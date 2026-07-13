@@ -1,3 +1,7 @@
+test "add is xor" {
+  assert_eq(@gf256.add(0x53, 0xCA), 0x99)
+}
+
 test "mul basic identities" {
   assert_eq(@gf256.mul(0, 123), 0)
   assert_eq(@gf256.mul(123, 0), 0)
@@ -6,7 +10,7 @@ test "mul basic identities" {
   assert_eq(@gf256.mul(128, 2), 29)     // 0x100 ^ 0x11D = 0x1D
 }
 
-test "mul is commutative and associative (spot)" {
+test "mul is commutative (spot)" {
   for a = 1; a < 256; a = a + 17 {
     for b = 1; b < 256; b = b + 13 {
       assert_eq(@gf256.mul(a, b), @gf256.mul(b, a))
