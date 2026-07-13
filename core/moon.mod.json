@@ -1,0 +1,10 @@
+{
+  "name": "naoto24kawa/moonqr",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/naoto24kawa/moonqr",
+  "description": "Pure QR code encoder/decoder written in MoonBit",
+  "keywords": ["qrcode", "qr"],
+  "source": "src",
+  "preferred-target": "js"
+}

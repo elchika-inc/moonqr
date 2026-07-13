@@ -1,0 +1,7 @@
+{
+  "name": "moonqr-monorepo",
+  "private": true,
+  "devDependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
