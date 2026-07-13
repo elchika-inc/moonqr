@@ -97,7 +97,10 @@ pub fn penalty(m : Matrix) -> Int {
   score
 }
 
-///| 8マスク試行して最小ペナルティを選択（フォーマット情報込みで評価）
+///| 8マスク試行して最小ペナルティのマスク番号を返す（フォーマット情報込みで評価）。
+///| 契約: 返却時、データ領域は非マスク状態に復元済みだが、フォーマット情報セルには
+///| 最後に試したマスクのビットが残る。呼び出し側は必ず
+///| apply_mask(m, best) と place_format(m, ec, best) を実行すること（encode() はそうする）。
 pub fn choose_mask(m : Matrix, ec : EcLevel) -> Int {
   let mut best = 0
   let mut best_score = 0x7FFFFFFF
