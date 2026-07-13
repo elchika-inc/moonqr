@@ -1,15 +1,8 @@
-///| Mode factory functions for testing
-pub fn numeric() -> Mode {
-  Mode::Numeric
-}
-
-pub fn alphanumeric() -> Mode {
-  Mode::Alphanumeric
-}
-
-pub fn byte() -> Mode {
-  Mode::Byte
-}
+pub(all) enum Mode {
+  Numeric
+  Alphanumeric
+  Byte
+} derive(Eq, Show)
 
 ///| 英数字モードの文字集合における index。非対応は -1
 fn alnum_index(c : Char) -> Int {

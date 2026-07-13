@@ -1,9 +1,3 @@
-pub enum Mode {
-  Numeric
-  Alphanumeric
-  Byte
-} derive(Eq, Show)
-
 pub struct BitWriter {
   bits : Array[Bool]
 }
