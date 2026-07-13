@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>moonqr demo</title>
+<style>
+  body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 24px; }
+  figure { margin: 0; text-align: center; }
+  svg { width: 240px; height: 240px; }
+  figcaption { max-width: 240px; word-break: break-all; font-size: 12px; }
+</style>
+<body>
+<script type="module">
+  // ビルド出力パスは実際の moon build 出力に合わせて調整
+  const mod = await import("../core/_build/js/release/build/encode/encode.js");
+  const EC = { L: 0, M: 1, Q: 2, H: 3 };
+  const CASES = [
+    ["HELLO", "M"],
+    ["https://github.com/naoto24kawa/moonqr", "M"],
+    ["0123456789", "L"],
+    ["こんにちは世界🦑", "H"],
+    ["A".repeat(500), "Q"],
+    ["WIFI:T:WPA;S:test;P:pass1234;;", "M"],
+  ];
+  for (const [text, ec] of CASES) {
+    const flat = mod.encode_js(text, EC[ec], 0);
+    const size = flat[0];
+    const margin = 4;
+    const total = size + margin * 2;
+    let d = "";
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      if (flat[1 + y * size + x]) d += `M${x + margin} ${y + margin}h1v1h-1z`;
+    }
+    const fig = document.createElement("figure");
+    fig.innerHTML =
+      `<svg viewBox="0 0 ${total} ${total}">` +
+      `<rect width="${total}" height="${total}" fill="#fff"/>` +
+      `<path d="${d}" fill="#000"/></svg>` +
+      `<figcaption>[${ec}] ${text.slice(0, 60)}</figcaption>`;
+    document.body.appendChild(fig);
+  }
+</script>
+</body>
