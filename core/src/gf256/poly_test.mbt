@@ -12,6 +12,14 @@ test "rs_encode length and determinism" {
   assert_eq(ec, @gf256.rs_encode(data, 10))
 }
 
+test "rs_encode with n_ec=0 returns empty" {
+  assert_eq(@gf256.rs_encode([1, 2, 3], 0), [])
+}
+
+test "rs_encode of empty data is all zeros" {
+  assert_eq(@gf256.rs_encode([], 5), [0, 0, 0, 0, 0])
+}
+
 test "rs_encode makes codeword divisible by generator" {
   // 符号語 = data || ec は g(x) で割り切れる（RS符号の定義）
   let data = [64, 86, 22, 198, 87, 38, 23, 50, 6, 54, 246, 118, 66]
