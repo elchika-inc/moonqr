@@ -34,3 +34,27 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
     }
   }
 }
+
+///| JS境界用: [size, m00, m01, ...] の平坦配列。エラー時は空配列。
+///| ec: 0=L 1=M 2=Q 3=H, version: 0=auto
+pub fn encode_js(text : String, ec : Int, version : Int) -> Array[Int] {
+  let level = match ec {
+    0 => EcLevel::L
+    1 => EcLevel::M
+    2 => EcLevel::Q
+    _ => EcLevel::H
+  }
+  let v : Int? = if version == 0 { None } else { Some(version) }
+  match encode(text, level, v) {
+    None => []
+    Some(m) => {
+      let out : Array[Int] = [m.size]
+      for y = 0; y < m.size; y = y + 1 {
+        for x = 0; x < m.size; x = x + 1 {
+          out.push(if m.get(x, y) { 1 } else { 0 })
+        }
+      }
+      out
+    }
+  }
+}

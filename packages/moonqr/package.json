@@ -1,0 +1,9 @@
+{
+  "name": "moonqr-parity-test",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
