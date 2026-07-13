@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>moonqr bench (Chrome)</title>
+</head>
+<body>
+<pre id="out">running...</pre>
+<script type="module">
+import { genFrame } from "./gen-frame.mjs";
+
+const WARMUP = 30, ITERS = 200;
+const frame = genFrame();
+const out = document.getElementById("out");
+const lines = [];
+function log(s) {
+  lines.push(s);
+  out.textContent = lines.join("\n");
+  console.log(s);
+}
+
+function measure(label, fn) {
+  for (let i = 0; i < WARMUP; i++) fn();
+  const times = [];
+  for (let i = 0; i < ITERS; i++) {
+    const t0 = performance.now();
+    const hits = fn();
+    times.push(performance.now() - t0);
+    if (i === 0) log(`${label} hits=${hits}`); // 結果一致の目視確認用
+  }
+  times.sort((a, b) => a - b);
+  const median = times[Math.floor(ITERS / 2)];
+  log(`${label}: median ${median.toFixed(3)} ms/frame`);
+  return median;
+}
+
+// --- js backend ---
+const jsMod = await import("../core/_build/js/release/build/bench/bench.js");
+const jsTime = measure("js     ", () => jsMod.bench_kernel(frame, 640, 480));
+
+// --- wasm-gc backend（import不要）---
+const wasmResp = await fetch("../core/_build/wasm-gc/release/build/bench/bench.wasm");
+const wasmBytes = await wasmResp.arrayBuffer();
+const { instance } = await WebAssembly.instantiate(wasmBytes, {});
+const w = instance.exports;
+const wasmTime = measure("wasm-gc", () => {
+  // 境界コスト込み: フレーム転送も計測に含める（これが本番の姿）
+  const f = w.make_frame(frame.length);
+  for (let i = 0; i < frame.length; i++) w.frame_set(f, i, frame[i]);
+  return w.bench_kernel_arr(f, 640, 480);
+});
+
+log(`ratio (wasm/js): ${(wasmTime / jsTime).toFixed(2)}`);
+log("DONE");
+</script>
+</body>
+</html>
