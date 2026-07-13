@@ -1,1 +1,3 @@
-{}
+{
+  "import": [{ "path": "naoto24kawa/moonqr/gf256", "alias": "gf256" }]
+}
