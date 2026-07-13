@@ -1,0 +1,6 @@
+{
+  "link": {
+    "js": { "exports": ["bench_kernel"], "format": "esm" },
+    "wasm-gc": { "exports": ["bench_kernel_arr", "make_frame", "frame_set"] }
+  }
+}
