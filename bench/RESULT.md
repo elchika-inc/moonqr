@@ -87,3 +87,75 @@ python3 -m http.server 8000 --directory ~/moonqr
 ユーザー実機のスマホカメラで `bench/demo.html` の6ケースを全読取: **6/6 成功**。
 ケース: HELLO(M) / GitHub URL(M) / 数字10桁(L) / こんにちは世界🦑(H) / A×500(Q) / WIFI設定文字列(M)。
 → v1 Done 基準3「実機スマホスキャナで読める」を充足。
+
+
+## jsQR e2eコーパスパリティ測定（Task 10・2026-07-14）
+
+### 環境
+
+- node: `v24.18.0`
+- jsqr (npm): `1.4.0`
+- jsQR移植元 pinned commit: `8e6a036beafa7053dd44b1b76ac578d22b1b3311`（P2 Task 2で固定した値と同一）
+- コーパス取得元: jsQR `tests/end-to-end/`（`scripts/fetch-fixtures.mjs` で shallow clone → `fixtures/jsqr-e2e/`、gitignore対象）
+
+### コーパス概要
+
+- 総ケース数: **254**
+- ground truth あり（output.json != null）: **214**
+- ground truth なし（output.json == null、jsQR自身も読めないnegativeケース）: **40**
+
+### 判定基準（スペック rubric 1）
+
+自前 decode_js の成功数 ≥ jsQR (npm) の成功数。成功 = jsQR/自前の返したテキストが
+output.json の `data` フィールドと**一致**すること（output.json が null のケースは
+ground truth が無いため、この一致判定の分母から除外——raw success/failure のみ参考記録）。
+
+### 結果（text-match, ground truth 214件中）
+
+| | jsQR (npm) | 自前 (decode_js) |
+|---|---|---|
+| 成功数 | 214 | 214 |
+| 成功率 | 100.0% | 100.0% |
+
+**判定: 自前(214) ≥ jsQR(214) → rubric PASS**
+
+- jsQRのみ成功（自前は不一致/失敗）: 0件 — (なし)
+- 自前のみ成功（jsQRは不一致/失敗）: 0件 — (なし)
+- jsQRが非null結果を返したが期待テキストと不一致: 0件 — (なし)
+- 自前が非null結果を返したが期待テキストと不一致: 0件 — (なし)
+
+### 参考: ground truth無しケース（output.json==null、40件）の raw success
+
+rubricの分母には含めない（一致判定の基準が無いため）。jsQR自身が読めないnegativeケースに
+対して非null結果を返す＝誤検出（false positive）の可能性がある、という観点でのみ参考記録。
+
+- jsQRが非null結果を返した件数: 0 — (なし)
+- 自前が非null結果を返した件数: 0 — (なし)
+
+### 分類・対応（初回測定で判明した1件差分の修正）
+
+初回測定（対角ミラー再試行の実装前）: 自前213 < jsQR214（`bike-1`ケースのみ差分）。
+`bike-1`は実写真（約90度回転したQR）で、format/version情報の読取までは成功するが
+codewords段で失敗——jsQR `decoder.ts` の `decode()` が実装する「抽出行列を対角線
+(TL-BR)でミラー（転置）して再試行」（locatorのファインダtop-right/bottom-left取り違え
+を補正する経路）が自前には未実装だったことが原因と特定した。
+
+対応: `core/src/decode/decode.mbt` に `try_decode_matrix`（format/version/data
+フルパイプラインの抽出）と `mirror_matrix`（対角線転置、in-place）を追加し、`scan()`
+が通常抽出行列で失敗した候補に対してミラー再試行を1回行うようjsQR `decoder.ts`を
+忠実移植した。再測定で自前214=jsQR214の完全一致となり、rubric達成。
+
+whiteboxテスト `core/src/decode/decode_wbtest.mbt` で
+(1) `mirror_matrix`のinvolution性（2回適用で元に戻る）、
+(2) `scan()`レベルでミラー再試行が転置画像を実際に救うこと（mutation checkで
+再試行を無効化すると同テストが確実に失敗することを確認済み）
+の2点をピン留めした。
+
+### 再現手順
+
+```bash
+export PATH="$HOME/.moon/bin:$PATH"
+node scripts/fetch-fixtures.mjs   # 冪等: 既にfixtures/jsqr-e2e/があればスキップ
+cd core && moon build --target js --release && cd ..
+node --test packages/moonqr/test/jsqr-parity.test.mjs
+```
