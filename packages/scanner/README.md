@@ -113,9 +113,10 @@ camera), so it also works in Node.js test environments with a DOM shim.
 
 ## License and attribution
 
-Apache License 2.0 — see [LICENSE](LICENSE) (bundled in this package's published tarball).
+Apache License 2.0 — see [LICENSE](../../LICENSE) (also bundled in this package's published
+tarball).
 
 This package's own logic (camera capture, worker orchestration, multiscale retry) is original.
 It depends on [`@elchika-inc/moonqr`](../moonqr), whose decoder is partly ported from
-[jsQR](https://github.com/cozmo/jsQR) (Apache-2.0) — see [NOTICE](NOTICE) and
-[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) (also bundled) for the full attribution.
+[jsQR](https://github.com/cozmo/jsQR) (Apache-2.0) — see [NOTICE](../../NOTICE) and
+[THIRD_PARTY_LICENSES](../../THIRD_PARTY_LICENSES) (also bundled) for the full attribution.

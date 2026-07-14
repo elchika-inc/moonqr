@@ -158,10 +158,11 @@ buffer).
 
 ## License and attribution
 
-Apache License 2.0 — see [LICENSE](LICENSE) (bundled in this package's published tarball).
+Apache License 2.0 — see [LICENSE](../../LICENSE) (also bundled in this package's published
+tarball).
 
 Portions of the decoder are ported from [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0), and
 the Reed–Solomon block / alignment-pattern position tables are derived from
 [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT). See
-[NOTICE](NOTICE) and [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) (also bundled) for the full
-attribution and upstream license texts.
+[NOTICE](../../NOTICE) and [THIRD_PARTY_LICENSES](../../THIRD_PARTY_LICENSES) (also bundled) for
+the full attribution and upstream license texts.
