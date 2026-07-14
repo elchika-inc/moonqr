@@ -316,3 +316,10 @@ cd core && moon build --target js --release && cd ..
 node --test packages/moonqr/test/monitor-lattice.test.mjs
 node --test packages/moonqr/test/*.test.mjs   # 全体回帰
 ```
+
+## 実機カメラ画像ゲート 最終結果（Task 12・2026-07-14）
+
+ユーザー実機（スマホ）でモニター上のQRを撮影→デモページにアップロード: **読取成功**（マルチスケール修正後）。
+初回は読取失敗 → 根本原因（モニターサブピクセル格子×エイリアシング縮小）を特定し、
+小スケール優先マルチスケール再試行を実装（同写真 5382ms→62ms）。jsQR も同写真で同様に失敗する
+ことを確認済み＝コアはパリティ維持、修正はシェル層のみ。ユーザーの体感遅延指摘も解消。
