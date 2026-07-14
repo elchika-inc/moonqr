@@ -170,3 +170,26 @@ test "decode_js: JSON escaping for quotes and backslashes" {
     _ => fail("decode_js output is not a JSON object")
   }
 }
+
+test "decode_js: guard branches return empty string without panicking" {
+  let tiny = Bytes::from_fixedarray(FixedArray::make(4, b'\x00'))
+  // width=0 / height=0 / 負値
+  assert_eq(@decode.decode_js(tiny, 0, 10, false), "")
+  assert_eq(@decode.decode_js(tiny, 10, 0, false), "")
+  assert_eq(@decode.decode_js(tiny, 10, -1, false), "")
+  assert_eq(@decode.decode_js(tiny, -1, 10, false), "")
+  // Int32 オーバーフロー: 65536*65536 は Int の積だと 0 にラップして
+  // 旧ガードをすり抜けていた（レビュー指摘の再現ケース）。
+  // Int64 積で 4.29e9 > 16M と判定され "" になること（パニックしないこと）。
+  assert_eq(@decode.decode_js(tiny, 65536, 65536, false), "")
+  // 空データ + 65536x65536 が真の致命ケース: 旧ガードは 0 == 0*4 で
+  // 両方すり抜け、binarize が範囲外パニックしていた（mutation checkで
+  // 旧ロジックに戻すとこの行だけがパニックすることを確認済み）。
+  let empty = Bytes::from_fixedarray(FixedArray::make(0, b'\x00'))
+  assert_eq(@decode.decode_js(empty, 65536, 65536, false), "")
+  // 65535*65535 ≈ 4.29e9 も Int32 max 超（正のオーバーフロー域）
+  assert_eq(@decode.decode_js(tiny, 65535, 65535, false), "")
+  // 16M 画素超（5000*4000=20M、オーバーフローなし域）: 画素数ガードが
+  // データ長ガード・データアクセスより先に発火し "" を返す
+  assert_eq(@decode.decode_js(tiny, 5000, 4000, false), "")
+}

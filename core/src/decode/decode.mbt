@@ -115,16 +115,21 @@ let max_pixels : Int = 16 * 1024 * 1024
 
 ///| JS境界（total）: `data.length == width*height*4` かつ `width>0`かつ`height>0`
 ///| かつ `width*height <= 16M` を満たさない不正入力は例外を出さず ""。
+///| 画素数・バイト長の積は Int64 で計算する——Int(32bit) の積は
+///| width=height=65536 で 0 にラップし、ガードをすり抜けて binarize が
+///| 範囲外パニックする（レビュー指摘）。65535*65535 ≈ 4.29e9 も Int32 max
+///| を超えるため、個別の上限チェックだけでは不十分で Int64 積が必要。
 ///| 成功時は `{"text":...,"bytes":[...],"version":N,"ecLevel":"M","corners":[{"x":..,"y":..}x4]}`
 ///| のJSON文字列（moonbitlang/core `@json` の `Json::stringify` でエスケープ）。
 pub fn decode_js(data : Bytes, width : Int, height : Int, invert : Bool) -> String {
   if width <= 0 || height <= 0 {
     return ""
   }
-  if width * height > max_pixels {
+  let pixels : Int64 = width.to_int64() * height.to_int64()
+  if pixels > max_pixels.to_int64() {
     return ""
   }
-  if data.length() != width * height * 4 {
+  if data.length().to_int64() != pixels * 4L {
     return ""
   }
   match decode(data, width, height, invert) {
