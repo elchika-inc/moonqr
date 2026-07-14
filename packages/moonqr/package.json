@@ -5,10 +5,39 @@
   "type": "module",
   "description": "QR code encoder and decoder written in MoonBit. No dependencies, works in the browser.",
   "license": "Apache-2.0",
-  "repository": { "type": "git", "url": "git+https://github.com/naoto24kawa/moonqr.git" },
-  "keywords": ["qrcode", "qr", "decoder", "encoder", "moonbit", "browser"],
-  "scripts": {
-    "test": "node --test test/*.test.mjs"
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naoto24kawa/moonqr.git"
   },
-  "devDependencies": { "qrcode": "^1.5.4" }
+  "keywords": [
+    "qrcode",
+    "qr",
+    "decoder",
+    "encoder",
+    "moonbit",
+    "browser"
+  ],
+  "files": ["dist"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:unit": "vitest run",
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
 }
