@@ -205,3 +205,90 @@ jsQR は `inversionAttempts` オプションで対応: 主計測は `"attemptBot
 **基準: 自前 median ≤ jsQR median × 1.2 が hit・miss 両フレームで成立すること。**
 
 **判定: PASS**
+
+## モニター格子写真対応 — マルチスケールデコード（Task 12・2026-07-14）
+
+### 背景・症状
+
+Task 12（実機カメラ画像ゲート）でユーザーがモニターに表示したQRをスマホで撮影した写真
+（`PXL_20260714_061734707.MP.jpg`、3472x4624px）を `bench/demo.html` で読ませたところ
+失敗した。紙のQR・実機スマホカメラでの直接読取は Task 14 で既に 6/6 成功しており、
+「モニター表示 + 撮影」という組み合わせに固有の失敗だった。
+
+### root cause（原因連鎖）
+
+1. **モニターのサブピクセル格子**: 液晶/有機ELモニターの画素構造が、白いはずの背景領域に
+   高周波の暗い格子模様として写真に写り込む。
+2. **ブロック二値化の誤認**: jsQR方式のブロック単位二値化はこの高周波格子を「ほぼ50%
+   speckle（黒白が細かく入り乱れた領域）」と誤認し、ファインダパターン（3隅の四角）を
+   検出できなくなる。視覚的に確認済み。**jsQR npm（1.4.0）でも全く同一の失敗が再現する**
+   ——つまり自前 `decode_js` のコア二値化・ロケータ（`core/src/decode/`）は無改修のまま
+   jsQRとパリティを保っており、**コア自体は原因ではない**。
+3. **素朴な単発縮小はエイリアシングで悪化する**: `sips -Z` による単一ステップの縮小を
+   1600/1200/1000/800/600/400pxの各サイズで試したが、jsQR npm・自前decode_jsの**両方とも
+   全サイズで失敗**した。単発の最近傍/双線形縮小は格子の高周波成分を適切にローパス
+   フィルタせずエイリアシングし、むしろパターンを悪化させる。
+4. **段階的な2x2ボックス平均縮小（正しいローパスフィルタ）で解決**: 縦横を2x2ブロック
+   平均で段階的に半分に縮小していくと、**1/8スケール付近で jsQR npm・自前decode_jsの
+   両方がデコードに成功する**（テキスト "HELLO" を正しく復元）。1/16スケールまで縮小すると
+   今度はQRモジュールが小さくなりすぎてデコードに失敗する（縮小しすぎの失敗モード）。
+
+### 対応
+
+`bench/demo.html` の画像読取パイプラインを、単発downscale→decode の1回勝負から、
+**マルチスケール再試行ループ**に置き換えた:
+
+1. ImageDataをネイティブ解像度で取得（旧実装の「1600px超なら`drawImage`で単発縮小してから
+   decode」を廃止——これが root cause 3 のエイリアシングを引き起こしていた）。
+2. メモリガード: `decode_js` の16Mピクセル上限（`max_pixels = 16 * 1024 * 1024` =
+   16,777,216、`core/src/decode/decode.mbt`）を超える画素数の場合、超えなくなるまで先に
+   `halveRGBA`（2x2ボックス平均、純JS実装）で縮小する。
+3. 現在スケールで `decode_js` を試行 → 失敗（`""`）なら `halveRGBA` で半分に縮小して
+   再試行 → `max(width, height) < 150` になるまで繰り返す。
+4. 成功したスケールを結果表示に反映する（例:「読取成功（1/8スケール）」）。
+
+同一ロジックを `packages/moonqr/test/lib/multiscale.mjs`（`halveRGBA` + `multiScaleDecode`）
+に実装し、`bench/demo.html` と手動同期（demo.html は `bench/` から静的配信され
+`packages/` 配下を import できないため）。両ファイルにこの同期の注記を残した。
+**コアデコーダ（`core/src/decode/`）は一切変更していない**——修正はJS境界のリトライ
+ラッパのみ。
+
+### 回帰テスト（`packages/moonqr/test/monitor-lattice.test.mjs`）
+
+実写真は使わず、`rasterize()` で生成したQR画像に合成のサブピクセル格子（9px周期の
+格子線上にある白画素のみ 220→120 に暗化。黒画素は無改変）を重ねたフィクスチャで
+失敗モードをコミット可能・決定的に再現した:
+
+- (a) フィクスチャに対する直接 `decode_js`（単一スケール）は **FAIL**（失敗モードの再現を証明）
+- (b) 同フィクスチャに対する **jsQR npm も FAIL**（コアがjsQRとパリティのままであることの証明）
+- (c) `multiScaleDecode` ヘルパーは **SUCCESS**（1/2スケールでテキスト "HELLO" を正しく復元）
+
+フィクスチャパラメータ: `scale=28`（モジュールあたり28px、写真スケール800px超）、
+格子`period=9`、暗化後階調`darkenTo=120`、白判定閾値`whiteThreshold=200`。
+scale×period×darkenTo の探索により、上記(a)(b)(c)の3条件を同時に満たす組み合わせとして選定。
+
+### ユーザー実写真での検証（ローカルのみ・非コミット）
+
+`~/Downloads/PXL_20260714_061734707.MP.jpg`（3472x4624px、`sips`で
+PNG変換してNode側で検証。写真自体もfixtures/相当物もリポジトリにはコミットしていない）:
+
+- ネイティブ解像度での直接 `decode_js`: **FAIL**
+- `multiScaleDecode`: **SUCCESS** — **1/8スケール**（434x578px）でテキスト `"HELLO"` を正しく復元
+
+Task 10/14で確認済みの「紙QR・直接読取は問題なし」を踏まえると、モニター格子写真という
+Task 12で新たに発覆した失敗ケースに対して本修正が有効であることを実機写真で確認した。
+
+### 全体テスト結果
+
+- `moon test`（core）: **92/92 PASS**
+- `node --test packages/moonqr/test/*.test.mjs`: **271/271 PASS**（既存268 + 新規
+  `monitor-lattice.test.mjs` 3件）
+
+### 再現手順
+
+```bash
+export PATH="$HOME/.moon/bin:$PATH"
+cd core && moon build --target js --release && cd ..
+node --test packages/moonqr/test/monitor-lattice.test.mjs
+node --test packages/moonqr/test/*.test.mjs   # 全体回帰
+```

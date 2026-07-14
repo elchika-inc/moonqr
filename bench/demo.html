@@ -63,45 +63,117 @@
     }
   }
 
+  // --- マルチスケールデコード（Phase 2 Task 12: モニター格子写真対応） ---
+  //
+  // root cause: モニター表示のQRをスマホで撮影すると、モニターのサブピクセル
+  // 格子（白いはずの領域に写り込む高周波の暗い格子線）が乗る。jsQR方式の
+  // ブロック二値化はこれを「ほぼ50%speckle」と誤認しファインダを検出できなく
+  // なる（jsQR npmでも同一の失敗＝コアの二値化/ロケータは無改修）。素朴な
+  // 単発縮小（旧実装のdrawImageによる単一downscale）はこの格子をエイリアシング
+  // してむしろ悪化させる。2x2ボックス平均による段階的な半分縮小（正しい
+  // ローパスフィルタ）を繰り返すと1/8スケール付近で解決する。詳細は
+  // bench/RESULT.md Task 12 節を参照。
+  //
+  // 同一ロジックが packages/moonqr/test/lib/multiscale.mjs にも存在する
+  // （手動同期。demo.html は bench/ から静的配信されるため packages/ 配下
+  // からimportできない——ロジックを変更する場合は両方のファイルを更新
+  // すること。両ファイルにこの注記を残す）。
+
+  // decode_js (core/src/decode/decode.mbt) の max_pixels 定数と同じ値
+  // （16 * 1024 * 1024 = 16,777,216）。
+  const MAX_PIXELS = 16 * 1024 * 1024;
+
+  // RGBA画素配列を2x2ボックス平均で縦横半分に縮小する（決定的・純JS実装）。
+  function halveRGBA(data, width, height) {
+    const nw = Math.floor(width / 2);
+    const nh = Math.floor(height / 2);
+    const out = new Uint8Array(nw * nh * 4);
+    for (let y = 0; y < nh; y++) {
+      for (let x = 0; x < nw; x++) {
+        const sx = x * 2;
+        const sy = y * 2;
+        let r = 0, g = 0, b = 0, a = 0;
+        for (let dy = 0; dy < 2; dy++) {
+          for (let dx = 0; dx < 2; dx++) {
+            const si = ((sy + dy) * width + (sx + dx)) * 4;
+            r += data[si];
+            g += data[si + 1];
+            b += data[si + 2];
+            a += data[si + 3];
+          }
+        }
+        const di = (y * nw + x) * 4;
+        out[di] = r >> 2;
+        out[di + 1] = g >> 2;
+        out[di + 2] = b >> 2;
+        out[di + 3] = a >> 2;
+      }
+    }
+    return { data: out, width: nw, height: nh };
+  }
+
+  // decodeFn を現在スケールで試行し、失敗したら halveRGBA で段階的に縮小
+  // しながら再試行する。成功時は { result, scale, width, height } を返す
+  // （scale = 1/scale が実際に使われた縮小率）。150px未満まで縮小してなお
+  // 失敗した場合は null。
+  function multiScaleDecode(decodeFn, data, width, height) {
+    let curData = data, curW = width, curH = height;
+
+    // メモリガード: 16Mピクセル上限に収まるまで先に縮小
+    while (curW * curH > MAX_PIXELS) {
+      const halved = halveRGBA(curData, curW, curH);
+      curData = halved.data; curW = halved.width; curH = halved.height;
+    }
+
+    let scale = 1;
+    for (;;) {
+      const result = decodeFn(curData, curW, curH);
+      if (result) {
+        return { result, scale, width: curW, height: curH };
+      }
+      if (Math.max(curW, curH) < 150) {
+        return null;
+      }
+      const halved = halveRGBA(curData, curW, curH);
+      curData = halved.data; curW = halved.width; curH = halved.height;
+      scale *= 2;
+    }
+  }
+
   async function processImage(file) {
     const resultDiv = document.createElement("div");
     resultDiv.className = "result";
 
     try {
       const bitmap = await createImageBitmap(file);
-      let { width, height } = bitmap;
+      const { width, height } = bitmap;
 
-      // Downscale if necessary (max dimension > 1600px)
-      // This protects decode_js from huge allocations and speeds up processing
-      const maxDim = Math.max(width, height);
-      let canvas = new OffscreenCanvas(width, height);
-
-      if (maxDim > 1600) {
-        const scale = 1600 / maxDim;
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
-        canvas = new OffscreenCanvas(width, height);
-      }
-
+      // ネイティブ解像度でImageDataを取得する（旧実装の「1600px超なら
+      // drawImageで単発縮小してからdecode」はモニター格子をエイリアシング
+      // して悪化させるため廃止。縮小は multiScaleDecode 内の2x2ボックス
+      // 平均に一本化する）。
+      const canvas = new OffscreenCanvas(width, height);
       const ctx = canvas.getContext("2d");
       ctx.drawImage(bitmap, 0, 0, width, height);
-
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = new Uint8Array(imageData.data.buffer, imageData.data.byteOffset, imageData.data.byteLength);
 
-      const result = decode_js(data, width, height, true);
-
-      const resultObj = result ? JSON.parse(result) : null;
+      const decodeFn = (d, w, h) => {
+        const out = decode_js(d, w, h, true);
+        return out === "" ? null : JSON.parse(out);
+      };
+      const outcome = multiScaleDecode(decodeFn, data, width, height);
+      const resultObj = outcome ? outcome.result : null;
 
       // Create thumbnail
       const thumbCanvas = new OffscreenCanvas(160, 160);
       const thumbCtx = thumbCanvas.getContext("2d");
       thumbCtx.fillStyle = "#fff";
       thumbCtx.fillRect(0, 0, 160, 160);
-      const scale = Math.min(160 / width, 160 / height);
-      const x = (160 - width * scale) / 2;
-      const y = (160 - height * scale) / 2;
-      thumbCtx.drawImage(bitmap, x, y, width * scale, height * scale);
+      const thumbScale = Math.min(160 / width, 160 / height);
+      const x = (160 - width * thumbScale) / 2;
+      const y = (160 - height * thumbScale) / 2;
+      thumbCtx.drawImage(bitmap, x, y, width * thumbScale, height * thumbScale);
 
       const thumbBlob = await thumbCanvas.convertToBlob();
       const thumbUrl = URL.createObjectURL(thumbBlob);
@@ -115,8 +187,9 @@
         const text = resultObj.text || "(empty)";
         const version = resultObj.version !== undefined ? resultObj.version : "?";
         const ecLevel = resultObj.ecLevel || "?";
+        const scaleNote = outcome.scale > 1 ? `（1/${outcome.scale}スケール）` : "";
         resultDiv.innerHTML += `
-          <p class="result-success">✓ 読取成功</p>
+          <p class="result-success">✓ 読取成功${scaleNote}</p>
           <p>テキスト: <code>${escapeHtml(text)}</code></p>
           <p>バージョン: ${version} / エラー訂正レベル: ${ecLevel}</p>
         `;
