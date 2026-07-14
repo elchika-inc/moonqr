@@ -61,6 +61,41 @@ test "binarize resolves >24px uniform black core correctly (jsQR blind spot regr
   assert_true(bin.get(107, 107))
 }
 
+test "non-multiple-of-8 frame keeps inversion invariant at every real pixel" {
+  // 61x53（8の倍数でない）: 末尾の部分ブロックでも全実ピクセルに
+  // binarized / inverted の両ビットが同一比較から書き込まれること
+  // （＝どの実ピクセルもスキップされないこと）の回帰テスト。
+  let w = 61
+  let h = 53
+  let buf = FixedArray::make(w * h * 4, b'\x00')
+  for y = 0; y < h; y = y + 1 {
+    for x = 0; x < w; x = x + 1 {
+      // 位置依存ノイズの明背景 + (20,16)-(43,39) に 24x24 の暗い正方形
+      let mut v = 180 + (x * 7 + y * 13) % 40
+      if x >= 20 && x < 44 && y >= 16 && y < 40 {
+        v = 30
+      }
+      let i = (y * w + x) * 4
+      buf[i] = v.to_byte()
+      buf[i + 1] = v.to_byte()
+      buf[i + 2] = v.to_byte()
+      buf[i + 3] = b'\xFF'
+    }
+  }
+  let (bin, inv) = @decode.binarize(Bytes::from_fixedarray(buf), w, h)
+  // 全実ピクセルで inverted == !binarized（部分ブロック含む）
+  for y = 0; y < h; y = y + 1 {
+    for x = 0; x < w; x = x + 1 {
+      assert_eq(inv.get(x, y), !bin.get(x, y))
+    }
+  }
+  // 意味的チェック: 暗い正方形の中心は黒、右下隅（部分ブロック領域）の
+  // 明背景は白
+  assert_true(bin.get(31, 27))
+  assert_false(bin.get(60, 52))
+  assert_false(bin.get(5, 5))
+}
+
 test "inverted matrix is logical negation of binarized at same coords" {
   let frame = synth_frame(160, 160)
   let (bin, inv) = @decode.binarize(frame, 160, 160)
