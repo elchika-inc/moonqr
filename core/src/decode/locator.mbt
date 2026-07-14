@@ -35,18 +35,25 @@ priv struct Quad {
 }
 
 ///| ファインダパターン候補の初期スコアリング結果。
+///| idx は元の挿入順。jsQR は ES2019 で安定保証された Array.prototype.sort に
+///| 依存するが、MoonBit の Array::sort_by は安定性を保証しないため、
+///| スコア同点時のタイブレーカとして idx を比較し安定ソートをエミュレートする
+///| （Task 10 のコーパスパリティで jsQR と同じ実効順序を保つため）。
 priv struct ScoredPoint {
   point : Point
   score : Double
   size : Double
+  idx : Int
 }
 
 ///| finderPatternGroups の1グループ（3点 + 合計スコア）。
+///| idx は ScoredPoint と同じ安定ソートエミュレーション用タイブレーカ。
 priv struct FinderGroup {
   p0 : Point
   p1 : Point
   p2 : Point
   score : Double
+  idx : Int
 }
 
 priv struct DimensionResult {
@@ -81,6 +88,17 @@ fn compare_double(a : Double, b : Double) -> Int {
     1
   } else {
     0
+  }
+}
+
+///| ScoredPoint のスコア昇順比較。同点は挿入順（idx）で決着
+///| （安定ソートエミュレーション — ScoredPoint のコメント参照）。
+fn compare_scored_point(a : ScoredPoint, b : ScoredPoint) -> Int {
+  let c = compare_double(a.score, b.score)
+  if c != 0 {
+    c
+  } else {
+    a.idx - b.idx
   }
 }
 
@@ -344,14 +362,12 @@ fn find_alignment_pattern(
           let size_score = score_pattern(score_point, ratios_1_1_1, matrix)
           let center : Point = { x: cx, y: cy }
           let score = size_score + distance(center, expected)
-          // size フィールドは未使用（アライメント候補には size ペナルティが無いため）
-          candidates.push({ point: center, score, size: 0.0 })
+          // size フィールドは未使用（アライメント候補には size ペナルティが無いため）。
+          // idx は挿入順（安定ソートエミュレーション用タイブレーカ）。
+          candidates.push({ point: center, score, size: 0.0, idx: candidates.length() })
         }
       }
-      let cmp_candidates = fn(a : ScoredPoint, b : ScoredPoint) -> Int {
-        compare_double(a.score, b.score)
-      }
-      candidates.sort_by(cmp_candidates)
+      candidates.sort_by(compare_scored_point)
       let alignment_point = if modules_between >= 15.0 && candidates.length() > 0 {
         candidates[0].point
       } else {
@@ -499,13 +515,11 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
       let score_point : Point = { x: rx.to_double(), y: ry.to_double() }
       let score = score_pattern(score_point, ratios_1_1_3_1_1, matrix)
       let center : Point = { x: cx, y: cy }
-      candidates.push({ point: center, score, size })
+      // idx は挿入順（安定ソートエミュレーション用タイブレーカ）
+      candidates.push({ point: center, score, size, idx: candidates.length() })
     }
   }
-  let cmp_candidates = fn(a : ScoredPoint, b : ScoredPoint) -> Int {
-    compare_double(a.score, b.score)
-  }
-  candidates.sort_by(cmp_candidates)
+  candidates.sort_by(compare_scored_point)
 
   // ---- 近いサイズの3点でグループ化 ----
   let groups : Array[FinderGroup] = []
@@ -517,24 +531,39 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
         if j != i {
           let p = candidates[j]
           let size_penalty = (p.size - point.size) * (p.size - point.size) / point.size
-          others.push({ point: p.point, score: p.score + size_penalty, size: p.size })
+          // idx は挿入順（安定ソートエミュレーション用タイブレーカ）
+          others.push({
+            point: p.point,
+            score: p.score + size_penalty,
+            size: p.size,
+            idx: others.length(),
+          })
         }
       }
-      let cmp_others = fn(a : ScoredPoint, b : ScoredPoint) -> Int {
-        compare_double(a.score, b.score)
-      }
-      others.sort_by(cmp_others)
+      others.sort_by(compare_scored_point)
       if others.length() >= 2 {
         let group_score = point.score + others[0].score + others[1].score
-        groups.push({ p0: point.point, p1: others[0].point, p2: others[1].point, score: group_score })
+        groups.push({
+          p0: point.point,
+          p1: others[0].point,
+          p2: others[1].point,
+          score: group_score,
+          idx: groups.length(),
+        })
       }
     }
   }
   if groups.is_empty() {
     return []
   }
+  // groups もスコア同点時は挿入順で決着（安定ソートエミュレーション）
   let cmp_groups = fn(a : FinderGroup, b : FinderGroup) -> Int {
-    compare_double(a.score, b.score)
+    let c = compare_double(a.score, b.score)
+    if c != 0 {
+      c
+    } else {
+      a.idx - b.idx
+    }
   }
   groups.sort_by(cmp_groups)
   let best = groups[0]
