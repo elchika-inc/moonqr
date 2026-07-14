@@ -1,12 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "lib": ["ES2020"],
+    // "DOM" は Task 4 の `src/dom.ts`（HTMLCanvasElement を扱う）に必要。
+    // 型のみの追加であり実行時挙動には影響しない。
+    "lib": ["ES2020", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
     "declaration": true,
     "skipLibCheck": true,
+    // test/lib/*.mjs（JSDoc型注釈付きの純JSヘルパ）を .test.ts から import する際に
+    // 型情報を拾えるようにする（decode.test.ts が test/lib/rasterize.mjs を使う）。
+    "allowJs": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,

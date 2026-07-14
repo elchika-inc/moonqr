@@ -11,5 +11,9 @@
 export { encode, toSvgString } from "./encode.js";
 export type { EcLevel, EncodeOptions, QrMatrix, SvgOptions } from "./types.js";
 
-// decode 側の実装は Task 4 で `./decode.js` に入る（現時点では型のみ）。
+export { decode } from "./decode.js";
 export type { DecodeOptions, DecodeResult, Point } from "./types.js";
+
+// `./dom.js`（toCanvas）はルートからは re-export しない。DOM 依存（HTMLCanvasElement）を
+// 持つためNode専用消費者の型解決を汚さないよう、`@elchika-inc/moonqr/dom` サブパス経由での
+// 利用に限定する（README のサブパス表を参照）。

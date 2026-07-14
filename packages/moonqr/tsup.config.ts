@@ -6,10 +6,9 @@ export default defineConfig({
   // 一切バンドルせずに済むようにするため。ルート（index.ts）は DX のため双方を
   // re-export するが、サイズ重視の消費者は `@elchika-inc/moonqr/encode` を使う。
   //
-  // NOTE: `src/dom.ts`（Task 4 で追加予定の DOM ヘルパ）はこの時点では存在しないため
-  // entry に含めていない。Task 4 で `src/dom.ts` を作成し、ここと package.json の
-  // exports map に `./dom` を追加する。
-  entry: ["src/index.ts", "src/encode.ts", "src/decode.ts"],
+  // `src/dom.ts`（toCanvas）は MoonBit 成果物に依存しない純粋な DOM ヘルパのため、
+  // encode/decode いずれの閉包にも影響しない別エントリとして追加する（Task 4）。
+  entry: ["src/index.ts", "src/encode.ts", "src/decode.ts", "src/dom.ts"],
   format: ["esm", "cjs"],
   dts: true,
   minify: true,

@@ -37,6 +37,11 @@
       "types": "./dist/decode.d.ts",
       "import": "./dist/decode.js",
       "require": "./dist/decode.cjs"
+    },
+    "./dom": {
+      "types": "./dist/dom.d.ts",
+      "import": "./dist/dom.js",
+      "require": "./dist/dom.cjs"
     }
   },
   "scripts": {
@@ -45,6 +50,7 @@
     "build": "tsup"
   },
   "devDependencies": {
+    "jsdom": "^25.0.1",
     "qrcode": "^1.5.4",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",

@@ -24,9 +24,6 @@ export interface SvgOptions {
   cell?: number;
 }
 
-// --- 以下は Task 4（decode 側 TS ラッパ）向けのスタブ。
-// このタスク（encode 側）では未使用だが、後続タスクの型契約を先に固定しておく。
-
 /** 平面上の点（px 座標） */
 export interface Point {
   x: number;
@@ -34,13 +31,16 @@ export interface Point {
 }
 
 export interface DecodeOptions {
-  /** true の場合、白黒を反転して読み取る（反転QR対応） */
+  /** 反転色QRも試すか（既定 true） */
   invert?: boolean;
 }
 
 export interface DecodeResult {
-  /** デコードされたテキスト */
   text: string;
-  /** QR の4隅（元画像px座標）。将来の可視化用途 */
-  corners?: [Point, Point, Point, Point];
+  /** 生バイト列（バイナリペイロード用） */
+  bytes: Uint8Array;
+  version: number;
+  ecLevel: EcLevel;
+  /** 元画像px。TL,TR,BR,BL 順 */
+  corners: [Point, Point, Point, Point];
 }

@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { encode, toSvgString } from "./index.js";
-// サブパス分割後もルートと encode サブパスが同一の実装を指していることを固定する
-// （ルートは encode.ts の re-export であるという契約の回帰テスト）。
+import { decode, encode, toSvgString } from "./index.js";
+// サブパス分割後もルートと encode/decode サブパスが同一の実装を指していることを固定する
+// （ルートは encode.ts/decode.ts の re-export であるという契約の回帰テスト）。
 import { encode as encodeSubpath, toSvgString as toSvgStringSubpath } from "./encode.js";
+import { decode as decodeSubpath } from "./decode.js";
 
 describe("subpath split", () => {
   it("root entry re-exports the same encode/toSvgString as the encode subpath", () => {
     expect(encode).toBe(encodeSubpath);
     expect(toSvgString).toBe(toSvgStringSubpath);
+  });
+  it("root entry re-exports the same decode as the decode subpath", () => {
+    expect(decode).toBe(decodeSubpath);
   });
 });
 
