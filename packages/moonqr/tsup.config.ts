@@ -1,11 +1,15 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  // NOTE: task-3-brief.md は entry に `src/dom.ts` も含める記載だが、
-  // dom.ts は Task 4（decode 側 TS ラッパ＋dom サブパス）で追加される。
-  // このタスク（encode 側）時点では存在しないため index.ts のみを指定し、
-  // Task 4 でこのファイルに追記する。
-  entry: ["src/index.ts"],
+  // encode / decode を物理的に別エントリへ分割する（サブパスエクスポート）。
+  // エンコードのみの消費者がデコーダ（raw 261KB / gzip 62KB、SJIS テーブル）を
+  // 一切バンドルせずに済むようにするため。ルート（index.ts）は DX のため双方を
+  // re-export するが、サイズ重視の消費者は `@elchika-inc/moonqr/encode` を使う。
+  //
+  // NOTE: `src/dom.ts`（Task 4 で追加予定の DOM ヘルパ）はこの時点では存在しないため
+  // entry に含めていない。Task 4 で `src/dom.ts` を作成し、ここと package.json の
+  // exports map に `./dom` を追加する。
+  entry: ["src/index.ts", "src/encode.ts", "src/decode.ts"],
   format: ["esm", "cjs"],
   dts: true,
   minify: true,
