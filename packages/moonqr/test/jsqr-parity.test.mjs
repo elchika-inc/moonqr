@@ -207,4 +207,16 @@ node --test packages/moonqr/test/jsqr-parity.test.mjs
     `rubric failed: ourSuccess=${ourSuccess} < jsqrSuccess=${jsqrSuccess}. ` +
       `jsQR-only fails (jsQR success, ours fails): ${jsqrOnlyFail.join(", ")}`,
   );
+
+  // 偽陽性回帰ピン（レビュー指摘）: null-GT の40件（jsQR自身も読めない
+  // negativeケース）は現状、自前デコーダも全件 null を返す。この挙動を
+  // アサートで固定する——rubric は GT一致数の比較のみなので、将来
+  // 「否定ケースでゴミ結果を返す」回帰が入っても rubric をすり抜けて
+  // 無検出になる。ここでピンしておけばその回帰は即座に落ちる。
+  assert.strictEqual(
+    ourRawSuccessNoGt,
+    0,
+    `null-GT（jsQR自身が読めない否定ケース）で自前デコーダが結果を返した — ` +
+      `偽陽性回帰の疑い: ${negativeCasesOurFalsePositive.join(", ")}`,
+  );
 });
