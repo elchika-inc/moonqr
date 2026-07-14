@@ -1,7 +1,10 @@
 ///| 移植元: jsQR (Apache-2.0), commit 8e6a036beafa7053dd44b1b76ac578d22b1b3311
 ///| https://github.com/cozmo/jsQR/blob/8e6a036beafa7053dd44b1b76ac578d22b1b3311/src/decoder/decoder.ts
-///| `readFormatInformation`/`readVersion` のアルゴリズム（全候補とのハミング
-///| 距離最小・許容誤り <=3、系統1がダメなら系統2でリトライ）を移植する。
+///| `readFormatInformation`/`readVersion` のアルゴリズム（各候補 C に対し
+///| min(dist(bits1, C), dist(bits2, C)) を単一ループで追跡し、全体最小が
+///| <=3 のときだけ採用する両系統同時最小距離方式）を移植する。
+///| 両系統が「別々の」符号語の近傍にある非対称な破損でも、客観的に
+///| 距離が近い方が勝つ（2コピー冗長の存在意義そのもの）。
 ///| ただし jsQR の「有効コード表（FORMAT_INFO_TABLE 等）」は移植せず、
 ///| encode パッケージの `format_bits(ec, mask)` / `version_bits(v)`
 ///| （qrcode npm と一致実証済み・真値表）を候補列挙に使う。
@@ -28,9 +31,11 @@ fn hamming_distance(a : Int, b : Int) -> Int {
   d
 }
 
-///| 15bit 生読取値1系統に対し、全32候補 (ec x mask) から最小ハミング距離の
-///| 候補を探す。距離が最小のもの1つを (distance, FormatInfo) で返す。
-fn best_format_match(bits : Int) -> (Int, FormatInfo) {
+///| 15bit 生読取値（2系統それぞれ）から最尤フォーマットを返す。
+///| jsQR readFormatInformation と同じく、全32候補 (ec x mask) を単一ループで
+///| 走査し、各候補 C に対し min(dist(bits1, C), dist(bits2, C)) を評価して
+///| 全体最小の候補を追跡する。最小距離が <=3 のときだけ採用、それ以外は None。
+pub fn decode_format(bits1 : Int, bits2 : Int) -> FormatInfo? {
   let ecs = all_ec_levels()
   let mut best_dist = 16 // 15bitの最大距離(15)より大きい番兵
   let mut best = FormatInfo::{ ec: @encode.EcLevel::L, mask: 0 }
@@ -38,59 +43,44 @@ fn best_format_match(bits : Int) -> (Int, FormatInfo) {
     for mask = 0; mask < 8; mask = mask + 1 {
       let ec = ecs[ei]
       let candidate = @encode.format_bits(ec, mask)
-      let d = hamming_distance(bits, candidate)
+      let d1 = hamming_distance(bits1, candidate)
+      let d2 = hamming_distance(bits2, candidate)
+      let d = if d1 < d2 { d1 } else { d2 }
       if d < best_dist {
         best_dist = d
         best = FormatInfo::{ ec, mask }
       }
     }
   }
-  (best_dist, best)
+  if best_dist <= 3 {
+    Some(best)
+  } else {
+    None
+  }
 }
 
-///| 15bit 生読取値（2系統それぞれ）から最尤フォーマットを返す。
-///| jsQR 同様、系統1で距離<=3の候補が見つかればそれを採用し、
-///| 見つからなければ系統2で同じことを試す。両方失敗すれば None。
-pub fn decode_format(bits1 : Int, bits2 : Int) -> FormatInfo? {
-  let (d1, best1) = best_format_match(bits1)
-  if d1 <= 3 {
-    return Some(best1)
-  }
-  let (d2, best2) = best_format_match(bits2)
-  if d2 <= 3 {
-    return Some(best2)
-  }
-  None
-}
-
-///| 18bit 生読取値1系統に対し、v7..40 の全34候補から最小ハミング距離の
-///| 候補を探す。
-fn best_version_match(bits : Int) -> (Int, Int) {
+///| 18bit 生読取値から最尤バージョン(7..40)を返す。
+///| jsQR readVersion と同じく、v7..40 の全34候補を単一ループで走査し、
+///| 各候補 C に対し min(dist(bits1, C), dist(bits2, C)) を評価して全体最小の
+///| 候補を追跡する。最小距離が <=3 のときだけ採用、それ以外は None。
+pub fn decode_version(bits1 : Int, bits2 : Int) -> Int? {
   let mut best_dist = 19 // 18bitの最大距離(18)より大きい番兵
   let mut best_version = 7
   for v = 7; v <= 40; v = v + 1 {
     let candidate = @encode.version_bits(v)
-    let d = hamming_distance(bits, candidate)
+    let d1 = hamming_distance(bits1, candidate)
+    let d2 = hamming_distance(bits2, candidate)
+    let d = if d1 < d2 { d1 } else { d2 }
     if d < best_dist {
       best_dist = d
       best_version = v
     }
   }
-  (best_dist, best_version)
-}
-
-///| 18bit 生読取値から最尤バージョン(7..40)を返す。距離>3 は None
-///| （系統1→系統2の2段フォールバックは decode_format と同じ）。
-pub fn decode_version(bits1 : Int, bits2 : Int) -> Int? {
-  let (d1, v1) = best_version_match(bits1)
-  if d1 <= 3 {
-    return Some(v1)
+  if best_dist <= 3 {
+    Some(best_version)
+  } else {
+    None
   }
-  let (d2, v2) = best_version_match(bits2)
-  if d2 <= 3 {
-    return Some(v2)
-  }
-  None
 }
 
 ///| フォーマット情報15bitを行列から読み出す（座標は encode `place_format`

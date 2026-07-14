@@ -146,6 +146,76 @@ test "decode_format rejects when both copies are far from every codeword" {
   }
 }
 
+// ---- ②' 系統間不一致（非対称破損）: 客観的に近い方が勝つ ----
+
+///| bit 15 未満のハミング距離（テスト内独立実装）。
+fn test_hamming(a : Int, b : Int) -> Int {
+  let mut x = a ^ b
+  let mut d = 0
+  while x != 0 {
+    d = d + (x & 1)
+    x = x >> 1
+  }
+  d
+}
+
+///| jsQR readFormatInformation は「系統1→系統2の逐次フォールバック」ではなく、
+///| 全候補について min(dist(bits1,C), dist(bits2,C)) を単一ループで追跡する
+///| （decoder.ts:190-235）。両系統が別々の符号語の近傍にある非対称破損では、
+///| 客観的に距離が近い方が勝たなければならない。逐次フォールバック実装だと
+///| bits1 側（距離3 <= 3）で先に (L,0) を採用してしまうため、このテストが
+///| 実装方式を弁別する。
+///|
+///| 健全性: BCH(15,5) の最小距離は7なので、3bit破壊した bits1 の最近傍は
+///| C1（他の符号語へは三角不等式より >= 7-3 = 4）、1bit破壊した bits2 の
+///| 最近傍は C2（他へは >= 6）と保証される。さらにテスト内で実距離も
+///| 検算して前提を固定する。
+test "decode_format picks objectively closer codeword across copies" {
+  let c1 = @encode.format_bits(@encode.EcLevel::L, 0)
+  let c2 = @encode.format_bits(@encode.EcLevel::H, 7)
+  // bits1 = C1 に3bit反転、bits2 = C2 に1bit反転
+  let bits1 = flip_bit(flip_bit(flip_bit(c1, 0), 5), 10)
+  let bits2 = flip_bit(c2, 7)
+  // 前提の検算: bits1 は C1 から距離3、bits2 は C2 から距離1
+  assert_eq(test_hamming(bits1, c1), 3)
+  assert_eq(test_hamming(bits2, c2), 1)
+  // 距離1の C2 側が勝つ
+  match @decode.decode_format(bits1, bits2) {
+    Some(fi) => {
+      assert_eq(fi.ec, @encode.EcLevel::H)
+      assert_eq(fi.mask, 7)
+    }
+    None => abort("expected Some((H,7))")
+  }
+  // 鏡映: 系統を入れ替えても客観的に近い方（C2、今度は bits1 側）が勝つ
+  match @decode.decode_format(bits2, bits1) {
+    Some(fi) => {
+      assert_eq(fi.ec, @encode.EcLevel::H)
+      assert_eq(fi.mask, 7)
+    }
+    None => abort("expected Some((H,7)) in mirrored order")
+  }
+}
+
+///| decode_version 版の不一致テスト。v7 に3bit破壊 vs v25 に1bit破壊 →
+///| 客観的に近い v25 が勝つ（BCH(18,6) も最小距離7以上なので同じ論証が成立）。
+test "decode_version picks objectively closer codeword across copies" {
+  let c1 = @encode.version_bits(7)
+  let c2 = @encode.version_bits(25)
+  let bits1 = flip_bit(flip_bit(flip_bit(c1, 0), 6), 13)
+  let bits2 = flip_bit(c2, 9)
+  assert_eq(test_hamming(bits1, c1), 3)
+  assert_eq(test_hamming(bits2, c2), 1)
+  match @decode.decode_version(bits1, bits2) {
+    Some(v) => assert_eq(v, 25)
+    None => abort("expected Some(25)")
+  }
+  match @decode.decode_version(bits2, bits1) {
+    Some(v) => assert_eq(v, 25)
+    None => abort("expected Some(25) in mirrored order")
+  }
+}
+
 // ---- ③ decode_version ----
 
 test "decode_version roundtrips for all v in 7..40" {
