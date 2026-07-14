@@ -13,7 +13,7 @@
 pub struct FormatInfo {
   ec : @encode.EcLevel
   mask : Int
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///| 全EC水準の列挙（インデックス順に依存しない固定順）。
 fn all_ec_levels() -> Array[@encode.EcLevel] {

@@ -55,7 +55,7 @@ pub(all) enum EcLevel {
   M
   Q
   H
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 fn ec_index(ec : EcLevel) -> Int {
   match ec {

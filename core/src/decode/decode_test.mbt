@@ -32,7 +32,7 @@ fn matrix_to_rgba(
       buf[i + 3] = b'\xFF'
     }
   }
-  (Bytes::from_fixedarray(buf), dim, dim)
+  (Bytes::from_array(buf[:]), dim, dim)
 }
 
 ///| 白黒を入れ替えたRGBA Bytesを作る（invert往復テスト用）。
@@ -46,7 +46,7 @@ fn invert_rgba(data : Bytes, width : Int, height : Int) -> Bytes {
     buf[o + 2] = v.to_byte()
     buf[o + 3] = b'\xFF'
   }
-  Bytes::from_fixedarray(buf)
+  Bytes::from_array(buf[:])
 }
 
 test "decode: full pipeline round-trip for ASCII text" {
@@ -94,7 +94,7 @@ test "decode_js: wrong data length returns empty string" {
     None => fail("encode failed")
   }
   let (data, w, h) = matrix_to_rgba(m, 4, 16, 30, 220)
-  let truncated = data[0:data.length() - 4].to_bytes()
+  let truncated = data[0:data.length() - 4].to_owned()
   assert_eq(@decode.decode_js(truncated, w, h, false), "")
 }
 
@@ -112,7 +112,7 @@ test "decode_js: noise-only image returns empty string" {
       buf[i + 3] = b'\xFF'
     }
   }
-  let data = Bytes::from_fixedarray(buf)
+  let data = Bytes::from_array(buf[:])
   assert_true(@decode.decode(data, w, h, true) is None)
   assert_eq(@decode.decode_js(data, w, h, true), "")
 }
@@ -172,7 +172,7 @@ test "decode_js: JSON escaping for quotes and backslashes" {
 }
 
 test "decode_js: guard branches return empty string without panicking" {
-  let tiny = Bytes::from_fixedarray(FixedArray::make(4, b'\x00'))
+  let tiny = Bytes::from_array(FixedArray::make(4, b'\x00')[:])
   // width=0 / height=0 / 負値
   assert_eq(@decode.decode_js(tiny, 0, 10, false), "")
   assert_eq(@decode.decode_js(tiny, 10, 0, false), "")
@@ -185,7 +185,7 @@ test "decode_js: guard branches return empty string without panicking" {
   // 空データ + 65536x65536 が真の致命ケース: 旧ガードは 0 == 0*4 で
   // 両方すり抜け、binarize が範囲外パニックしていた（mutation checkで
   // 旧ロジックに戻すとこの行だけがパニックすることを確認済み）。
-  let empty = Bytes::from_fixedarray(FixedArray::make(0, b'\x00'))
+  let empty = Bytes::from_array(FixedArray::make(0, b'\x00')[:])
   assert_eq(@decode.decode_js(empty, 65536, 65536, false), "")
   // 65535*65535 ≈ 4.29e9 も Int32 max 超（正のオーバーフロー域）
   assert_eq(@decode.decode_js(tiny, 65535, 65535, false), "")

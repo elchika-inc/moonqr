@@ -109,5 +109,5 @@ pub fn frame_set(f : FixedArray[Byte], i : Int, v : Int) -> Unit {
 }
 
 pub fn bench_kernel_arr(f : FixedArray[Byte], width : Int, height : Int) -> Int {
-  bench_kernel(Bytes::from_fixedarray(f), width, height)
+  bench_kernel(Bytes::from_array(f[:]), width, height)
 }

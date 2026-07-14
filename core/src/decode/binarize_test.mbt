@@ -33,7 +33,7 @@ fn synth_frame(w : Int, h : Int) -> Bytes {
       buf[i + 3] = b'\xFF'
     }
   }
-  Bytes::from_fixedarray(buf)
+  Bytes::from_array(buf[:])
 }
 
 test "binarize marks ring pixel black and gap pixel white" {
@@ -82,7 +82,7 @@ test "non-multiple-of-8 frame keeps inversion invariant at every real pixel" {
       buf[i + 3] = b'\xFF'
     }
   }
-  let (bin, inv) = @decode.binarize(Bytes::from_fixedarray(buf), w, h)
+  let (bin, inv) = @decode.binarize(Bytes::from_array(buf[:]), w, h)
   // 全実ピクセルで inverted == !binarized（部分ブロック含む）
   for y = 0; y < h; y = y + 1 {
     for x = 0; x < w; x = x + 1 {

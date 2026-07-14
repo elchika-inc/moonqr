@@ -2,7 +2,7 @@ pub(all) enum Mode {
   Numeric
   Alphanumeric
   Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///| 英数字モードの文字集合における index。非対応は -1
 fn alnum_index(c : Char) -> Int {

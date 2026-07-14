@@ -25,18 +25,21 @@ jobs:
 
       # MoonBit の CDN (cli.moonbitlang.com) は "latest"/"nightly" チャンネルしか配信せず、
       # 日付/バージョン指定の過去ビルドを保持していない（unix.sh の ARGUMENTS /
-      # MOONBIT_INSTALL_VERSION は latest/nightly の切り替えにしか使えず、実際の検証済み
-      # バージョン 0.1.20260703 を指定しても 403 になる。2026-07-14 に確認済み）。
-      # そのため文字列によるバージョン固定はできず、代わりにインストール結果を固定キーで
-      # actions/cache しておき、「毎回 latest を再取得して知らぬ間に壊れる」のを防ぐ
-      # （キーを手動で上げるまでは同じツールチェインを使い続ける）。
-      # 背景・既知のブロッカー・アップグレード手順は docs/TOOLCHAIN.md を参照。
+      # MOONBIT_INSTALL_VERSION は latest/nightly の切り替えにしか使えず、過去の日付付き
+      # バージョンを指定しても 403 になる。2026-07-14 に確認済み）。文字列によるバージョン
+      # 固定は上流の都合で不可能——このキャッシュはそれの代替ではなく、単なるダウンロード
+      # 時間短縮のためのビルド高速化キャッシュ。キーには実際に検証済みの moon バージョンを
+      # 含めており、latest が進んでも自動では変わらない（＝黙って知らぬ間に壊れることはない）。
+      # 新しい latest でコードを検証・移行したら、その時点でキーをそのバージョンに手動で
+      # 更新する（cache-miss→フレッシュインストールが起きるのは意図通り）。latest が既存
+      # コードを壊した場合の対応は「コードを latest に追従させる」（pre-1.0 言語のトレード
+      # オフ。詳細・アップグレード手順は docs/TOOLCHAIN.md）。
       - name: Cache MoonBit toolchain
         id: moon-cache
         uses: actions/cache@v4
         with:
           path: ~/.moon
-          key: moonbit-toolchain-${{ runner.os }}-2026-07-14
+          key: moonbit-toolchain-${{ runner.os }}-0.1.20260713
 
       - name: Install MoonBit toolchain
         if: steps.moon-cache.outputs.cache-hit != 'true'

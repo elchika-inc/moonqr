@@ -25,15 +25,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # See .github/workflows/ci.yml for why this can't be a real version pin, and
-      # docs/TOOLCHAIN.md for the full explanation + upgrade procedure. Keep this cache key
-      # in sync with ci.yml's.
+      # See .github/workflows/ci.yml for why this can't be a real version pin (upstream only
+      # serves latest/nightly) — this is a build-speed cache, not a pin, keyed on the moon
+      # version actually verified against this repo. Keep this cache key in sync with ci.yml's.
+      # Full explanation + upgrade procedure: docs/TOOLCHAIN.md.
       - name: Cache MoonBit toolchain
         id: moon-cache
         uses: actions/cache@v4
         with:
           path: ~/.moon
-          key: moonbit-toolchain-${{ runner.os }}-2026-07-14
+          key: moonbit-toolchain-${{ runner.os }}-0.1.20260713
 
       - name: Install MoonBit toolchain
         if: steps.moon-cache.outputs.cache-hit != 'true'

@@ -89,7 +89,7 @@ test "decode: transposed clean QR image recovers via scan's mirror retry" {
       buf[i + 3] = b'\xFF'
     }
   }
-  let data = Bytes::from_fixedarray(buf)
+  let data = Bytes::from_array(buf[:])
   let r = match decode(data, side, side, false) {
     Some(r) => r
     None => fail("expected mirror retry to recover the transposed image")

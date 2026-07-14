@@ -24,7 +24,7 @@ fn synth_frame(w : Int, h : Int) -> Bytes {
       buf[i + 3] = b'\xFF'
     }
   }
-  Bytes::from_fixedarray(buf)
+  Bytes::from_array(buf[:])
 }
 
 test "kernel finds finder-like runs in synthetic frame" {
@@ -43,5 +43,5 @@ test "kernel finds nothing in noise-only frame" {
     buf[i * 4 + 2] = v.to_byte()
     buf[i * 4 + 3] = b'\xFF'
   }
-  assert_eq(@bench.bench_kernel(Bytes::from_fixedarray(buf), w, w), 0)
+  assert_eq(@bench.bench_kernel(Bytes::from_array(buf[:]), w, w), 0)
 }

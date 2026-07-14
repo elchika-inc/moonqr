@@ -26,7 +26,7 @@
 pub struct DecodedData {
   text : String
   bytes : Array[Int]
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///| BitStream.ts の鏡映。MSB-firstでビット列を読む。バイト境界最適化はせず、
 ///| 1bitずつ読み進める単純実装（正しさを優先。BitWriter.write の逆操作に相当）。
@@ -71,9 +71,9 @@ fn chars_to_string(chars : Array[Char]) -> String {
 ///| 範囲外（0-44 以外）は呼び出し元で弾く。
 fn alnum_char(idx : Int) -> Char {
   if idx < 10 {
-    Char::from_int(48 + idx) // '0'-'9'
+    Int::unsafe_to_char(48 + idx) // '0'-'9'
   } else if idx < 36 {
-    Char::from_int(65 + idx - 10) // 'A'-'Z'
+    Int::unsafe_to_char(65 + idx - 10) // 'A'-'Z'
   } else {
     match idx {
       36 => ' '
@@ -189,9 +189,9 @@ fn decode_numeric(
     bytes.push(48 + a)
     bytes.push(48 + b)
     bytes.push(48 + c)
-    chars.push(Char::from_int(48 + a))
-    chars.push(Char::from_int(48 + b))
-    chars.push(Char::from_int(48 + c))
+    chars.push(Int::unsafe_to_char(48 + a))
+    chars.push(Int::unsafe_to_char(48 + b))
+    chars.push(Int::unsafe_to_char(48 + c))
     length = length - 3
   }
   if length == 2 {
@@ -206,8 +206,8 @@ fn decode_numeric(
     let b = num % 10
     bytes.push(48 + a)
     bytes.push(48 + b)
-    chars.push(Char::from_int(48 + a))
-    chars.push(Char::from_int(48 + b))
+    chars.push(Int::unsafe_to_char(48 + a))
+    chars.push(Int::unsafe_to_char(48 + b))
   } else if length == 1 {
     let num = match r.read_bits(4) {
       Some(v) => v
@@ -217,7 +217,7 @@ fn decode_numeric(
       return None
     }
     bytes.push(48 + num)
-    chars.push(Char::from_int(48 + num))
+    chars.push(Int::unsafe_to_char(48 + num))
   }
   Some(())
 }
@@ -290,7 +290,7 @@ fn decode_byte(
   match utf8_decode(seg_bytes) {
     Some(cps) =>
       for i = 0; i < cps.length(); i = i + 1 {
-        chars.push(Char::from_int(cps[i]))
+        chars.push(Int::unsafe_to_char(cps[i]))
       }
     None => () // 不正UTF-8: jsQRのcatchと同じくテキスト寄与なしで継続
   }
@@ -323,8 +323,8 @@ fn decode_kanji(
     bytes.push(c >> 8)
     bytes.push(c & 0xFF)
     match sjis_to_unicode(c) {
-      Some(cp) => chars.push(Char::from_int(cp))
-      None => chars.push(Char::from_int(0))
+      Some(cp) => chars.push(Int::unsafe_to_char(cp))
+      None => chars.push(Int::unsafe_to_char(0))
     }
   }
   Some(())

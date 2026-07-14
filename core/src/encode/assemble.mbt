@@ -17,7 +17,7 @@ pub fn assemble(bits : BitWriter, version : Int, ec : EcLevel) -> Array[Int]? {
   let mut pad_toggle = true
   while data.length() < n_data {
     data.push(if pad_toggle { 0xEC } else { 0x11 })
-    pad_toggle = not(pad_toggle)
+    pad_toggle = !pad_toggle
   }
   // ブロック分割 + RS
   let blocks = rs_blocks(version, ec)

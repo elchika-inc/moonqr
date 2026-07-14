@@ -6,9 +6,11 @@ tooling quirks that are easy to trip over on a first checkout — read this befo
 ## Prerequisites
 
 - **MoonBit toolchain** (compiles `core/` to JavaScript). This repo is verified against
-  **`0.1.20260703` (`6fbf8c3` 2026-07-03)** — installing `latest` may give you a newer,
-  incompatible toolchain. See [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) for why the version
-  can't actually be pinned by the official installer, and what to do about it:
+  **`0.1.20260713` (`75c7e1f` 2026-07-13)**, which was `latest` at the time of verification.
+  The official installer only ever serves `latest`/`nightly` — it cannot install a specific
+  historical version — so by the time you read this, `latest` may have moved further and be
+  incompatible with `core/` again. See [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) for why
+  version pinning isn't possible upstream, and what to do if `moon test` fails after install:
 
   ```sh
   curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash

@@ -26,7 +26,7 @@ test "decode_format recovers all 32 (ec, mask) combos" {
           assert_eq(fi.ec, ec)
           assert_eq(fi.mask, mask)
         }
-        None => abort("expected Some for ec=\{ec} mask=\{mask}")
+        None => abort("expected Some for ec_index=\{ei} mask=\{mask}")
       }
     }
   }

@@ -13,19 +13,19 @@ pub fn Matrix::new(version : Int) -> Matrix {
   }
 }
 
-pub fn get(self : Matrix, x : Int, y : Int) -> Bool {
+pub fn Matrix::get(self : Matrix, x : Int, y : Int) -> Bool {
   self.modules[y * self.size + x]
 }
 
-pub fn set(self : Matrix, x : Int, y : Int, v : Bool) -> Unit {
+pub fn Matrix::set(self : Matrix, x : Int, y : Int, v : Bool) -> Unit {
   self.modules[y * self.size + x] = v
 }
 
-pub fn is_function(self : Matrix, x : Int, y : Int) -> Bool {
+pub fn Matrix::is_function(self : Matrix, x : Int, y : Int) -> Bool {
   self.function[y * self.size + x]
 }
 
-fn set_function(self : Matrix, x : Int, y : Int, v : Bool) -> Unit {
+fn Matrix::set_function(self : Matrix, x : Int, y : Int, v : Bool) -> Unit {
   self.set(x, y, v)
   self.function[y * self.size + x] = true
 }
