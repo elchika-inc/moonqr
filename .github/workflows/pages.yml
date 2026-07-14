@@ -25,10 +25,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # See .github/workflows/ci.yml for why this can't be a real version pin, and
+      # docs/TOOLCHAIN.md for the full explanation + upgrade procedure. Keep this cache key
+      # in sync with ci.yml's.
+      - name: Cache MoonBit toolchain
+        id: moon-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.moon
+          key: moonbit-toolchain-${{ runner.os }}-2026-07-14
+
       - name: Install MoonBit toolchain
-        run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+        if: steps.moon-cache.outputs.cache-hit != 'true'
+        run: curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+
+      - name: Add MoonBit to PATH
+        run: echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: Show MoonBit toolchain version
+        run: moon version
 
       - name: Build core (MoonBit -> JS)
         working-directory: core

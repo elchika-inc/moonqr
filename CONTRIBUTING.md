@@ -5,11 +5,15 @@ tooling quirks that are easy to trip over on a first checkout — read this befo
 
 ## Prerequisites
 
-- **MoonBit toolchain** (compiles `core/` to JavaScript):
+- **MoonBit toolchain** (compiles `core/` to JavaScript). This repo is verified against
+  **`0.1.20260703` (`6fbf8c3` 2026-07-03)** — installing `latest` may give you a newer,
+  incompatible toolchain. See [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) for why the version
+  can't actually be pinned by the official installer, and what to do about it:
 
   ```sh
   curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
   export PATH="$HOME/.moon/bin:$PATH"
+  moon version   # compare against docs/TOOLCHAIN.md
   ```
 
 - **Node.js 22+** (CI runs on Node 22; the published npm packages declare `engines.node
