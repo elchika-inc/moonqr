@@ -104,6 +104,96 @@ for (const { name, perspective } of PERSPECTIVE_CASES) {
   });
 }
 
+// --- Step 2b': ジオメトリピン（回転） ---
+// decode成功だけでは「デコーダが歪みを復元した」のか「ラスタライザが
+// そもそも歪ませていない」のか区別できない（サボタージュレビュー指摘）。
+// そこでデコーダが報告する corners を、rasterize.mjs の実装とは独立に
+// 手計算した期待画像座標へピン留めする。
+//
+// 導出（rasterize のヘルパは一切使わない・平面幾何の手計算）:
+//   v2-M: size=25, scale=4, margin=4
+//   m = margin*scale = 16px（余白）, s = size*scale = 100px（QR部）
+//   W = (size+2*margin)*scale = 132px（正準画像の一辺）, pad = 2px
+//   正準画像でのQR論理TL角 = (m, m) = (16,16)、BR角 = (m+s, m+s) = (116,116)
+//   90度回転（中心(W/2,W/2)=(66,66)、x'=cx-dy, y'=cy+dx）:
+//     TL(16,16): dx=dy=-50 → (66+50, 66-50) = (116, 16)
+//     BR(116,116): dx=dy=+50 → (66-50, 66+50) = (16, 116)
+//   正方形の90度回転はbboxが不変（[0,W]²のまま）なので平行移動は+padのみ:
+//     期待 corners[0] = (118, 18) / corners[2] = (18, 118)
+//   theta=0サボタージュ時は corners[0]=(18,18) となり100px乖離 → 必ずFAIL。
+test("roundtrip geometry pin: rotate=90 moves logical TL to (118,18)", () => {
+  const flat = encode_js(ROTATE_TEXT, EC_NUM.M, 2);
+  assert.equal(flat[0], 25, "v2 size must be 25 (pin arithmetic depends on it)");
+  const result = decodeRasterized(flat, { scale: 4, margin: 4, rotate: 90 });
+  assert.notEqual(result, null);
+  assert.equal(result.text, ROTATE_TEXT);
+  const tol = 8; // 2*scale
+  const tl = result.corners[0];
+  const br = result.corners[2];
+  assert.ok(Math.abs(tl.x - 118) <= tol, `TL.x=${tl.x} expected~118 (rotated)`);
+  assert.ok(Math.abs(tl.y - 18) <= tol, `TL.y=${tl.y} expected~18 (rotated)`);
+  assert.ok(Math.abs(br.x - 18) <= tol, `BR.x=${br.x} expected~18 (rotated)`);
+  assert.ok(Math.abs(br.y - 118) <= tol, `BR.y=${br.y} expected~118 (rotated)`);
+});
+
+// --- Step 2c': ジオメトリピン（透視: せん断＝アフィン直接算術） ---
+// 上辺を右へ 12% ずらすせん断（tl/tr 同オフセット）。quad は平行四辺形に
+// なるため写像はアフィンで、内部点は直接算術で計算できる（ホモグラフィ不要）:
+//   quad: p0=(kW,0) p1=(W+kW,0) p2=(W,W) p3=(0,W)（k=0.12）
+//   bbox minX=0 → キャンバス平行移動は +pad のみ
+//   P(u,v) = p0 + u*(p1-p0) + v*(p3-p0), p1-p0=(W,0), p3-p0=(-kW,W)
+//   QR TL: u=v=m/W → x = kW + m - (m/W)*kW + pad, y = m + pad
+//   QR BR: u=v=(m+s)/W → 同式
+// perspective短絡サボタージュ時は TL.x≈18（乖離13.9px）→ 必ずFAIL。
+test("roundtrip geometry pin: perspective shear (affine arithmetic)", () => {
+  const flat = encode_js(PERSPECTIVE_TEXT, EC_NUM.M, 2);
+  assert.equal(flat[0], 25);
+  const k = 0.12;
+  const result = decodeRasterized(flat, {
+    scale: 4, margin: 4, perspective: { tl: { x: k }, tr: { x: k } },
+  });
+  assert.notEqual(result, null);
+  assert.equal(result.text, PERSPECTIVE_TEXT);
+  const W = 132, pad = 2, m = 16, s = 100;
+  const expX = (px) => k * W + px - (px / W) * k * W + pad;
+  const tol = 4;
+  const tl = result.corners[0];
+  const br = result.corners[2];
+  assert.ok(Math.abs(tl.x - expX(m)) <= tol, `TL.x=${tl.x} expected~${expX(m)}`);
+  assert.ok(Math.abs(tl.y - (m + pad)) <= tol, `TL.y=${tl.y} expected~${m + pad}`);
+  assert.ok(Math.abs(br.x - expX(m + s)) <= tol, `BR.x=${br.x} expected~${expX(m + s)}`);
+  assert.ok(Math.abs(br.y - (m + s + pad)) <= tol, `BR.y=${br.y} expected~${m + s + pad}`);
+});
+
+// --- Step 2c'': ジオメトリピン（透視: 台形＝真の射影変換） ---
+// せん断ピンはアフィン退化（g=h=0）のため、射影パス（g,h≠0）もピンする。
+// 期待値は rasterize.mjs（Heckbert閉形式）とは独立の実装——単位正方形→quad
+// の DLT を 8x8 ガウス消去で解く一回限りのスクリプト——で導出してハード
+// コードした値（導出条件: W=132, pad=2, quad p0=(0.08W+2,2) p1=(0.92W+2,2)
+// p2=(W+2,W+2) p3=(2,W+2)、QR角は u=v=16/132 と 116/132）:
+//   QR TL = (25.17, 15.71) / QR TR = (110.83, 15.71) / QR BR = (116.87, 115.38)
+// 実測デコーダ出力 (25.55,16.36)/(117.70,116.19) と ~1px で一致し相互検証済み。
+// perspective短絡時は TL.x≈18（乖離7.2px > tol4）/ TR.x≈118 → 必ずFAIL。
+test("roundtrip geometry pin: perspective trapezoid (projective, DLT-derived)", () => {
+  const flat = encode_js(PERSPECTIVE_TEXT, EC_NUM.M, 2);
+  assert.equal(flat[0], 25);
+  const result = decodeRasterized(flat, {
+    scale: 4, margin: 4,
+    perspective: { tl: { x: 0.08, y: 0 }, tr: { x: -0.08, y: 0 } },
+  });
+  assert.notEqual(result, null);
+  assert.equal(result.text, PERSPECTIVE_TEXT);
+  const tol = 4;
+  const tl = result.corners[0];
+  const tr = result.corners[1];
+  const br = result.corners[2];
+  assert.ok(Math.abs(tl.x - 25.17) <= tol, `TL.x=${tl.x} expected~25.17`);
+  assert.ok(Math.abs(tl.y - 15.71) <= tol, `TL.y=${tl.y} expected~15.71`);
+  assert.ok(Math.abs(tr.x - 110.83) <= tol, `TR.x=${tr.x} expected~110.83`);
+  assert.ok(Math.abs(br.x - 116.87) <= tol, `BR.x=${br.x} expected~116.87`);
+  assert.ok(Math.abs(br.y - 115.38) <= tol, `BR.y=${br.y} expected~115.38`);
+});
+
 // --- Step 2d: ノイズ — v2-M × ノイズ振幅30, seed固定 ---
 test("roundtrip noise: v2-M amplitude=30 seed=42", () => {
   const flat = encode_js("ROTATE TEST", EC_NUM.M, 2);
