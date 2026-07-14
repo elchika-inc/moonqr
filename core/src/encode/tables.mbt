@@ -1,6 +1,6 @@
 ///| このファイルは scripts/gen-tables.mjs により生成。手編集禁止。
 ///| 出典: qrcode-generator (MIT) https://github.com/kazuhikoarase/qrcode-generator
-///| 取得元: https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/master/js/dist/qrcode.js
+///| 取得元: https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/83b7e8fe3fddd3b0368dbafd6ce56995bd25e3c8/js/dist/qrcode.js
 ///| RS_BLOCK_TABLE の行順は (version-1)*4 + ec_index(L=0,M=1,Q=2,H=3)。
 ///| （ErrorCorrectLevel の数値定数 L=1,M=0,Q=3,H=2 とは無関係。
 ///|  getRsBlockTable の switch 分岐がシンボル名基準のため、行オフセットは常に L,M,Q,H の固定順）

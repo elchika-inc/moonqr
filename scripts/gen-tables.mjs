@@ -4,7 +4,7 @@
 //
 // 注意: master ブランチの js/qrcode.js は現在のリポジトリ構成には存在しない
 // （js/ 以下は ts/ からビルドされた dist/ 構成に移行済み）。
-// 実際に確認したソース: https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/master/js/dist/qrcode.js
+// 実際に確認したソース: js/dist/qrcode.js
 // （コンパイル済み plain JS。ts/src/ts/com/d_project/qrcode/RSBlock.ts, QRUtil.ts と内容一致を確認済み）
 //
 // RS_BLOCK_TABLE の並びは (version-1)*4 + [L,M,Q,H の index]。
@@ -12,8 +12,13 @@
 // switch 文でシンボル名によって分岐しており、table の行オフセットは
 // L:+0, M:+1, Q:+2, H:+3 の固定順（ソースコメント "// L // M // Q // H" とも一致）。
 // 数値定数の並びに惑わされないこと。
+//
+// master の HEAD が動くと無断でテーブル内容が変わりうるため、取得時点の
+// commit SHA に固定する（2026-07-14 時点の master HEAD = 83b7e8f）。
+// 更新時は `git ls-remote https://github.com/kazuhikoarase/qrcode-generator HEAD`
+// で新SHAを取得し、再生成後 `git diff core/src/encode/tables.mbt` で差分を確認すること。
 const SOURCE_URL =
-  "https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/master/js/dist/qrcode.js";
+  "https://raw.githubusercontent.com/kazuhikoarase/qrcode-generator/83b7e8fe3fddd3b0368dbafd6ce56995bd25e3c8/js/dist/qrcode.js";
 
 import { writeFileSync } from "node:fs";
 

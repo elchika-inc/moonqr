@@ -1,0 +1,187 @@
+///| 移植元: jsQR (Apache-2.0), commit 8e6a036beafa7053dd44b1b76ac578d22b1b3311
+///| https://github.com/cozmo/jsQR/blob/8e6a036beafa7053dd44b1b76ac578d22b1b3311/src/index.ts
+///| https://github.com/cozmo/jsQR/blob/8e6a036beafa7053dd44b1b76ac578d22b1b3311/src/decoder/decoder.ts
+///|
+///| `scan()`（候補 location を順に試し、最初に成功したものを返す）と
+///| `jsQR()`（binarize→通常/反転の2系統を順に scan）のトップレベル制御フローを移植する。
+///| jsQR `decoder.ts` の `decode()` は失敗時に抽出済み行列を対角線(TL-BR)で
+///| ミラー（転置）して再試行する。P2 Task 9 では見送っていたが、Task 10 の
+///| jsQRコーパスパリティ測定で locator の top-right/bottom-left 取り違え
+///| （ファインダが正方に近い配置のとき90度回転の写真で起きやすい）による
+///| 1件差分を確認したため実装する（`try_decode_matrix` + `mirror_matrix`）。
+///|
+///| バージョン判定: jsQR `readVersion` は dimension から算出した provisional
+///| version が6以下ならビット読取なしでそのまま採用し、7以上のときだけ
+///| version情報18bitを読んで最尤バージョンを採用する（不一致時はNoneではなく
+///| 常に読取値を採用——ただし本ポートでは読取バージョンの想定dimension
+///| (v*4+17) が実際の location.dimension と一致することを追加で要求する。
+///| jsQR は Uint8ClampedArray 相当の範囲外アクセスが `undefined`＝falsy になる
+///| JS の緩さに暗黙依存しているが、MoonBit の FixedArray はそうではなく
+///| 範囲外アクセスがパニックするため、不一致は候補失敗として扱う安全側の
+///| 意図的アダプテーション）。
+
+///| `decode` の返り値。corners は TL,TR,BR,BL 順、元画像px座標
+///| （jsQR `index.ts` の topLeftCorner/topRightCorner/bottomRightCorner/
+///| bottomLeftCorner と同じ mapping(0,0)/mapping(dim,0)/mapping(dim,dim)/
+///| mapping(0,dim) に対応）。
+pub struct DecodeResult {
+  text : String
+  bytes : Array[Int]
+  version : Int
+  ec : @encode.EcLevel
+  corners : Array[Point]
+}
+
+///| 抽出済み行列1枚に対する format/version/data のフルパイプライン
+///| （jsQR `decoder.ts` の `decodeMatrix` 相当）。dimension が
+///| `version*4+17`（version 1..40）の形でなければ、この時点で候補として
+///| 成立しない（jsQR は Uint8ClampedArray の範囲外読みが undefined=falsy に
+///| なる緩さに暗黙依存するが、MoonBit の FixedArray は範囲外アクセスが
+///| パニックするため、ここで明示的に弾く安全側のアダプテーション。
+///| noise由来の誤検出locationで再現確認済み）。
+fn try_decode_matrix(m : BitMatrix, dimension : Int) -> (Int, FormatInfo, DecodedData)? {
+  if (dimension - 17) % 4 != 0 {
+    return None
+  }
+  let provisional = (dimension - 17) / 4
+  if provisional < 1 || provisional > 40 {
+    return None
+  }
+  let version = if provisional <= 6 {
+    provisional
+  } else {
+    let (b1, b2) = read_version_bits(m)
+    let v = match decode_version(b1, b2) {
+      Some(v) => v
+      None => return None
+    }
+    if v * 4 + 17 != dimension {
+      return None
+    }
+    v
+  }
+  let (f1, f2) = read_format_bits(m)
+  let fmt = match decode_format(f1, f2) {
+    Some(f) => f
+    None => return None
+  }
+  let codewords = match read_data(m, version, fmt) {
+    Some(cw) => cw
+    None => return None
+  }
+  let dd = match decode_data(codewords, version) {
+    Some(d) => d
+    None => return None
+  }
+  Some((version, fmt, dd))
+}
+
+///| 行列を対角線(TL-BR)で転置する in-place（jsQR `decoder.ts` の `decode()`
+///| ミラー再試行相当）。locator がファインダの top-right/bottom-left を
+///| 取り違えたときに生じる転置誤りを補正する。
+fn mirror_matrix(m : BitMatrix) -> Unit {
+  for x = 0; x < m.width; x = x + 1 {
+    for y = x + 1; y < m.height; y = y + 1 {
+      let a = m.get(x, y)
+      let b = m.get(y, x)
+      if a != b {
+        m.set(x, y, b)
+        m.set(y, x, a)
+      }
+    }
+  }
+}
+
+///| 二値行列1枚に対する候補ループ（jsQR `scan()` 相当）。
+///| locate の候補を順に試し、通常の抽出行列で失敗したら対角ミラーで
+///| 再試行（jsQR `decode()` 相当）、それでも失敗したら次候補へ。
+fn scan(matrix : BitMatrix) -> DecodeResult? {
+  let locations = locate(matrix)
+  for i = 0; i < locations.length(); i = i + 1 {
+    let loc = locations[i]
+    let extracted = extract(matrix, loc)
+    let m = extracted.matrix
+    let attempt = match try_decode_matrix(m, loc.dimension) {
+      Some(r) => Some(r)
+      None => {
+        mirror_matrix(m)
+        try_decode_matrix(m, loc.dimension)
+      }
+    }
+    let (version, fmt, dd) = match attempt {
+      Some(r) => r
+      None => continue
+    }
+    let dim = loc.dimension.to_double()
+    let mapping = extracted.mapping
+    let corners = [
+      mapping(0.0, 0.0),
+      mapping(dim, 0.0),
+      mapping(dim, dim),
+      mapping(0.0, dim),
+    ]
+    return Some({ text: dd.text, bytes: dd.bytes, version, ec: fmt.ec, corners })
+  }
+  None
+}
+
+///| RGBA ピクセル → 復号結果。invert=true なら反転行列でも試行
+///| （jsQR `jsQR()` の `attemptBoth` 相当）。
+pub fn decode(data : Bytes, width : Int, height : Int, invert : Bool) -> DecodeResult? {
+  let (normal, inverted) = binarize(data, width, height)
+  match scan(normal) {
+    Some(r) => Some(r)
+    None => if invert { scan(inverted) } else { None }
+  }
+}
+
+///| EcLevel → "L"/"M"/"Q"/"H"（decode_js のJSON出力用）。
+fn ec_level_str(ec : @encode.EcLevel) -> String {
+  match ec {
+    @encode.EcLevel::L => "L"
+    @encode.EcLevel::M => "M"
+    @encode.EcLevel::Q => "Q"
+    @encode.EcLevel::H => "H"
+  }
+}
+
+///| RGBAピクセル1枚あたりの上限画素数（16M = 16 * 1024 * 1024）。
+let max_pixels : Int = 16 * 1024 * 1024
+
+///| JS境界（total）: `data.length == width*height*4` かつ `width>0`かつ`height>0`
+///| かつ `width*height <= 16M` を満たさない不正入力は例外を出さず ""。
+///| 画素数・バイト長の積は Int64 で計算する——Int(32bit) の積は
+///| width=height=65536 で 0 にラップし、ガードをすり抜けて binarize が
+///| 範囲外パニックする（レビュー指摘）。65535*65535 ≈ 4.29e9 も Int32 max
+///| を超えるため、個別の上限チェックだけでは不十分で Int64 積が必要。
+///| 成功時は `{"text":...,"bytes":[...],"version":N,"ecLevel":"M","corners":[{"x":..,"y":..}x4]}`
+///| のJSON文字列（moonbitlang/core `@json` の `Json::stringify` でエスケープ）。
+pub fn decode_js(data : Bytes, width : Int, height : Int, invert : Bool) -> String {
+  if width <= 0 || height <= 0 {
+    return ""
+  }
+  let pixels : Int64 = width.to_int64() * height.to_int64()
+  if pixels > max_pixels.to_int64() {
+    return ""
+  }
+  if data.length().to_int64() != pixels * 4L {
+    return ""
+  }
+  match decode(data, width, height, invert) {
+    None => ""
+    Some(r) => {
+      let bytes_json = r.bytes.map(fn(b) { Json::number(b.to_double()) })
+      let corners_json = r.corners.map(fn(p) {
+        Json::object({ "x": Json::number(p.x), "y": Json::number(p.y) })
+      })
+      let obj = Json::object({
+        "text": Json::string(r.text),
+        "bytes": Json::array(bytes_json),
+        "version": Json::number(r.version.to_double()),
+        "ecLevel": Json::string(ec_level_str(r.ec)),
+        "corners": Json::array(corners_json),
+      })
+      obj.stringify()
+    }
+  }
+}
