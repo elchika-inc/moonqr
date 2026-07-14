@@ -1,0 +1,88 @@
+name: CI
+
+# push/PR ごとに MoonBit コア + TS パッケージ両方のテストを走らせる。
+# pages.yml（Task 7）と同じ MoonBit/pnpm セットアップ手順を踏襲する。
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+
+      - name: moon test (core, target js)
+        working-directory: core
+        run: moon test --target js
+
+      - name: moon build (core, target js, release)
+        working-directory: core
+        run: moon build --target js --release
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Enable pnpm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages (tsup)
+        run: pnpm -r build
+
+      - name: Typecheck packages
+        run: pnpm -r typecheck
+
+      # fixtures/jsqr-e2e/ は jsQR の pinned SHA を shallow clone して取得する
+      # （scripts/fetch-fixtures.mjs）。gitignore 対象・ネットワークが要るため、
+      # SHA（＝スクリプトの内容）が変わらない限り再取得しないようキャッシュする。
+      - name: Cache jsQR e2e fixtures
+        id: fixtures-cache
+        uses: actions/cache@v4
+        with:
+          path: fixtures/jsqr-e2e
+          key: fixtures-jsqr-e2e-${{ hashFiles('scripts/fetch-fixtures.mjs') }}
+
+      - name: Fetch jsQR e2e fixtures (parity test corpus)
+        run: node scripts/fetch-fixtures.mjs
+
+      - name: Node test suite (moonqr, incl. jsQR parity + encode sweep)
+        run: node --test packages/moonqr/test/*.test.mjs
+
+      - name: Vitest (moonqr)
+        run: pnpm --filter @elchika-inc/moonqr test:unit
+
+      - name: Vitest (scanner)
+        run: pnpm --filter @elchika-inc/moonqr-scanner test:unit
+
+      - name: Report bundle sizes
+        if: always()
+        run: node scripts/report-bundle-sizes.mjs

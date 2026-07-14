@@ -7,3 +7,9 @@ fixtures/
 dist/
 packages/scanner/src/worker-inline.generated.ts
 site/assets/
+
+# prepack (scripts/copy-legal-files.mjs) がリポジトリルートから複製する使い捨てコピー。
+# ソースは各リポジトリルート直下の LICENSE / NOTICE / THIRD_PARTY_LICENSES。
+packages/*/LICENSE
+packages/*/NOTICE
+packages/*/THIRD_PARTY_LICENSES

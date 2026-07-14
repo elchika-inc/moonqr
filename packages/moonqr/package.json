@@ -6,9 +6,20 @@
   "description": "QR code encoder and decoder written in MoonBit. No dependencies, works in the browser.",
   "license": "Apache-2.0",
   "sideEffects": false,
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/naoto24kawa/moonqr.git"
+    "url": "git+https://github.com/naoto24kawa/moonqr.git",
+    "directory": "packages/moonqr"
+  },
+  "homepage": "https://github.com/naoto24kawa/moonqr/tree/main/packages/moonqr#readme",
+  "bugs": {
+    "url": "https://github.com/naoto24kawa/moonqr/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "qrcode",
@@ -18,7 +29,7 @@
     "moonbit",
     "browser"
   ],
-  "files": ["dist"],
+  "files": ["dist", "README.md", "LICENSE", "NOTICE", "THIRD_PARTY_LICENSES"],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -42,12 +53,15 @@
       "types": "./dist/dom.d.ts",
       "import": "./dist/dom.js",
       "require": "./dist/dom.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "test:unit": "vitest run",
-    "build": "tsup"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsup",
+    "prepack": "node ../../scripts/copy-legal-files.mjs"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",
