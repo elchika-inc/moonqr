@@ -27,6 +27,31 @@ test "encode over capacity returns None" {
   }
 }
 
+test "encode_js rejects out-of-range version and ec" {
+  assert_eq(@encode.encode_js("HI", 1, 41), [])
+  assert_eq(@encode.encode_js("HI", 1, -1), [])
+  assert_eq(@encode.encode_js("HI", 9, 1), []) // ec 範囲外
+  assert_eq(@encode.encode_js("HI", -1, 1), [])
+}
+
+test "encode_js rejects empty text" {
+  // 空文字は仕様として拒否する（qrcode npm は throw する。我々は [] で表現）
+  assert_eq(@encode.encode_js("", 1, 0), [])
+}
+
+test "encode rejects empty text" {
+  match @encode.encode("", @encode.EcLevel::M, None) {
+    Some(_) => abort("empty text must be rejected")
+    None => assert_true(true)
+  }
+}
+
+test "to_svg_string_js produces svg or empty on failure" {
+  let svg = @encode.to_svg_string_js("HI", 1, 0, 4, 10)
+  assert_true(svg.contains("<svg"))
+  assert_eq(@encode.to_svg_string_js("HI", 1, 41, 4, 10), "") // 範囲外 → ""
+}
+
 test "svg output contains rect per dark module" {
   match @encode.encode("HI", @encode.EcLevel::M, None) {
     Some(m) => {

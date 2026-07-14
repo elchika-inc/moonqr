@@ -94,7 +94,10 @@ pub fn utf8_encode(text : String) -> Array[Int] {
   out
 }
 
-///| モード指示子＋文字数指示子＋データビットを書く
+///| モード指示子＋文字数指示子＋データビットを書く。
+///| 契約: mode=Alphanumeric で呼ぶ場合、text の全文字が英数字モード文字集合
+///| （0-9, A-Z, および space $ % * + - . / :）に属すること。呼び出し側は
+///| detect_mode() 経由でこの前提を満たすこと。違反（範囲外文字）は abort。
 pub fn write_segment(
   w : BitWriter,
   text : String,
@@ -127,7 +130,15 @@ pub fn write_segment(
       w.write(0b0010, 4)
       let idx : Array[Int] = []
       for c in text {
-        idx.push(alnum_index(c))
+        let i = alnum_index(c)
+        // 契約: Alphanumeric モードで write_segment を呼ぶのは detect_mode が
+        // 全文字を英数字と判定した場合のみ（内部呼び出しは常にこの前提を満たす）。
+        // alnum_index が -1 を返す文字が来るのは呼び出し側の契約違反であり、
+        // 誤ったビット列を無言で書き込むよりも早期に abort して検知する。
+        if i < 0 {
+          abort("write_segment: non-alphanumeric char in Alphanumeric mode (caller contract violation)")
+        }
+        idx.push(i)
       }
       w.write(idx.length(), cci_bits(mode, version))
       let mut i = 0

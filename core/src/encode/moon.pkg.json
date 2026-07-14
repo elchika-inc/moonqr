@@ -2,7 +2,7 @@
   "import": [{ "path": "naoto24kawa/moonqr/gf256", "alias": "gf256" }],
   "link": {
     "js": {
-      "exports": ["encode_js"],
+      "exports": ["encode_js", "to_svg_string_js"],
       "format": "esm"
     }
   }
