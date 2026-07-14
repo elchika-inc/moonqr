@@ -11,12 +11,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/naoto24kawa/moonqr.git",
+    "url": "git+https://github.com/elchika-inc/moonqr.git",
     "directory": "packages/scanner"
   },
-  "homepage": "https://github.com/naoto24kawa/moonqr/tree/main/packages/scanner#readme",
+  "homepage": "https://github.com/elchika-inc/moonqr/tree/main/packages/scanner#readme",
   "bugs": {
-    "url": "https://github.com/naoto24kawa/moonqr/issues"
+    "url": "https://github.com/elchika-inc/moonqr/issues"
   },
   "publishConfig": {
     "access": "public"

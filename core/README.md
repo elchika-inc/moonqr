@@ -5,7 +5,7 @@ JavaScript dependencies, no WASM runtime coupling. This is the MoonBit-native mo
 published to [mooncakes.io](https://mooncakes.io/); it is also the source compiled to
 JS and shipped as the npm packages [`@elchika-inc/moonqr`](https://www.npmjs.com/package/@elchika-inc/moonqr)
 and [`@elchika-inc/moonqr-scanner`](https://www.npmjs.com/package/@elchika-inc/moonqr-scanner) —
-see the [repository README](https://github.com/naoto24kawa/moonqr) for the JS/TS side
+see the [repository README](https://github.com/elchika-inc/moonqr) for the JS/TS side
 (if you're building a Node.js or browser app, you probably want the npm packages, not
 this module directly).
 
@@ -66,11 +66,11 @@ match result {
 
 ## License and attribution
 
-Apache License 2.0 — see [LICENSE](https://github.com/naoto24kawa/moonqr/blob/main/LICENSE).
+Apache License 2.0 — see [LICENSE](https://github.com/elchika-inc/moonqr/blob/main/LICENSE).
 
 Portions of `decode` are ported from [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0),
 and the Reed–Solomon block / alignment-pattern position tables in `encode` are derived
 from [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT). See
-[NOTICE](https://github.com/naoto24kawa/moonqr/blob/main/NOTICE) and
-[THIRD_PARTY_LICENSES](https://github.com/naoto24kawa/moonqr/blob/main/THIRD_PARTY_LICENSES)
+[NOTICE](https://github.com/elchika-inc/moonqr/blob/main/NOTICE) and
+[THIRD_PARTY_LICENSES](https://github.com/elchika-inc/moonqr/blob/main/THIRD_PARTY_LICENSES)
 for the full attribution.

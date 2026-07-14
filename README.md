@@ -14,7 +14,7 @@ browser (no WASM, no native addons).
 an uploaded image, or scan with your camera, all client-side) is built by
 [`.github/workflows/pages.yml`](.github/workflows/pages.yml), but Pages hasn't been enabled for
 this repository yet (human-gated step). Once enabled it will be live at
-`https://naoto24kawa.github.io/moonqr/`.
+`https://elchika-inc.github.io/moonqr/`.
 
 ## Why MoonBit
 
