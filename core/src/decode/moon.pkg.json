@@ -1,0 +1,6 @@
+{
+  "import": [
+    { "path": "naoto24kawa/moonqr/gf256", "alias": "gf256" },
+    { "path": "naoto24kawa/moonqr/encode", "alias": "encode" }
+  ]
+}
