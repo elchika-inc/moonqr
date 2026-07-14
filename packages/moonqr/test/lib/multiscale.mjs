@@ -66,10 +66,13 @@ export function halveRGBA(data, width, height) {
  *
  * 手順:
  *   1. メモリガード: width*height が MAX_PIXELS を超える場合、超えなくなるまで
- *      先に半分縮小する（decode_js の16Mピクセル上限に収めるため）。
+ *      先に半分縮小する（decode_js の16Mピクセル上限に収めるため）。この事前
+ *      半減も返り値の scale に計上する——scale は常に「入力ネイティブ解像度に
+ *      対する総縮小率」（例: 17.6Mピクセル入力で事前半減1回→初回試行で成功
+ *      なら scale=2。48MP級スマホ写真では事前半減が日常的に発動する）。
  *   2. decodeFn(data, width, height) を試行。truthy を返せば成功として
  *      { result, scale, width, height } を返す（scale = 1/scale が実際に使われた
- *      縮小率。scale=1なら無縮小、scale=8なら1/8縮小で成功）。
+ *      総縮小率。scale=1なら無縮小、scale=8なら1/8縮小で成功）。
  *   3. 失敗（falsy）なら max(width, height) >= 150 の間は halveRGBA して再試行。
  *      150未満まで縮小してなお失敗した場合は null を返す。
  *
@@ -85,17 +88,20 @@ export function multiScaleDecode(decodeFn, data, width, height) {
   let curData = data;
   let curW = width;
   let curH = height;
+  let scale = 1; // 入力ネイティブ解像度に対する総縮小率（事前半減も計上する）
 
-  // 1. メモリガード（16Mピクセル上限に収まるまで先に縮小）
+  // 1. メモリガード（16Mピクセル上限に収まるまで先に縮小。この半減も scale に
+  //    計上する——計上しないと「事前半減のおかげで初めて成功した」ケースが
+  //    scale=1（無縮小成功）として報告されてしまう）
   while (curW * curH > MAX_PIXELS) {
     const halved = halveRGBA(curData, curW, curH);
     curData = halved.data;
     curW = halved.width;
     curH = halved.height;
+    scale *= 2;
   }
 
   // 2-3. 縮小しながらの再試行ループ
-  let scale = 1;
   for (;;) {
     const result = decodeFn(curData, curW, curH);
     if (result) {

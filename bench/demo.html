@@ -114,18 +114,21 @@
 
   // decodeFn を現在スケールで試行し、失敗したら halveRGBA で段階的に縮小
   // しながら再試行する。成功時は { result, scale, width, height } を返す
-  // （scale = 1/scale が実際に使われた縮小率）。150px未満まで縮小してなお
-  // 失敗した場合は null。
+  // （scale = 1/scale が入力ネイティブ解像度に対する総縮小率。メモリガードの
+  // 事前半減も計上する）。150px未満まで縮小してなお失敗した場合は null。
   function multiScaleDecode(decodeFn, data, width, height) {
     let curData = data, curW = width, curH = height;
+    let scale = 1; // 入力ネイティブ解像度に対する総縮小率（事前半減も計上する）
 
-    // メモリガード: 16Mピクセル上限に収まるまで先に縮小
+    // メモリガード: 16Mピクセル上限に収まるまで先に縮小。この半減も scale に
+    // 計上する——計上しないと「事前半減のおかげで初めて成功した」ケースが
+    // scale=1（無縮小成功）として報告されてしまう（48MP級スマホ写真で日常的に発動）。
     while (curW * curH > MAX_PIXELS) {
       const halved = halveRGBA(curData, curW, curH);
       curData = halved.data; curW = halved.width; curH = halved.height;
+      scale *= 2;
     }
 
-    let scale = 1;
     for (;;) {
       const result = decodeFn(curData, curW, curH);
       if (result) {

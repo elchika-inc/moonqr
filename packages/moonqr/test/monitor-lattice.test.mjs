@@ -114,3 +114,47 @@ test("monitor lattice fixture: multiScaleDecode SUCCEEDS and returns the right t
   assert.equal(outcome.result.text, text);
   assert.ok(outcome.scale >= 2, `expected halving to have occurred (scale=${outcome.scale})`);
 });
+
+// 事前半減（メモリガード）のスケール計上の回帰テスト。
+// decode_js の16Mピクセル上限（16,777,216）を超える入力ではメモリガードが
+// ループ開始前に半減を行う。この半減が返り値の scale に計上されないと、
+// 「事前半減のおかげで初めて成功した」ケースが scale=1（無縮小成功）として
+// 報告されてしまう（48MP級スマホ写真 8064x6048 で日常的に発動する経路）。
+// クリーンなQR（格子なし）を 4200x4200（=17.64Mピクセル > 16M）の白キャンバス
+// に埋め込む——事前半減1回で 2100x2100 になり初回試行で成功するはずなので、
+// 「初回のループ内試行で成功しても scale が事前半減を反映して >= 2」を固定する。
+test("pre-halve memory guard: halvings are counted in the returned scale (>16M px input)", () => {
+  const text = "HELLO";
+  const flat = encode_js(text, EC_NUM.M, 1);
+  assert.notEqual(flat.length, 0, "encode_js must succeed");
+  // scale=8: 事前半減で4px/moduleになってもクリーンQRなら余裕でデコード可能
+  const qr = rasterize(flat, { scale: 8, margin: 4 });
+
+  const BIG = 4200; // 4200*4200 = 17,640,000 > 16*1024*1024 = 16,777,216
+  assert.ok(BIG * BIG > 16 * 1024 * 1024, "canvas must exceed the 16M pixel limit");
+  const big = new Uint8Array(BIG * BIG * 4).fill(255); // 全面白（alpha込み）
+  // QRを中央付近に埋め込む
+  const ox = Math.floor((BIG - qr.width) / 2);
+  const oy = Math.floor((BIG - qr.height) / 2);
+  for (let y = 0; y < qr.height; y++) {
+    const srcRow = y * qr.width * 4;
+    const dstRow = ((oy + y) * BIG + ox) * 4;
+    big.set(qr.data.subarray(srcRow, srcRow + qr.width * 4), dstRow);
+  }
+
+  const outcome = multiScaleDecode(decodeFn, big, BIG, BIG);
+  assert.notEqual(outcome, null, "multiScaleDecode must succeed on the oversized clean QR");
+  assert.equal(outcome.result.text, text);
+  assert.ok(
+    outcome.width * outcome.height <= 16 * 1024 * 1024,
+    "decode must have happened within the 16M pixel limit",
+  );
+  assert.ok(
+    outcome.scale >= 2,
+    `pre-halve halvings must be counted in the returned scale ` +
+      `(scale=${outcome.scale}, finalSize=${outcome.width}x${outcome.height})`,
+  );
+  // scale と実サイズの整合: 総縮小率 scale に対して final width = floor寄りの
+  // BIG/scale になっているはず（halveRGBAは各段で floor(w/2)）。
+  assert.equal(outcome.width, Math.floor(BIG / outcome.scale));
+});
