@@ -4,9 +4,11 @@
 ///|
 ///| `scan()`（候補 location を順に試し、最初に成功したものを返す）と
 ///| `jsQR()`（binarize→通常/反転の2系統を順に scan）のトップレベル制御フローを移植する。
-///| jsQR `decoder.ts` の `decode()` は失敗時に抽出済み行列を対角線でミラーして
-///| 再試行するが、brief の指示により本タスクでは未実装（候補ループのみ。
-///| ミラー再試行は将来タスクの検討事項として残す）。
+///| jsQR `decoder.ts` の `decode()` は失敗時に抽出済み行列を対角線(TL-BR)で
+///| ミラー（転置）して再試行する。P2 Task 9 では見送っていたが、Task 10 の
+///| jsQRコーパスパリティ測定で locator の top-right/bottom-left 取り違え
+///| （ファインダが正方に近い配置のとき90度回転の写真で起きやすい）による
+///| 1件差分を確認したため実装する（`try_decode_matrix` + `mirror_matrix`）。
 ///|
 ///| バージョン判定: jsQR `readVersion` は dimension から算出した provisional
 ///| version が6以下ならビット読取なしでそのまま採用し、7以上のときだけ
@@ -30,51 +32,84 @@ pub struct DecodeResult {
   corners : Array[Point]
 }
 
+///| 抽出済み行列1枚に対する format/version/data のフルパイプライン
+///| （jsQR `decoder.ts` の `decodeMatrix` 相当）。dimension が
+///| `version*4+17`（version 1..40）の形でなければ、この時点で候補として
+///| 成立しない（jsQR は Uint8ClampedArray の範囲外読みが undefined=falsy に
+///| なる緩さに暗黙依存するが、MoonBit の FixedArray は範囲外アクセスが
+///| パニックするため、ここで明示的に弾く安全側のアダプテーション。
+///| noise由来の誤検出locationで再現確認済み）。
+fn try_decode_matrix(m : BitMatrix, dimension : Int) -> (Int, FormatInfo, DecodedData)? {
+  if (dimension - 17) % 4 != 0 {
+    return None
+  }
+  let provisional = (dimension - 17) / 4
+  if provisional < 1 || provisional > 40 {
+    return None
+  }
+  let version = if provisional <= 6 {
+    provisional
+  } else {
+    let (b1, b2) = read_version_bits(m)
+    let v = match decode_version(b1, b2) {
+      Some(v) => v
+      None => return None
+    }
+    if v * 4 + 17 != dimension {
+      return None
+    }
+    v
+  }
+  let (f1, f2) = read_format_bits(m)
+  let fmt = match decode_format(f1, f2) {
+    Some(f) => f
+    None => return None
+  }
+  let codewords = match read_data(m, version, fmt) {
+    Some(cw) => cw
+    None => return None
+  }
+  let dd = match decode_data(codewords, version) {
+    Some(d) => d
+    None => return None
+  }
+  Some((version, fmt, dd))
+}
+
+///| 行列を対角線(TL-BR)で転置する in-place（jsQR `decoder.ts` の `decode()`
+///| ミラー再試行相当）。locator がファインダの top-right/bottom-left を
+///| 取り違えたときに生じる転置誤りを補正する。
+fn mirror_matrix(m : BitMatrix) -> Unit {
+  for x = 0; x < m.width; x = x + 1 {
+    for y = x + 1; y < m.height; y = y + 1 {
+      let a = m.get(x, y)
+      let b = m.get(y, x)
+      if a != b {
+        m.set(x, y, b)
+        m.set(y, x, a)
+      }
+    }
+  }
+}
+
 ///| 二値行列1枚に対する候補ループ（jsQR `scan()` 相当）。
-///| locate の候補を順に試し、format/version/data の全段を通過した最初の
-///| 結果を返す。途中で失敗した候補は次候補へ（continue）。
+///| locate の候補を順に試し、通常の抽出行列で失敗したら対角ミラーで
+///| 再試行（jsQR `decode()` 相当）、それでも失敗したら次候補へ。
 fn scan(matrix : BitMatrix) -> DecodeResult? {
   let locations = locate(matrix)
   for i = 0; i < locations.length(); i = i + 1 {
     let loc = locations[i]
     let extracted = extract(matrix, loc)
     let m = extracted.matrix
-    // dimension が version*4+17 の形（version 1..40）でなければ、この時点で
-    // 候補として成立しない（jsQR は Uint8ClampedArray の範囲外読みが
-    // undefined=falsy になる緩さに暗黙依存するが、MoonBit の FixedArray は
-    // 範囲外アクセスがパニックするため、ここで明示的に弾く安全側の
-    // アダプテーション。noise由来の誤検出locationで再現確認済み）。
-    if (loc.dimension - 17) % 4 != 0 {
-      continue
-    }
-    let provisional = (loc.dimension - 17) / 4
-    if provisional < 1 || provisional > 40 {
-      continue
-    }
-    let version = if provisional <= 6 {
-      provisional
-    } else {
-      let (b1, b2) = read_version_bits(m)
-      let v = match decode_version(b1, b2) {
-        Some(v) => v
-        None => continue
+    let attempt = match try_decode_matrix(m, loc.dimension) {
+      Some(r) => Some(r)
+      None => {
+        mirror_matrix(m)
+        try_decode_matrix(m, loc.dimension)
       }
-      if v * 4 + 17 != loc.dimension {
-        continue
-      }
-      v
     }
-    let (f1, f2) = read_format_bits(m)
-    let fmt = match decode_format(f1, f2) {
-      Some(f) => f
-      None => continue
-    }
-    let codewords = match read_data(m, version, fmt) {
-      Some(cw) => cw
-      None => continue
-    }
-    let dd = match decode_data(codewords, version) {
-      Some(d) => d
+    let (version, fmt, dd) = match attempt {
+      Some(r) => r
       None => continue
     }
     let dim = loc.dimension.to_double()
