@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       jsqr:
-        specifier: ^1.4.0
+        specifier: 1.4.0
         version: 1.4.0
       pngjs:
         specifier: ^7.0.0
