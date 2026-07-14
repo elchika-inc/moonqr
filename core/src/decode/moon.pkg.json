@@ -2,5 +2,12 @@
   "import": [
     { "path": "naoto24kawa/moonqr/gf256", "alias": "gf256" },
     { "path": "naoto24kawa/moonqr/encode", "alias": "encode" }
-  ]
+  ],
+  "test-import": [{ "path": "moonbitlang/core/json", "alias": "json" }],
+  "link": {
+    "js": {
+      "exports": ["decode_js"],
+      "format": "esm"
+    }
+  }
 }
