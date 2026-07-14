@@ -74,10 +74,13 @@
   // ローパスフィルタ）を繰り返すと1/8スケール付近で解決する。詳細は
   // bench/RESULT.md Task 12 節を参照。
   //
-  // 同一ロジックが packages/moonqr/test/lib/multiscale.mjs にも存在する
-  // （手動同期。demo.html は bench/ から静的配信されるため packages/ 配下
-  // からimportできない——ロジックを変更する場合は両方のファイルを更新
-  // すること。両ファイルにこの注記を残す）。
+  // 同一ロジックの正本は packages/scanner/src/multiscale.ts（Phase 3 Task 5 で
+  // 一本化。旧 packages/moonqr/test/lib/multiscale.mjs の手動同期複製は削除済み）。
+  // demo.html は bench/ から静的配信される単体HTMLのため packages/ 配下から
+  // importできず、このインライン複製が暫定的に残っている——Task 7 で
+  // demo.html を scanner/moonqr の dist import に作り直す際に削除される
+  // （意図的な二段階移行。ロジックを変更する場合は multiscale.ts と両方
+  // 更新すること）。
 
   // decode_js (core/src/decode/decode.mbt) の max_pixels 定数と同じ値
   // （16 * 1024 * 1024 = 16,777,216）。
