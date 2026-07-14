@@ -90,6 +90,39 @@ describe("decode", () => {
     expect(decode(bad, 5, 5)).toBeNull();
   });
 
+  // --- totality 契約: decode は「いかなる入力でも」例外を投げず DecodeResult|null を返す。
+  // MoonBit 側 decode_js は width/height を BigInt(width) に通すため、NaN/小数/Infinity が
+  // 境界を越えると RangeError で throw する（`width <= 0` ガードは NaN 比較が常に false に
+  // なるためすり抜ける）。data が null/undefined なら `data.length` 参照で TypeError。
+  // 小数の width は `canvas.width * devicePixelRatio` 等で現実に発生しうる経路であり、
+  // Task 6 の scanner がホストアプリを未捕捉例外でクラッシュさせる。JS 呼び出し元は型で
+  // 守られないため、境界の手前で全て null に倒す。
+  const INVALID_DIMENSIONS: Array<[string, unknown, unknown]> = [
+    ["NaN", Number.NaN, Number.NaN],
+    ["fractional (2.5)", 2.5, 2.5],
+    ["Infinity", Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY],
+    ["negative", -1, -1],
+    ["zero", 0, 0],
+  ];
+  it.each(INVALID_DIMENSIONS)(
+    "returns null (never throws) for %s width/height",
+    (_label, width, height) => {
+      const data = new Uint8Array(100);
+      expect(() =>
+        decode(data, width as number, height as number),
+      ).not.toThrow();
+      expect(decode(data, width as number, height as number)).toBeNull();
+    },
+  );
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+  ])("returns null (never throws) for %s data", (_label, data) => {
+    expect(() => decode(data as unknown as Uint8Array, 5, 5)).not.toThrow();
+    expect(decode(data as unknown as Uint8Array, 5, 5)).toBeNull();
+  });
+
   it("returns null for garbage (non-QR) pixel data", () => {
     const width = 50;
     const height = 50;

@@ -74,6 +74,19 @@ export function decode(
   height: number,
   options?: DecodeOptions,
 ): DecodeResult | null {
+  // 入力ガード（totality 契約の要）。MoonBit 側 `decode_js` は width/height を `BigInt(width)` へ
+  // 通すため、NaN / 小数 / Infinity が境界を越えると **RangeError を throw する**（同様に
+  // data が null/undefined だと `data.length` 参照で TypeError）。MoonBit 側の
+  // `width <= 0` ガードは NaN 比較が常に false になるためすり抜ける。
+  // 小数の width は `canvas.width * devicePixelRatio` や `video.videoWidth` 由来の計算で
+  // 現実に発生しうる経路であり、そのままではスキャナがホストアプリを未捕捉例外でクラッシュ
+  // させる。TS の型は非TS呼び出し元を守らないため、境界の手前で全て null に倒す。
+  if (!data || typeof (data as { length?: unknown }).length !== "number") return null;
+  // Number.isInteger は NaN・小数・±Infinity を全て弾く（`> 0` 比較だけでは NaN が漏れる）。
+  if (!Number.isInteger(width) || !Number.isInteger(height)) return null;
+  if (width <= 0 || height <= 0) return null;
+  if (data.length !== width * height * 4) return null;
+
   const alsoTryInverted = options?.invert ?? true;
   const normalized =
     data instanceof Uint8ClampedArray
