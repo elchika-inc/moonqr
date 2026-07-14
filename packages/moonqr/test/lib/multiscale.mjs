@@ -61,20 +61,30 @@ export function halveRGBA(data, width, height) {
 }
 
 /**
- * decodeFn を現在スケールで試行し、失敗したら halveRGBA で段階的に縮小しながら
- * 再試行するマルチスケールデコード。
+ * 半減ピラミッドを構築し、**小スケール（画素数の少ない）レベルから昇順に**
+ * decodeFn を試行するマルチスケールデコード。
+ *
+ * 試行順の根拠（perf）: カメラ写真は小スケールでデコードできることが大半
+ * （実測: ユーザーの16Mピクセル写真は1/8スケールでのみ成功）なのに、大スケール
+ * から試すとネイティブ解像度の失敗試行（Nodeで約3.5秒、スマホ実機ではさらに
+ * 遅い）を毎回払うことになる。一般的なスキャナの定石に合わせ、安価な小スケール
+ * （~100ms）から試し、フル解像度は「遠く/小さく写ったQR」向けの最後の手段と
+ * する。
  *
  * 手順:
  *   1. メモリガード: width*height が MAX_PIXELS を超える場合、超えなくなるまで
  *      先に半分縮小する（decode_js の16Mピクセル上限に収めるため）。この事前
- *      半減も返り値の scale に計上する——scale は常に「入力ネイティブ解像度に
- *      対する総縮小率」（例: 17.6Mピクセル入力で事前半減1回→初回試行で成功
- *      なら scale=2。48MP級スマホ写真では事前半減が日常的に発動する）。
- *   2. decodeFn(data, width, height) を試行。truthy を返せば成功として
- *      { result, scale, width, height } を返す（scale = 1/scale が実際に使われた
- *      総縮小率。scale=1なら無縮小、scale=8なら1/8縮小で成功）。
- *   3. 失敗（falsy）なら max(width, height) >= 150 の間は halveRGBA して再試行。
- *      150未満まで縮小してなお失敗した場合は null を返す。
+ *      半減も scale に計上する——scale は常に「入力ネイティブ解像度に対する
+ *      総縮小率」（48MP級スマホ写真では事前半減が日常的に発動する）。
+ *   2. ピラミッド構築: ≤16Mの基点レベルから halveRGBA を繰り返し、
+ *      max(width, height) >= 150 のレベルからさらに1段生成する（従来の逐次
+ *      halving と同一のレベル集合）。メモリ注記: 全レベルを保持するコストは
+ *      幾何級数（1 + 1/4 + 1/16 + ...）で基点画像の約1.33倍——許容範囲として
+ *      先行構築を採用（遅延構築より単純で、demo.html との手動同期も容易）。
+ *   3. 画素数の少ないレベルから昇順に decodeFn を試行。成功したら
+ *      { result, scale, width, height, attemptedScales } を返す
+ *      （scale = 成功レベルの総縮小率。attemptedScales = 試行した scale の列、
+ *      先頭が最小レベル＝最大 scale）。全レベル失敗なら null。
  *
  * @param {(data: Uint8Array, width: number, height: number) => any} decodeFn
  *   1回のデコード試行。成功時はtruthyな結果（例: パース済みJSON）、失敗時は
@@ -82,7 +92,8 @@ export function halveRGBA(data, width, height) {
  * @param {Uint8Array} data RGBA画素（ネイティブ解像度）
  * @param {number} width
  * @param {number} height
- * @returns {{result: any, scale: number, width: number, height: number} | null}
+ * @returns {{result: any, scale: number, width: number, height: number,
+ *            attemptedScales: number[]} | null}
  */
 export function multiScaleDecode(decodeFn, data, width, height) {
   let curData = data;
@@ -101,19 +112,32 @@ export function multiScaleDecode(decodeFn, data, width, height) {
     scale *= 2;
   }
 
-  // 2-3. 縮小しながらの再試行ループ
-  for (;;) {
-    const result = decodeFn(curData, curW, curH);
-    if (result) {
-      return { result, scale, width: curW, height: curH };
-    }
-    if (Math.max(curW, curH) < 150) {
-      return null;
-    }
+  // 2. 半減ピラミッド構築（levels[0] = 基点 = 最大レベル）
+  const levels = [{ data: curData, width: curW, height: curH, scale }];
+  while (Math.max(curW, curH) >= 150) {
     const halved = halveRGBA(curData, curW, curH);
     curData = halved.data;
     curW = halved.width;
     curH = halved.height;
     scale *= 2;
+    levels.push({ data: curData, width: curW, height: curH, scale });
   }
+
+  // 3. 小スケール（画素数の少ない）レベルから昇順に試行
+  const attemptedScales = [];
+  for (let i = levels.length - 1; i >= 0; i--) {
+    const lv = levels[i];
+    attemptedScales.push(lv.scale);
+    const result = decodeFn(lv.data, lv.width, lv.height);
+    if (result) {
+      return {
+        result,
+        scale: lv.scale,
+        width: lv.width,
+        height: lv.height,
+        attemptedScales,
+      };
+    }
+  }
+  return null;
 }

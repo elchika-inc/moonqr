@@ -158,3 +158,43 @@ test("pre-halve memory guard: halvings are counted in the returned scale (>16M p
   // BIG/scale になっているはず（halveRGBAは各段で floor(w/2)）。
   assert.equal(outcome.width, Math.floor(BIG / outcome.scale));
 });
+
+// 小スケール優先の試行順の回帰テスト（perf対応）。
+// カメラ写真は小スケールでデコードできることが大半なのに、大スケールから試すと
+// ネイティブ解像度の失敗試行（16Mピクセルで数秒）を毎回払う。multiScaleDecode は
+// 半減ピラミッドを構築後、画素数の少ないレベルから昇順に試行しなければならない。
+// lattice フィクスチャは 816px → ピラミッドの scale は [1,2,4,8]（150px 未満で
+// 打ち切り）なので、最初の試行は必ず scale=8（最小レベル 102px）であること、
+// および成功がネイティブ解像度（scale=1）の試行前に起きること（=フル解像度の
+// 失敗コストを払っていないこと）を固定する。
+test("small-first ordering: smallest pyramid level attempted first, no full-res attempt when small succeeds", () => {
+  const { text, data, width, height } = makeLatticeFixture();
+  assert.equal(width, 816, "fixture width must be 816 (pyramid scales [1,2,4,8])");
+  const outcome = multiScaleDecode(decodeFn, data, width, height);
+  assert.notEqual(outcome, null, "multiScaleDecode must succeed on the lattice fixture");
+  assert.equal(outcome.result.text, text);
+
+  // 最初の試行は最小レベル（最大 scale）
+  assert.ok(Array.isArray(outcome.attemptedScales), "outcome must expose attemptedScales");
+  assert.equal(
+    outcome.attemptedScales[0],
+    8,
+    `first attempt must be the smallest pyramid level (scale=8), got ` +
+      `attemptedScales=[${outcome.attemptedScales.join(",")}]`,
+  );
+  // 昇順（画素数の少ない順）= scale は単調減少（各段でちょうど半分）
+  for (let i = 1; i < outcome.attemptedScales.length; i++) {
+    assert.equal(
+      outcome.attemptedScales[i],
+      outcome.attemptedScales[i - 1] / 2,
+      "attempts must ascend in pixel count (scale halves each step)",
+    );
+  }
+  // 小スケールで成功した以上、ネイティブ解像度（scale=1）の高価な失敗試行を
+  // 払っていないこと
+  assert.ok(
+    !outcome.attemptedScales.includes(1),
+    `full-resolution attempt must not happen when a smaller scale succeeds ` +
+      `(attemptedScales=[${outcome.attemptedScales.join(",")}])`,
+  );
+});
