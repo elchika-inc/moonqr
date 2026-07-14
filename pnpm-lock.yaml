@@ -39,7 +39,7 @@ importers:
   packages/scanner:
     dependencies:
       '@elchika-inc/moonqr':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../moonqr
     devDependencies:
       esbuild:

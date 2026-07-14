@@ -6,7 +6,7 @@ plain JavaScript. No runtime dependencies. Works in Node.js and the browser.
 - `encode` / `toSvgString` — text → QR matrix → SVG string.
 - `decode` — RGBA pixels → QR text (locates, extracts, corrects, and decodes; handles rotation,
   inverted color schemes, and photographed QR codes).
-- `toCanvas` — draw a QR matrix onto an `HTMLCanvas​Element`.
+- `toCanvas` — draw a QR matrix onto an `HTMLCanvasElement`.
 
 For a live camera scanner built on top of this package, see
 [`@elchika-inc/moonqr-scanner`](../scanner).

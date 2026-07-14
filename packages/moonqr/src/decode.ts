@@ -81,7 +81,10 @@ export function decode(
   // 小数の width は `canvas.width * devicePixelRatio` や `video.videoWidth` 由来の計算で
   // 現実に発生しうる経路であり、そのままではスキャナがホストアプリを未捕捉例外でクラッシュ
   // させる。TS の型は非TS呼び出し元を守らないため、境界の手前で全て null に倒す。
-  if (!data || typeof (data as { length?: unknown }).length !== "number") return null;
+  // `instanceof` で型そのものを検証する（`.length` の duck-typing では、正しい長さの
+  // 素の `Array` や `Float64Array` が通過してしまい、MoonBit 側で
+  // `Error: Index out of bounds` を throw させてしまう＝README の「例外を投げない」契約違反）。
+  if (!(data instanceof Uint8Array || data instanceof Uint8ClampedArray)) return null;
   // Number.isInteger は NaN・小数・±Infinity を全て弾く（`> 0` 比較だけでは NaN が漏れる）。
   if (!Number.isInteger(width) || !Number.isInteger(height)) return null;
   if (width <= 0 || height <= 0) return null;

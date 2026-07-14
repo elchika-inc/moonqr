@@ -123,6 +123,18 @@ describe("decode", () => {
     expect(decode(data as unknown as Uint8Array, 5, 5)).toBeNull();
   });
 
+  // `.length` だけを見る duck-typing ガードは、正しい長さの `Array` / `Float64Array` を
+  // 通過させてしまい MoonBit 側で `Error: Index out of bounds` を throw させる
+  // （README の「例外を投げない」契約違反）。`instanceof Uint8Array | Uint8ClampedArray`
+  // で型そのものを検証することで、`.length` が一致するだけの近似入力も構造的に弾く。
+  it.each([
+    ["plain Array", Array.from({ length: 100 }, () => 0)],
+    ["Float64Array", new Float64Array(100)],
+  ])("returns null (never throws) for a %s of the correct length", (_label, data) => {
+    expect(() => decode(data as unknown as Uint8Array, 5, 5)).not.toThrow();
+    expect(decode(data as unknown as Uint8Array, 5, 5)).toBeNull();
+  });
+
   it("returns null for garbage (non-QR) pixel data", () => {
     const width = 50;
     const height = 50;

@@ -29,7 +29,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -41,7 +42,7 @@
     "prepack": "node ../../scripts/copy-legal-files.mjs"
   },
   "dependencies": {
-    "@elchika-inc/moonqr": "workspace:*"
+    "@elchika-inc/moonqr": "workspace:^"
   },
   "devDependencies": {
     "esbuild": "^0.27.7",

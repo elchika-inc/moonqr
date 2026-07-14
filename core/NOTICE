@@ -1,0 +1,10 @@
+moonqr
+Copyright 2026 naoto24kawa
+
+Portions derived from jsQR (https://github.com/cozmo/jsQR)
+Copyright (c) 2016 Cosmo Wolfe
+Licensed under the Apache License, Version 2.0
+
+QR code RS block / alignment position tables derived from qrcode-generator
+(https://github.com/kazuhikoarase/qrcode-generator)
+Copyright (c) 2009 Kazuhiko Arase, MIT License
