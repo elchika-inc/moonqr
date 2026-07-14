@@ -1,0 +1,54 @@
+{
+  "name": "@elchika-inc/moonqr-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "description": "QR code scanner with camera support for moonqr",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elchika-inc/moonqr.git",
+    "directory": "packages/scanner"
+  },
+  "homepage": "https://github.com/elchika-inc/moonqr/tree/main/packages/scanner#readme",
+  "bugs": {
+    "url": "https://github.com/elchika-inc/moonqr/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["qrcode", "scanner", "camera", "moonbit"],
+  "files": ["dist", "README.md", "LICENSE", "NOTICE", "THIRD_PARTY_LICENSES"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build:worker": "node scripts/build-worker.mjs",
+    "test:unit": "node scripts/build-worker.mjs && vitest run",
+    "typecheck": "node scripts/build-worker.mjs && tsc --noEmit -p tsconfig.json",
+    "build": "node scripts/build-worker.mjs && tsup",
+    "prepack": "node ../../scripts/copy-legal-files.mjs"
+  },
+  "dependencies": {
+    "@elchika-inc/moonqr": "workspace:^"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.7",
+    "jsdom": "^25.0.1",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}

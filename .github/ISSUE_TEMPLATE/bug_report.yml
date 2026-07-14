@@ -1,0 +1,75 @@
+name: Bug report
+description: Something isn't encoding or decoding correctly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. QR encode/decode issues are almost always
+        impossible to diagnose without the actual image, so please attach it if at all possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: A clear description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: image
+    attributes:
+      label: QR code image
+      description: >
+        Attach the QR code image involved (drag and drop it into this box). If the bug is on
+        encode, attach the image that was produced; if it's on decode, attach the image (or
+        camera frame) that failed to decode or decoded incorrectly. If you can't share the
+        actual image, please attach a redacted/synthetic QR code that still reproduces the bug.
+      placeholder: Drag and drop the image here, or paste a link to it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected text / result
+      description: >
+        What text or result did you expect from this QR code? For decode issues, what should
+        `decode()` have returned? For encode issues, what input text did you encode?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: What did you actually get (returned value, thrown error, wrong text, `null`, etc.)?
+    validations:
+      required: true
+
+  - type: input
+    id: package
+    attributes:
+      label: Package and version
+      description: e.g. `@elchika-inc/moonqr@0.1.0` or `@elchika-inc/moonqr-scanner@0.1.0`
+      placeholder: "@elchika-inc/moonqr@x.y.z"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser / Node.js version
+      description: e.g. "Chrome 126 on macOS 15" or "Node.js 22.4.0"
+      placeholder: Chrome 126 / Node.js 22.4.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction (optional)
+      description: A short code snippet that reproduces the issue, if you have one.
+      render: ts
+    validations:
+      required: false

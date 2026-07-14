@@ -1,9 +1,73 @@
 {
-  "name": "moonqr-parity-test",
+  "name": "@elchika-inc/moonqr",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test test/*.test.mjs" },
-  "dependencies": {
-    "qrcode": "^1.5.4"
+  "description": "QR code encoder and decoder written in MoonBit. No dependencies, works in the browser.",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elchika-inc/moonqr.git",
+    "directory": "packages/moonqr"
+  },
+  "homepage": "https://github.com/elchika-inc/moonqr/tree/main/packages/moonqr#readme",
+  "bugs": {
+    "url": "https://github.com/elchika-inc/moonqr/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "qrcode",
+    "qr",
+    "decoder",
+    "encoder",
+    "moonbit",
+    "browser"
+  ],
+  "files": ["dist", "README.md", "LICENSE", "NOTICE", "THIRD_PARTY_LICENSES"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./encode": {
+      "types": "./dist/encode.d.ts",
+      "import": "./dist/encode.js",
+      "require": "./dist/encode.cjs"
+    },
+    "./decode": {
+      "types": "./dist/decode.d.ts",
+      "import": "./dist/decode.js",
+      "require": "./dist/decode.cjs"
+    },
+    "./dom": {
+      "types": "./dist/dom.d.ts",
+      "import": "./dist/dom.js",
+      "require": "./dist/dom.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsup",
+    "prepack": "node ../../scripts/copy-legal-files.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1",
+    "qrcode": "^1.5.4",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

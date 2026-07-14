@@ -1,4 +1,9 @@
+///| 契約: mask は 0..7 のみ（ISO 18004 のマスクパターン番号）。内部呼び出しは
+///| choose_mask が 0..7 のループでのみ渡すため常に満たされる。範囲外は誤用として abort。
 pub fn mask_bit(mask : Int, x : Int, y : Int) -> Bool {
+  if mask < 0 || mask > 7 {
+    abort("mask_bit: mask out of range 0..7 (caller contract violation)")
+  }
   match mask {
     0 => (x + y) % 2 == 0
     1 => y % 2 == 0

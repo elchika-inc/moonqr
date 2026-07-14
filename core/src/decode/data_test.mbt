@@ -126,3 +126,41 @@ test "decode_data: terminator-less exhaustion with all-zero remainder -> gracefu
   assert_eq(got.text, "")
   assert_eq(got.bytes, [])
 }
+
+test "decode_data resumes after unknown mode nibble" {
+  // 未知モード(0011=StructuredAppend、この jsQR pin では未対応=ペイロード消費なしでスキップ)
+  // の直後に有効な Byte セグメントが続くケース。jsQR と同じく「4bitだけ読み飛ばして継続」
+  // する挙動を確認する。
+  // コードワードは手計算せず @encode.BitWriter で意図したビット列そのものを組み立てる:
+  //   0011(未知mode,4bit) | 0100(byteモード,4bit) | CCI(8bit,v1)=2 | 'A'(8bit) | 'B'(8bit) | 0000(終端,4bit)
+  // 合計36bit -> to_codewords() で5バイトにパディングされる。
+  let w = @encode.BitWriter::new()
+  w.write(0b0011, 4) // 未知モード（StructuredAppend想定）: 4bitのみ消費してスキップされるはず
+  w.write(0b0100, 4) // Byteモード
+  w.write(2, @encode.cci_bits(@encode.Mode::Byte, 1)) // CCI: length=2
+  w.write(0x41, 8) // 'A'
+  w.write(0x42, 8) // 'B'
+  w.write(0b0000, 4) // 終端子
+  let cw = w.to_codewords()
+  match @decode.decode_data(cw, 1) {
+    Some(d) => assert_eq(d.text, "AB")
+    None => abort("must resume after unknown mode")
+  }
+}
+
+test "decode_data rejects out-of-range alphanumeric index" {
+  // alnum ペア値 11bit に 45*45=2025 以上（不正）を入れる -> None
+  // コードワードは手計算せず @encode.BitWriter で意図したビット列そのものを組み立てる:
+  //   0010(alnumモード,4bit) | CCI(9bit,v1)=2 | 2047(11bit, >= 2025で不正)
+  // decode_alphanumeric は a=2047/45=45 > 44 の時点で None を返すため、
+  // 終端子や2文字目分の追加ビットは不要（値を読み切った直後に弾かれる）。
+  let w = @encode.BitWriter::new()
+  w.write(0b0010, 4) // Alphanumericモード
+  w.write(2, @encode.cci_bits(@encode.Mode::Alphanumeric, 1)) // CCI: length=2
+  w.write(2047, 11) // 不正なペア値（2025以上）
+  let cw = w.to_codewords()
+  match @decode.decode_data(cw, 1) {
+    Some(_) => abort("invalid alnum pair must be rejected")
+    None => assert_true(true)
+  }
+}

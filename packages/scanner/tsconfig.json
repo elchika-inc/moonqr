@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    // ES2022.Error のみ追加: `new Error(msg, { cause })` の型（Errorコンストラクタの
+    // 第2引数）はES2020 libにはないが、target自体はES2020のまま据え置く
+    // （出力構文はES2020のまま・型情報だけ後方から拝借する一般的なパターン）。
+    "lib": ["ES2020", "ES2022.Error", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": true,
+    // tsup(rollup-plugin-dts) が .d.ts バンドル生成時に baseUrl:"." を暗黙注入するため、
+    // TS6/7 で deprecated 化された baseUrl エラー(TS5101)を明示的に黙らせる（packages/moonqr
+    // と同じ理由・同じ対処）。baseUrl 自体は我々のコードでは未使用。
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src"]
+}

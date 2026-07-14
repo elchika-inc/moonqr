@@ -6,17 +6,22 @@
 // なる（jsQR npm でも同一の失敗＝自前decode_jsのコア二値化/ロケータは無改修
 // でjsQRとパリティのまま）。素朴な単発縮小はこの格子をエイリアシングして
 // むしろ悪化させるため、2x2ボックス平均による段階的な半分縮小
-// （lib/multiscale.mjs の multiScaleDecode）で解決する。詳細は
+// （@elchika-inc/moonqr-scanner の multiScaleDecode）で解決する。詳細は
 // bench/RESULT.md Task 12 節を参照。
 //
 // このテストは実写真を使わず、rasterize() で生成したQR画像に合成の
 // サブピクセル格子を重ねたフィクスチャで失敗モードを再現する（コミット
 // 可能・決定的）。
+//
+// Phase 3 Task 5: 旧 lib/multiscale.mjs（手動同期の複製）は削除し、
+// packages/scanner/src/multiscale.ts を唯一の実装として直接importする。
+// Node 24 はネイティブTS型ストリッピングを持つため、node --test から
+// .ts を直接importでき、ビルド成果物への依存を持ち込まずに済む。
 import { test } from "node:test";
 import assert from "node:assert";
 import jsQR from "jsqr";
 import { rasterize } from "./lib/rasterize.mjs";
-import { multiScaleDecode } from "./lib/multiscale.mjs";
+import { multiScaleDecode } from "../../scanner/src/multiscale.ts";
 
 // ビルド出力パス規約は roundtrip.test.mjs 等と同じ。
 const encodeMod = await import(
