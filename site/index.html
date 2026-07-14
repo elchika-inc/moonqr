@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>moonqr デモ</title>
+    <meta
+      name="description"
+      content="MoonBit製 QRコードライブラリ moonqr のブラウザデモ（生成・画像読取・カメラスキャン）"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <!--
+      importmap: scanner/dist/index.js は `@elchika-inc/moonqr/decode` をベア指定子で
+      importする（パッケージ間依存はバンドルに巻き込まない設計。scripts/build-site.mjs
+      冒頭コメント参照）。ブラウザにNode解決はないため、ここで ./assets/ 配下の
+      コピー済みファイルへ明示的に解決する。CDN不使用・自己完結。
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@elchika-inc/moonqr/encode": "./assets/moonqr/encode.js",
+          "@elchika-inc/moonqr/decode": "./assets/moonqr/decode.js",
+          "@elchika-inc/moonqr/dom": "./assets/moonqr/dom.js",
+          "@elchika-inc/moonqr-scanner": "./assets/moonqr-scanner/index.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>moonqr デモ</h1>
+      <p>
+        MoonBit で書かれた QR エンコーダ/デコーダ
+        <code>@elchika-inc/moonqr</code> と、カメラスキャナ
+        <code>@elchika-inc/moonqr-scanner</code> のブラウザ実演です。すべてこのページ内で完結し、外部
+        CDN には一切アクセスしません。
+      </p>
+    </header>
+
+    <main>
+      <section id="generate-section">
+        <h2>1. 生成（テキスト → QR）</h2>
+        <label for="text-input">テキスト</label>
+        <textarea id="text-input" placeholder="https://example.com">https://github.com/naoto24kawa/moonqr</textarea>
+        <div class="row">
+          <div>
+            <label for="ec-select">エラー訂正レベル</label>
+            <select id="ec-select">
+              <option value="L">L（低）</option>
+              <option value="M" selected>M（標準）</option>
+              <option value="Q">Q（高）</option>
+              <option value="H">H（最高）</option>
+            </select>
+          </div>
+          <div>
+            <label for="version-select">バージョン</label>
+            <select id="version-select">
+              <option value="auto" selected>自動（最小サイズ）</option>
+            </select>
+          </div>
+        </div>
+        <div class="generate-output">
+          <div class="qr-preview" id="qr-preview"></div>
+          <div>
+            <p id="generate-status" class="note">入力を待機中…</p>
+            <div class="actions">
+              <button id="download-svg-btn" class="secondary" disabled>SVG をダウンロード</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="read-section">
+        <h2>2. 読取（画像ファイル）</h2>
+        <p class="note">
+          <code>QrScanner</code> のマルチスケールデコード（<code>multiScaleDecode</code>）を使用します。
+          モニター越しの撮影や縮小画像でも、段階的な縮小ピラミッドを小スケールから試すことで読み取れます。
+        </p>
+        <div id="drop-zone">
+          <p>ここにQR画像をドラッグ&amp;ドロップ、またはクリックして選択</p>
+          <input type="file" id="file-input" accept="image/*" multiple style="display: none" />
+        </div>
+        <div id="read-results"></div>
+      </section>
+
+      <section id="camera-section">
+        <h2>3. 読取（カメラ・ライブスキャン）</h2>
+        <p class="note">
+          <code>navigator.mediaDevices.getUserMedia</code> は HTTPS または localhost
+          でのみ利用できます（Secure Context 制約）。カメラのないヘッドレス環境や権限拒否時はエラーメッセージを表示します。
+        </p>
+        <div class="actions">
+          <button id="camera-start-btn">カメラ開始</button>
+          <button id="camera-stop-btn" class="secondary" disabled>停止</button>
+        </div>
+        <p id="camera-status" class="note" style="margin-top: 10px"></p>
+        <div class="camera-stage" style="margin-top: 12px">
+          <video id="camera-video" muted playsinline></video>
+          <canvas id="camera-overlay"></canvas>
+        </div>
+        <div id="camera-result"></div>
+      </section>
+    </main>
+
+    <footer>
+      <a href="https://github.com/naoto24kawa/moonqr" target="_blank" rel="noopener">naoto24kawa/moonqr</a>
+      · Apache-2.0
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

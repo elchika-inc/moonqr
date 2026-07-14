@@ -1,6 +1,9 @@
 {
   "name": "moonqr-monorepo",
   "private": true,
+  "scripts": {
+    "build:site": "node scripts/build-site.mjs"
+  },
   "devDependencies": {
     "jsqr": "1.4.0",
     "pngjs": "^7.0.0",

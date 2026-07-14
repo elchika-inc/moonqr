@@ -13,11 +13,10 @@
 // が小さくなりすぎて失敗する）。詳細は bench/RESULT.md Task 12 節を参照。
 //
 // Phase 3 Task 5: このファイルが唯一の実装（旧 packages/moonqr/test/lib/multiscale.mjs
-// は削除済み・回帰テストはこの実装を直接importする形で移設した）。bench/demo.html には
-// 手動同期された旧いインライン複製が暫定的に残っている——Task 7 で demo.html を
-// scanner/moonqr の dist import に作り直す際に削除される（意図的な二段階移行。
-// テスト経路は本タスクで既に一本化済みであり、demo.html は静的HTML単体で動作する
-// デモという性質上、ビルド成果物への依存切り替えをこのタスクの範囲外とした）。
+// は削除済み・回帰テストはこの実装を直接importする形で移設した）。bench/demo.html に
+// あった手動同期の旧いインライン複製は Task 7 で削除済み——GitHub Pages デモ
+// （site/app.js）はこの実装を `@elchika-inc/moonqr-scanner` の公開 export
+// （`multiScaleDecode`）経由で使う。
 
 // decode_js (core/src/decode/decode.mbt) の max_pixels 定数と同じ値
 // （16 * 1024 * 1024 = 16,777,216）。この上限を超える画素数のまま

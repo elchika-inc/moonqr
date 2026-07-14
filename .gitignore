@@ -6,3 +6,4 @@ _build/
 fixtures/
 dist/
 packages/scanner/src/worker-inline.generated.ts
+site/assets/
