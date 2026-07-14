@@ -21,6 +21,7 @@
   "scripts": {
     "build:worker": "node scripts/build-worker.mjs",
     "test:unit": "node scripts/build-worker.mjs && vitest run",
+    "typecheck": "node scripts/build-worker.mjs && tsc --noEmit -p tsconfig.json",
     "build": "node scripts/build-worker.mjs && tsup"
   },
   "dependencies": {

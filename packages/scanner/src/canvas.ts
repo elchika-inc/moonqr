@@ -66,13 +66,21 @@ function sourceSize(source: HTMLImageElement | HTMLCanvasElement | ImageBitmap):
 
 /** `QrScanner.scanImage` 向け: 任意の画像ソースをRGBA画素に変換する。 */
 export async function sourceToRGBA(source: ScanImageSource): Promise<RGBAFrame> {
-  const drawable = source instanceof Blob ? await createImageBitmap(source) : source;
-  const { width, height } = sourceSize(drawable);
-  if (!width || !height) {
-    throw new Error("scanImage: source has no intrinsic width/height");
+  // Blobから起こしたImageBitmapは**このスコープが所有する**ため、必ず close() して
+  // GPU/デコード済みメモリを解放する（scanImage(Blob)を繰り返すとリークする）。
+  // 呼び出し元から渡されたImageBitmapは所有権がないので閉じない。
+  const ownedBitmap = source instanceof Blob ? await createImageBitmap(source) : null;
+  const drawable = ownedBitmap ?? (source as HTMLImageElement | HTMLCanvasElement | ImageBitmap);
+  try {
+    const { width, height } = sourceSize(drawable);
+    if (!width || !height) {
+      throw new Error("scanImage: source has no intrinsic width/height");
+    }
+    const { ctx } = createCanvas(width, height);
+    ctx.drawImage(drawable, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    return { data: imageData.data, width, height };
+  } finally {
+    ownedBitmap?.close();
   }
-  const { ctx } = createCanvas(width, height);
-  ctx.drawImage(drawable, 0, 0, width, height);
-  const imageData = ctx.getImageData(0, 0, width, height);
-  return { data: imageData.data, width, height };
 }

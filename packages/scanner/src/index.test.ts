@@ -76,23 +76,42 @@ function mockGetUserMedia(impl: (constraints: unknown) => Promise<MediaStream>) 
 // （worker-handle.tsのtryCreateRealWorker: typeof Worker!=="undefined" を満たす）。
 class FakeWorker {
   static instances: FakeWorker[] = [];
+  /** trueの間、応答を自動配送せず pendingResponses に溜める（stop()後の遅延配送を再現する）。 */
+  static defer = false;
+  static pendingResponses: Array<() => void> = [];
   onmessage: ((event: { data: unknown }) => void) | null = null;
   onerror: ((event: unknown) => void) | null = null;
   terminate = vi.fn();
   postMessage = vi.fn((message: { id: number }) => {
-    // 実Workerの非同期性を模す: 常に「見つからなかった」で即応答する
+    // 実Workerの非同期性を模す: 既定では「見つからなかった」で即応答する
     // （呼び出し元のpendingフラグを解放し、次フレームが進行できるようにする）。
-    queueMicrotask(() => {
-      this.onmessage?.({ data: { id: message.id, result: null } });
-    });
+    const deliver = (result: unknown = null) => {
+      this.onmessage?.({ data: { id: message.id, result } });
+    };
+    if (FakeWorker.defer) {
+      FakeWorker.pendingResponses.push(() => deliver(FakeWorker.deferredResult));
+      return;
+    }
+    queueMicrotask(() => deliver(null));
   });
+  /** defer中に配送する結果（既定は成功結果を模した任意のオブジェクト）。 */
+  static deferredResult: unknown = null;
   constructor() {
     FakeWorker.instances.push(this);
+  }
+  /** 溜めておいた応答を今この場で配送する。 */
+  static flush(): void {
+    const queued = FakeWorker.pendingResponses;
+    FakeWorker.pendingResponses = [];
+    for (const deliver of queued) deliver();
   }
 }
 
 function installFakeWorker(): void {
   FakeWorker.instances = [];
+  FakeWorker.defer = false;
+  FakeWorker.pendingResponses = [];
+  FakeWorker.deferredResult = null;
   vi.stubGlobal("Worker", FakeWorker);
   if (!("createObjectURL" in URL)) {
     // @ts-expect-error jsdom未実装環境向けの最小stub
@@ -250,6 +269,55 @@ describe("QrScanner live-frame decoding", () => {
     expect(onResult.mock.calls[0]?.[0]?.text).toBe(LATTICE_TEXT);
 
     scanner.stop();
+  });
+});
+
+describe("QrScanner stale-response safety (regression)", () => {
+  // 回帰テスト: Worker.terminate() は **Workerスレッドを止めるだけ** で、既にメイン
+  // スレッドのイベントループに積まれた "message" タスクはキャンセルしない。
+  // stop()後に古い応答が配送されても onResult / onError を発火させてはならない
+  // （消費者が「成功→stop()→成功画面へ遷移」した直後に二重通知が来る事故を防ぐ）。
+  it("does NOT call onResult when a worker response arrives after stop()", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    installFakeWorker();
+    FakeWorker.defer = true; // 応答を保留し、stop()後に手動配送する
+    FakeWorker.deferredResult = { text: "STALE", bytes: new Uint8Array(), version: 1, ecLevel: "M", corners: [] };
+    const { stream } = makeFakeStream();
+    mockGetUserMedia(() => Promise.resolve(stream));
+    mockCanvasWith(cleanImage);
+    mockVideoSize(video, cleanImage.width, cleanImage.height);
+
+    const onResult = vi.fn();
+    const scanner = new QrScanner(video, onResult);
+    await scanner.start();
+    await vi.advanceTimersByTimeAsync(50); // フレームをpostMessageさせる
+    expect(FakeWorker.pendingResponses.length).toBeGreaterThan(0); // 応答が in-flight
+
+    scanner.stop();
+    FakeWorker.flush(); // stop()後に古い応答が配送される
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(onResult).not.toHaveBeenCalled();
+  });
+
+  it("does NOT call onError when a worker error arrives after stop()", async () => {
+    installFakeWorker();
+    const { stream } = makeFakeStream();
+    mockGetUserMedia(() => Promise.resolve(stream));
+    mockCanvasWith(cleanImage);
+
+    const onError = vi.fn();
+    const scanner = new QrScanner(video, vi.fn(), { onError });
+    await scanner.start();
+    const worker = FakeWorker.instances[0];
+    if (!worker) throw new Error("expected a FakeWorker instance");
+
+    scanner.stop();
+    // stop()後にクラッシュ通知が届いても、RealWorkerHandle 側でハンドラが外れている
+    // （かつ index.ts 側にも stopped ガードがある）ため発火しない。
+    worker.onerror?.(new ErrorEvent("error", { message: "late boom" }));
+
+    expect(onError).not.toHaveBeenCalled();
   });
 });
 

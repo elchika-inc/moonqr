@@ -61,6 +61,9 @@ export class QrScanner {
   private lastScanAt = -Infinity;
   private consecutiveFailures = 0;
   private nextRequestId = 0;
+  // 現在Workerへ投げていて未応答のリクエストid（なければnull）。これと一致しない応答は
+  // 捨てる（Worker再起動やstop()を跨いだ古い応答による状態汚染を防ぐ）。
+  private inFlightId: number | null = null;
 
   constructor(
     video: HTMLVideoElement,
@@ -121,6 +124,7 @@ export class QrScanner {
     // カメラのライブ表示インジケータが残留するブラウザがあるため、srcObjectも切る。
     this.video.srcObject = null;
     this.pending = false;
+    this.inFlightId = null;
     // 再start()した際に前回セッションのエスカレーション状態を持ち越さない。
     this.consecutiveFailures = 0;
     this.lastScanAt = -Infinity;
@@ -135,10 +139,16 @@ export class QrScanner {
 
   /** Worker クラッシュ時: 自動再起動しつつ onError へ surface する（握りつぶさない）。 */
   private handleWorkerCrash(event: ErrorEvent | Event): void {
+    // stop()後に届いた（イベントループに積まれ済みの）クラッシュ通知でコールバックを
+    // 発火させない——stop()は「以後このスキャナは何も通知しない」という契約であり、
+    // 解放済みインスタンスからのonErrorは消費者にとって解釈不能なノイズになる。
+    // 「握りつぶさない」の対象は稼働中に起きたエラーであって、stop()済みインスタンスの
+    // 残響ではない。
+    if (this.stopped) return;
     this.pending = false;
+    this.inFlightId = null; // クラッシュしたWorkerへの投げは応答しない
     const message = event instanceof ErrorEvent ? event.message : "unknown worker error";
     this.onError(new Error(`Scanner worker crashed: ${message}`, { cause: event }));
-    if (this.stopped) return;
     this.worker?.terminate();
     this.worker = this.createWorker();
   }
@@ -169,13 +179,24 @@ export class QrScanner {
     const multiscale = this.consecutiveFailures >= this.escalateAfterFailures;
     const id = this.nextRequestId++;
     this.pending = true;
+    this.inFlightId = id;
     this.worker.postMessage({ id, buffer, width, height, invert: this.invert, multiscale }, [
       buffer,
     ]);
   }
 
   private handleWorkerMessage(response: WorkerResponse): void {
+    // stop()後に届いた応答を捨てる（重要）。Worker.terminate() はWorkerスレッドを
+    // 止めるだけで、**既にメインスレッドのイベントループへ積まれた "message" タスクは
+    // キャンセルしない**。ガードがないと「スキャン成功 → 消費者が stop() して成功画面へ
+    // 遷移 → 直後に古い応答が届いて onResult がもう一度発火」という状態破壊が起きる。
+    if (this.stopped) return;
+    // 現在の in-flight リクエスト以外の応答も捨てる（Worker再起動を跨いだ古い応答が
+    // pending/consecutiveFailures を汚染するのを防ぐ）。
+    if (response.id !== this.inFlightId) return;
+
     this.pending = false;
+    this.inFlightId = null;
     if (response.result) {
       this.consecutiveFailures = 0;
       this.onResult(response.result);

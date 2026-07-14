@@ -18,20 +18,39 @@ export interface WorkerHandle {
 /** 実Workerをラップするだけの薄いアダプタ（型を WorkerHandle に揃える）。 */
 class RealWorkerHandle implements WorkerHandle {
   private readonly worker: Worker;
+  private terminated = false;
   onmessage: ((event: { data: WorkerResponse }) => void) | null = null;
   onerror: ((event: ErrorEvent | Event) => void) | null = null;
 
   constructor(worker: Worker) {
     this.worker = worker;
-    worker.onmessage = (event) => this.onmessage?.(event as unknown as { data: WorkerResponse });
-    worker.onerror = (event) => this.onerror?.(event);
+    worker.onmessage = (event) => {
+      if (this.terminated) return;
+      this.onmessage?.(event as unknown as { data: WorkerResponse });
+    };
+    worker.onerror = (event) => {
+      if (this.terminated) return;
+      this.onerror?.(event);
+    };
   }
 
   postMessage(message: WorkerRequest, transfer: Transferable[]): void {
+    if (this.terminated) return;
     this.worker.postMessage(message, transfer);
   }
 
+  /**
+   * `Worker.terminate()` は **Workerスレッドを止めるだけ** で、既にメインスレッドの
+   * イベントループへ積まれた "message" タスクはキャンセルしない——terminate直後に
+   * 古い応答が配送されうる。terminated フラグ + ハンドラの解除で、その残響を
+   * 呼び出し元へ漏らさない（InlineWorkerHandle と同じ不変条件を実Worker側でも守る）。
+   */
   terminate(): void {
+    this.terminated = true;
+    this.worker.onmessage = null;
+    this.worker.onerror = null;
+    this.onmessage = null;
+    this.onerror = null;
     this.worker.terminate();
   }
 }
@@ -65,6 +84,8 @@ class InlineWorkerHandle implements WorkerHandle {
 
   terminate(): void {
     this.terminated = true;
+    this.onmessage = null;
+    this.onerror = null;
   }
 }
 
