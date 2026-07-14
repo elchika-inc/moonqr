@@ -1,18 +1,18 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>moonqr デモ</title>
+    <title>moonqr — QR encoder/decoder in MoonBit</title>
     <meta
       name="description"
-      content="MoonBit製 QRコードライブラリ moonqr のブラウザデモ（生成・画像読取・カメラスキャン）"
+      content="moonqr: a QR code encoder and decoder written in MoonBit, compiled to plain JavaScript. Zero runtime dependencies, runs in the browser. Try the live demo."
     />
     <link rel="stylesheet" href="./style.css" />
     <!-- インラインSVGのfavicon（外部リクエストなし・404回避）。 -->
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><rect width='8' height='8' fill='%23fff'/><path d='M1 1h2v2H1zM5 1h2v2H5zM1 5h2v2H1zM4 4h1v1H4zM6 4h1v1H6zM4 6h1v1H4zM6 6h1v1H6z' fill='%23000'/></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><rect width='8' height='8' fill='%23000'/><path d='M1 1h2v2H1zM5 1h2v2H5zM1 5h2v2H1zM4 4h1v1H4zM6 4h1v1H6zM4 6h1v1H4zM6 6h1v1H6z' fill='%23fff'/></svg>"
     />
     <!--
       importmap: scanner/dist/index.js は `@elchika-inc/moonqr/decode` をベア指定子で
@@ -40,84 +40,264 @@
     </script>
   </head>
   <body>
-    <header>
-      <h1>moonqr デモ</h1>
-      <p>
-        MoonBit で書かれた QR エンコーダ/デコーダ
-        <code>@elchika-inc/moonqr</code> と、カメラスキャナ
-        <code>@elchika-inc/moonqr-scanner</code> のブラウザ実演です。すべてこのページ内で完結し、外部
-        CDN には一切アクセスしません。
-      </p>
+    <a class="skip-link" href="#demo">Skip to demo</a>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top" data-i18n="nav.brand">moonqr</a>
+        <nav class="topbar-nav" aria-label="Site">
+          <a href="https://github.com/elchika-inc/moonqr" target="_blank" rel="noopener" data-i18n="nav.github">GitHub</a>
+          <button id="lang-toggle" type="button" class="lang-toggle" aria-label="Switch language">
+            <span data-i18n="nav.langToggle">日本語</span>
+          </button>
+        </nav>
+      </div>
     </header>
 
-    <main>
-      <section id="generate-section">
-        <h2>1. 生成（テキスト → QR）</h2>
-        <label for="text-input">テキスト</label>
-        <textarea id="text-input" placeholder="https://example.com">https://github.com/elchika-inc/moonqr</textarea>
-        <div class="row">
-          <div>
-            <label for="ec-select">エラー訂正レベル</label>
-            <select id="ec-select">
-              <option value="L">L（低）</option>
-              <option value="M" selected>M（標準）</option>
-              <option value="Q">Q（高）</option>
-              <option value="H">H（最高）</option>
-            </select>
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-inner">
+          <p class="eyebrow" data-i18n="hero.eyebrow">QR ENCODER + DECODER · MOONBIT → JS</p>
+          <h1 id="hero-title" data-i18n="hero.title">QR codes, compiled from MoonBit.</h1>
+          <p class="hero-subtitle" data-i18n="hero.subtitle">
+            An encoder and decoder for QR codes, written in MoonBit and compiled to plain
+            JavaScript. Zero runtime dependencies, runs entirely in the browser — try it below.
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#demo" data-i18n="hero.ctaDemo">Try the demo ↓</a>
+            <a class="btn btn-secondary" href="https://github.com/elchika-inc/moonqr" target="_blank" rel="noopener" data-i18n="hero.ctaGithub">View on GitHub</a>
           </div>
-          <div>
-            <label for="version-select">バージョン</label>
-            <select id="version-select">
-              <option value="auto" selected>自動（最小サイズ）</option>
-            </select>
-          </div>
+          <ul class="hero-badges">
+            <li><span class="dot dot-ok"></span><span data-i18n="hero.badge1">214/214 decoder parity with jsQR</span></li>
+            <li><span class="dot dot-accent"></span><span data-i18n="hero.badge2">faster than jsQR</span></li>
+            <li><span class="dot dot-accent"></span><span data-i18n="hero.badge3">6.4 KB gzip encoder</span></li>
+          </ul>
         </div>
-        <div class="generate-output">
-          <div class="qr-preview" id="qr-preview"></div>
-          <div>
-            <p id="generate-status" class="note">入力を待機中…</p>
-            <div class="actions">
-              <button id="download-svg-btn" class="secondary" disabled>SVG をダウンロード</button>
+      </section>
+
+      <section id="demo" class="section" aria-labelledby="demo-heading">
+        <h2 id="demo-heading" data-i18n="demo.heading">Try it now</h2>
+        <p class="section-intro" data-i18n="demo.intro">
+          Everything below runs entirely in your browser — no server, no external requests. Open
+          the console or the network tab if you don't believe it.
+        </p>
+
+        <div class="demo-panel">
+          <h3 data-i18n="generate.heading">1. Generate — text → QR</h3>
+          <label for="text-input" data-i18n="generate.textLabel">Text</label>
+          <textarea id="text-input" placeholder="https://example.com">https://github.com/elchika-inc/moonqr</textarea>
+          <div class="row">
+            <div>
+              <label for="ec-select" data-i18n="generate.ecLabel">Error correction level</label>
+              <select id="ec-select">
+                <option value="L" data-i18n="generate.ecL">L (Low)</option>
+                <option value="M" selected data-i18n="generate.ecM">M (Medium)</option>
+                <option value="Q" data-i18n="generate.ecQ">Q (Quartile)</option>
+                <option value="H" data-i18n="generate.ecH">H (High)</option>
+              </select>
+            </div>
+            <div>
+              <label for="version-select" data-i18n="generate.versionLabel">Version</label>
+              <select id="version-select">
+                <option value="auto" selected data-i18n="generate.versionAuto">Auto (smallest)</option>
+              </select>
+            </div>
+          </div>
+          <div class="generate-output">
+            <div class="qr-preview" id="qr-preview"></div>
+            <div>
+              <p id="generate-status" class="note" data-i18n="generate.waiting">Waiting for input…</p>
+              <div class="actions">
+                <button id="download-svg-btn" class="secondary" disabled data-i18n="generate.downloadSvg">Download SVG</button>
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="demo-panel">
+          <h3 data-i18n="read.heading">2. Read — image file</h3>
+          <p class="note" data-i18n-html="read.intro">
+            Uses QrScanner's multiscale decode (<code>scanImage</code>). Works on screenshots and
+            downscaled images — even photos of a QR code shown on a monitor — by trying a
+            downscale pyramid from the smallest scale first.
+          </p>
+          <div id="drop-zone" tabindex="0" role="button" aria-label="Choose a QR image file">
+            <p data-i18n="read.dropzone">Drag &amp; drop a QR image here, or click to choose a file</p>
+            <input type="file" id="file-input" accept="image/*" multiple style="display: none" />
+          </div>
+          <div id="read-results"></div>
+        </div>
+
+        <div class="demo-panel">
+          <h3 data-i18n="camera.heading">3. Read — live camera</h3>
+          <p class="note" data-i18n-html="camera.intro">
+            <code>navigator.mediaDevices.getUserMedia</code> only works over HTTPS or localhost
+            (secure-context restriction). On an insecure origin, without a camera, or if
+            permission is denied, this shows a clear error instead of failing silently.
+          </p>
+          <div class="actions">
+            <button id="camera-start-btn" data-i18n="camera.start">Start camera</button>
+            <button id="camera-stop-btn" class="secondary" disabled data-i18n="camera.stop">Stop</button>
+          </div>
+          <p id="camera-status" class="note" style="margin-top: 10px"></p>
+          <div class="camera-stage" style="margin-top: 12px">
+            <video id="camera-video" muted playsinline></video>
+            <canvas id="camera-overlay"></canvas>
+          </div>
+          <div id="camera-result"></div>
+        </div>
       </section>
 
-      <section id="read-section">
-        <h2>2. 読取（画像ファイル）</h2>
-        <p class="note">
-          <code>QrScanner</code> のマルチスケールデコード（<code>multiScaleDecode</code>）を使用します。
-          モニター越しの撮影や縮小画像でも、段階的な縮小ピラミッドを小スケールから試すことで読み取れます。
-        </p>
-        <div id="drop-zone">
-          <p>ここにQR画像をドラッグ&amp;ドロップ、またはクリックして選択</p>
-          <input type="file" id="file-input" accept="image/*" multiple style="display: none" />
+      <section id="numbers" class="section" aria-labelledby="numbers-heading">
+        <h2 id="numbers-heading" data-i18n="numbers.heading">By the numbers</h2>
+        <div class="stat-grid">
+          <a class="stat-card" href="https://github.com/elchika-inc/moonqr/blob/main/bench/RESULT.md" target="_blank" rel="noopener">
+            <p class="stat-label" data-i18n="numbers.parityTitle">Decoder parity</p>
+            <p class="stat-value">214 / 214</p>
+            <p class="stat-desc" data-i18n="numbers.parityDesc">
+              Exact-text match with jsQR on jsQR's own 254-image end-to-end corpus. The 40 images
+              jsQR itself can't read, we correctly reject too.
+            </p>
+            <span class="stat-evidence" data-i18n="numbers.evidence">See bench/RESULT.md →</span>
+          </a>
+          <a class="stat-card" href="https://github.com/elchika-inc/moonqr/blob/main/bench/RESULT.md" target="_blank" rel="noopener">
+            <p class="stat-label" data-i18n="numbers.speedTitle">Decoder speed</p>
+            <p class="stat-value">0.77x / 0.75x</p>
+            <p class="stat-desc" data-i18n="numbers.speedDesc">
+              Frame time relative to jsQR at 640×480 — with a QR present / without one. Lower is
+              faster.
+            </p>
+            <span class="stat-evidence" data-i18n="numbers.evidence">See bench/RESULT.md →</span>
+          </a>
+          <a class="stat-card" href="https://github.com/elchika-inc/moonqr/blob/main/bench/RESULT.md" target="_blank" rel="noopener">
+            <p class="stat-label" data-i18n="numbers.encodeTitle">Encoder parity</p>
+            <p class="stat-value">160 / 160</p>
+            <p class="stat-desc" data-i18n="numbers.encodeDesc">
+              Cell-for-cell match against the qrcode npm package across every version × EC-level
+              combination.
+            </p>
+            <span class="stat-evidence" data-i18n="numbers.evidence">See bench/RESULT.md →</span>
+          </a>
+          <a class="stat-card" href="https://github.com/elchika-inc/moonqr/blob/main/packages/moonqr/README.md" target="_blank" rel="noopener">
+            <p class="stat-label" data-i18n="numbers.bundleTitle">Bundle size</p>
+            <p class="stat-value">6.4 KB / ~50 KB</p>
+            <p class="stat-desc" data-i18n="numbers.bundleDesc">
+              gzip, encode-only subpath / full decoder. Import just the part you use.
+            </p>
+            <span class="stat-evidence" data-i18n="numbers.evidence">See bench/RESULT.md →</span>
+          </a>
         </div>
-        <div id="read-results"></div>
       </section>
 
-      <section id="camera-section">
-        <h2>3. 読取（カメラ・ライブスキャン）</h2>
-        <p class="note">
-          <code>navigator.mediaDevices.getUserMedia</code> は HTTPS または localhost
-          でのみ利用できます（Secure Context 制約）。カメラのないヘッドレス環境や権限拒否時はエラーメッセージを表示します。
+      <section id="moonbit" class="section" aria-labelledby="moonbit-heading">
+        <h2 id="moonbit-heading" data-i18n="moonbit.heading">Why MoonBit</h2>
+        <p data-i18n="moonbit.body1">
+          MoonBit is a modern, statically-typed language that targets Wasm, JS, and native. Two
+          backends matter for the browser — js and wasm-gc — so before committing to one, we
+          measured both on the real decode workload, boundary costs included.
         </p>
-        <div class="actions">
-          <button id="camera-start-btn">カメラ開始</button>
-          <button id="camera-stop-btn" class="secondary" disabled>停止</button>
-        </div>
-        <p id="camera-status" class="note" style="margin-top: 10px"></p>
-        <div class="camera-stage" style="margin-top: 12px">
-          <video id="camera-video" muted playsinline></video>
-          <canvas id="camera-overlay"></canvas>
-        </div>
-        <div id="camera-result"></div>
+        <p data-i18n="moonbit.body2">
+          The result: the js backend was 1.99x faster than wasm-gc (geometric mean across Node and
+          Chrome). wasm-gc has no bulk-transfer path yet for moving a Uint8Array into a
+          FixedArray[Byte] — every pixel crosses the JS↔wasm boundary one element at a time. So
+          this project ships the js backend.
+        </p>
+        <a class="section-evidence" href="https://github.com/elchika-inc/moonqr/blob/main/bench/RESULT.md" target="_blank" rel="noopener" data-i18n="moonbit.evidence">Full methodology →</a>
+      </section>
+
+      <section id="story" class="section" aria-labelledby="story-heading">
+        <h2 id="story-heading" data-i18n="story.heading">War story: QR codes on a monitor</h2>
+        <p data-i18n="story.body1">
+          A photo of a QR code shown on a monitor picks up the screen's sub-pixel grid as
+          high-frequency noise. Naive block-based binarization mistakes it for near-50% speckle
+          and can't find the finder patterns — jsQR fails on these too, so this isn't a bug in our
+          binarizer.
+        </p>
+        <p data-i18n="story.body2">
+          A single-step downscale makes it worse — it aliases the grid instead of filtering it.
+          The fix is a small-scale-first multiscale pyramid: box-averaged (2×2 mean, a real
+          low-pass filter) downscales, tried smallest first. On a real monitor-photo test case
+          this cut decode time from ~5.4s to ~62ms, because the small scale that actually works is
+          reached immediately instead of after every larger scale has already failed.
+        </p>
+        <a class="section-evidence" href="https://github.com/elchika-inc/moonqr/blob/main/bench/RESULT.md" target="_blank" rel="noopener" data-i18n="story.evidence">Full write-up →</a>
+      </section>
+
+      <section id="install" class="section" aria-labelledby="install-heading">
+        <h2 id="install-heading" data-i18n="install.heading">Install</h2>
+        <p class="note" data-i18n="install.note">
+          @elchika-inc/moonqr and @elchika-inc/moonqr-scanner aren't published to npm yet — the
+          snippets below show the API you'll use once they are. To try it today, clone the repo
+          and build it locally.
+        </p>
+        <pre class="code-block"><code>npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner</code></pre>
+
+        <h3 data-i18n="install.encodeTitle">Encode → SVG</h3>
+        <pre class="code-block"><code>import { encode, toSvgString } from "@elchika-inc/moonqr/encode";
+
+const matrix = encode("HELLO", { ecLevel: "M" });
+if (matrix) {
+  const svg = toSvgString(matrix, { margin: 4, cell: 8 });
+  document.body.innerHTML = svg;
+}</code></pre>
+
+        <h3 data-i18n="install.decodeTitle">Decode → from ImageData</h3>
+        <pre class="code-block"><code>import { decode } from "@elchika-inc/moonqr/decode";
+
+// data is an RGBA pixel buffer (Uint8Array or Uint8ClampedArray),
+// e.g. from CanvasRenderingContext2D#getImageData
+const result = decode(imageData.data, imageData.width, imageData.height);
+if (result) {
+  console.log(result.text, result.version, result.ecLevel);
+}</code></pre>
+
+        <h3 data-i18n="install.cameraTitle">Live camera scan</h3>
+        <pre class="code-block"><code>import { QrScanner } from "@elchika-inc/moonqr-scanner";
+
+const video = document.querySelector("video");
+const scanner = new QrScanner(
+  video,
+  (result) => console.log("scanned:", result.text),
+  { preferredCamera: "environment" },
+);
+
+await scanner.start();
+// scanner.stop() when you're done</code></pre>
+      </section>
+
+      <section id="limitations" class="section" aria-labelledby="limitations-heading">
+        <h2 id="limitations-heading" data-i18n="limitations.heading">Limitations</h2>
+        <ul class="limitations-list">
+          <li data-i18n="limitations.kanji">
+            Kanji-mode encoding is not supported — Japanese (and other non-ASCII) text is always
+            encoded as byte-mode UTF-8, which is valid but not maximally compact. Decoding
+            Kanji-mode QR codes made by other encoders is fully supported.
+          </li>
+          <li data-i18n="limitations.segments">
+            No mixed-mode segment optimization — the encoder picks one mode (Numeric /
+            Alphanumeric / Byte) for the whole input rather than splitting mixed content into
+            per-segment optimal modes.
+          </li>
+          <li data-i18n="limitations.eci">
+            No ECI, Structured Append, or Micro QR — only standard (Model 2) QR codes with default
+            byte-mode handling are supported.
+          </li>
+        </ul>
       </section>
     </main>
 
     <footer>
-      <a href="https://github.com/elchika-inc/moonqr" target="_blank" rel="noopener">elchika-inc/moonqr</a>
-      · Apache-2.0
+      <div class="footer-links">
+        <a href="https://github.com/elchika-inc/moonqr" target="_blank" rel="noopener" data-i18n="footer.github">GitHub</a>
+        <span class="footer-pending"><span data-i18n="footer.npm">npm</span> <span data-i18n="footer.comingSoon">(coming soon)</span></span>
+        <span class="footer-pending"><span data-i18n="footer.mooncakes">mooncakes.io</span> <span data-i18n="footer.comingSoon">(coming soon)</span></span>
+        <a href="https://github.com/elchika-inc/moonqr/blob/main/LICENSE" target="_blank" rel="noopener"><span data-i18n="footer.license">License</span>: Apache-2.0</a>
+      </div>
+      <p class="footer-attribution" data-i18n-html="footer.attribution">
+        Portions of the decoder are ported from <a href="https://github.com/cozmo/jsQR" target="_blank" rel="noopener">jsQR</a>
+        (Apache-2.0); the Reed–Solomon block / alignment-pattern position tables are derived from
+        <a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noopener">qrcode-generator</a> (MIT).
+      </p>
     </footer>
 
     <script type="module" src="./app.js"></script>
