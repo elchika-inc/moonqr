@@ -2,14 +2,146 @@
 <meta charset="utf-8">
 <title>moonqr demo</title>
 <style>
-  body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 24px; }
+  body { font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 24px; padding: 20px; }
   figure { margin: 0; text-align: center; }
   svg { width: 240px; height: 240px; }
   figcaption { max-width: 240px; word-break: break-all; font-size: 12px; }
+  #decoder-section { width: 100%; margin-bottom: 20px; }
+  #drop-zone { border: 2px dashed #ccc; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: background 0.2s; }
+  #drop-zone.dragover { background: #f0f0f0; border-color: #999; }
+  .result { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; text-align: left; }
+  .result-thumbnail { max-width: 160px; max-height: 160px; margin: 10px 0; }
+  .result-success { color: #2ecc71; font-weight: bold; }
+  .result-failure { color: #e74c3c; font-weight: bold; }
 </style>
 <body>
+<div id="decoder-section">
+  <h2>QRコード読取（画像ファイル）</h2>
+  <div id="drop-zone">
+    <p>ここにQR画像をドラッグ&ドロップ、またはクリックして選択</p>
+    <input type="file" id="file-input" accept="image/*" multiple style="display: none;">
+  </div>
+  <div id="results"></div>
+</div>
+
 <script type="module">
-  // ビルド出力パスは実際の moon build 出力に合わせて調整
+  // Decode セクション
+  const decode_mod = await import("../core/_build/js/release/build/decode/decode.js");
+  const decode_js = decode_mod.decode_js;
+
+  const fileInput = document.getElementById("file-input");
+  const dropZone = document.getElementById("drop-zone");
+  const resultsDiv = document.getElementById("results");
+
+  dropZone.addEventListener("click", () => fileInput.click());
+
+  dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+  });
+
+  dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+  });
+
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    fileInput.files = e.dataTransfer.files;
+    handleFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    handleFiles(e.target.files);
+  });
+
+  async function handleFiles(files) {
+    resultsDiv.innerHTML = "";
+    for (const file of files) {
+      const result = await processImage(file);
+      resultsDiv.appendChild(result);
+    }
+  }
+
+  async function processImage(file) {
+    const resultDiv = document.createElement("div");
+    resultDiv.className = "result";
+
+    try {
+      const bitmap = await createImageBitmap(file);
+      let { width, height } = bitmap;
+
+      // Downscale if necessary (max dimension > 1600px)
+      // This protects decode_js from huge allocations and speeds up processing
+      const maxDim = Math.max(width, height);
+      let canvas = new OffscreenCanvas(width, height);
+
+      if (maxDim > 1600) {
+        const scale = 1600 / maxDim;
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        canvas = new OffscreenCanvas(width, height);
+      }
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0, width, height);
+
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = new Uint8Array(imageData.data.buffer, imageData.data.byteOffset, imageData.data.byteLength);
+
+      const result = decode_js(data, width, height, true);
+
+      const resultObj = result ? JSON.parse(result) : null;
+
+      // Create thumbnail
+      const thumbCanvas = new OffscreenCanvas(160, 160);
+      const thumbCtx = thumbCanvas.getContext("2d");
+      thumbCtx.fillStyle = "#fff";
+      thumbCtx.fillRect(0, 0, 160, 160);
+      const scale = Math.min(160 / width, 160 / height);
+      const x = (160 - width * scale) / 2;
+      const y = (160 - height * scale) / 2;
+      thumbCtx.drawImage(bitmap, x, y, width * scale, height * scale);
+
+      const thumbBlob = await thumbCanvas.convertToBlob();
+      const thumbUrl = URL.createObjectURL(thumbBlob);
+
+      resultDiv.innerHTML = `
+        <strong>${file.name}</strong>
+        <img src="${thumbUrl}" class="result-thumbnail" alt="thumbnail">
+      `;
+
+      if (resultObj) {
+        const text = resultObj.text || "(empty)";
+        const version = resultObj.version !== undefined ? resultObj.version : "?";
+        const ecLevel = resultObj.ecLevel || "?";
+        resultDiv.innerHTML += `
+          <p class="result-success">✓ 読取成功</p>
+          <p>テキスト: <code>${escapeHtml(text)}</code></p>
+          <p>バージョン: ${version} / エラー訂正レベル: ${ecLevel}</p>
+        `;
+      } else {
+        resultDiv.innerHTML += `<p class="result-failure">✗ 読取失敗</p>`;
+      }
+    } catch (err) {
+      resultDiv.innerHTML = `
+        <strong>${file.name}</strong>
+        <p class="result-failure">✗ エラー: ${escapeHtml(err.message)}</p>
+      `;
+    }
+
+    return resultDiv;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+
+<script type="module">
+  // Encode セクション（元のコード）
   const mod = await import("../core/_build/js/release/build/encode/encode.js");
   const EC = { L: 0, M: 1, Q: 2, H: 3 };
   const CASES = [
