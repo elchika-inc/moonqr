@@ -23,7 +23,7 @@ pub fn version_bits(version : Int) -> Int {
   (version << 12) | (rem & 0xFFF)
 }
 
-///| フォーマット情報15bitを2系統の位置に書き込む（bit14 が先頭）
+///| フォーマット情報15bitを2系統の位置に書き込む（get_bit(0)=LSB が先頭セル (8,0) に入る。bit14 は 15bit 整数の最上位）
 pub fn place_format(m : Matrix, ec : EcLevel, mask : Int) -> Unit {
   let bits = format_bits(ec, mask)
   let get_bit = fn(i : Int) -> Bool { ((bits >> i) & 1) == 1 }

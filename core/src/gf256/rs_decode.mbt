@@ -12,7 +12,7 @@ fn calc_syndromes(msg : Array[Int], n_ec : Int) -> Array[Int] {
   synd
 }
 
-///| Berlekamp-Massey: エラーロケータ多項式 σ(x)（index 0 = 定数項 1）
+///| Berlekamp-Massey: エラーロケータ多項式 σ(x)（index 0 = 最高次。定数項 1 は末尾要素）
 fn find_error_locator(synd : Array[Int]) -> Array[Int]? {
   let mut err_loc = [1]
   let mut old_loc = [1]
@@ -127,7 +127,7 @@ fn correct_errors(
       deriv.push(0)
     }
   }
-  // deriv は x で1次下げた多項式として評価する（下の eval で x^2 刻みに対応）
+  // deriv は σ の形式微分（GF(2^8) では偶数次項が消える）。plain Horner で x_inv を評価する
   let out = msg.copy()
   for k = 0; k < positions.length(); k = k + 1 {
     let pos = positions[k]
