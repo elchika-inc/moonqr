@@ -160,15 +160,15 @@ cd core && moon build --target js --release && cd ..
 node --test packages/moonqr/test/jsqr-parity.test.mjs
 ```
 
-
 ## decode性能ベンチ jsQR比較（Task 11・2026-07-14）
 
 ### 環境
 
 - node: `v24.18.0`
+- moon: `moon 0.1.20260703 (6fbf8c3 2026-07-03)`
 - arch: `arm64` / platform: `darwin`
 - jsqr (npm): `1.4.0`
-- commit: `4f21690`
+- commit: `14f6903`
 
 ### 方法
 
@@ -186,12 +186,19 @@ jsQR は `inversionAttempts` オプションで対応: 主計測は `"attemptBot
 （自前 `invert=true` に相当）、参考計測は `"dontInvert"`（自前
 `invert=false` に相当）。
 
+計測フェアネスの注記:
+- 各イテレーションの戻り値を sink に集計・検証している（JIT のデッドコード
+  除去対策。hit で sink=ITERS、miss で sink=0 になることを assert 済み）。
+- 実行順序は各フレームにつき jsQR → 自前 の固定順・非インターリーブ。時間
+  経過によるドリフト（サーマル・GC）は後に走る自前側に不利に働くため、
+  報告される自前優位に対して保守的なバイアス（rubric 判定を甘くしない方向）。
+
 ### 結果
 
 | frame | jsQR attemptBoth (ms) | ours invert=true (ms) | ratio (ours/jsQR) | 判定 | jsQR dontInvert (ms, 参考) | ours invert=false (ms, 参考) | ratio (参考) |
 |---|---|---|---|---|---|---|---|
-| hit | 77.050 | 57.914 | 0.752 | PASS | 76.649 | 58.043 | 0.757 |
-| miss | 174.594 | 138.757 | 0.795 | PASS | 90.246 | 70.483 | 0.781 |
+| hit | 78.620 | 60.122 | 0.765 | PASS | 82.788 | 63.106 | 0.762 |
+| miss | 180.165 | 134.224 | 0.745 | PASS | 90.535 | 72.805 | 0.804 |
 
 ### 判定（スペック rubric 2）
 

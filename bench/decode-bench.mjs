@@ -18,7 +18,7 @@
 // jsQR は inversionAttempts: "attemptBoth"（主計測）/ "dontInvert"（参考）、
 // 自前は invert=true（主計測、attemptBoth相当）/ invert=false（参考、
 // dontInvert相当）で対応させる。
-import { readFileSync, appendFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -113,25 +113,47 @@ function ourDecode(frame, invert) {
 }
 
 // --- 計測 ---
-function median(fn) {
+// 結果消費ガード: 各イテレーションの戻り値を sink に集計してログする
+// （Phase 1 run-node.mjs が hits を捕捉していたのと同じ趣旨。戻り値を捨てると
+// JIT のデッドコード除去で計測対象の一部が消えるリスクがあるため、結果を
+// 必ず消費して観測可能にする。hit フレームでは sink=ITERS（毎回デコード成功）、
+// miss フレームでは sink=0 になるはず）。
+function median(label, expectedSink, fn) {
   for (let i = 0; i < WARMUP; i++) fn();
   const times = [];
+  let sink = 0;
   for (let i = 0; i < ITERS; i++) {
     const t0 = performance.now();
-    fn();
+    const res = fn();
     times.push(performance.now() - t0);
+    // jsQR は object|null、decode_js は string（"" = 失敗）を返す
+    sink += typeof res === "string" ? (res.length > 0 ? 1 : 0) : res ? 1 : 0;
+  }
+  console.log(`  ${label}: sink=${sink}/${ITERS} decoded iterations`);
+  if (sink !== expectedSink) {
+    throw new Error(
+      `sink mismatch for ${label}: got ${sink}, expected ${expectedSink} — ` +
+      `measurement loop did not consistently exercise the intended path`,
+    );
   }
   times.sort((a, b) => a - b);
   return times[Math.floor(ITERS / 2)];
 }
 
+// 実行順序の注記: 各フレームにつき jsQR → 自前 の固定順・非インターリーブで
+// 計測する。時間経過によるドリフト（サーマルスロットリング・GC 圧の蓄積）は
+// 後に走る側＝自前に不利に働くため、報告される自前優位に対して保守的な
+// （優位を過小評価する方向の）バイアスであり、rubric 判定を甘くする方向には
+// 働かない。
 const results = {};
 for (const [frameName, frame] of [["hit", hitFrame], ["miss", missFrame]]) {
+  console.log(`measuring [${frameName}] frame:`);
+  const exp = frameName === "hit" ? ITERS : 0;
   results[frameName] = {
-    jsqrAttemptBoth: median(() => jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "attemptBoth" })),
-    ourInvertTrue: median(() => decode_js(frame, WIDTH, HEIGHT, true)),
-    jsqrDontInvert: median(() => jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "dontInvert" })),
-    ourInvertFalse: median(() => decode_js(frame, WIDTH, HEIGHT, false)),
+    jsqrAttemptBoth: median("jsQR attemptBoth", exp, () => jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "attemptBoth" })),
+    ourInvertTrue: median("ours invert=true ", exp, () => decode_js(frame, WIDTH, HEIGHT, true)),
+    jsqrDontInvert: median("jsQR dontInvert  ", exp, () => jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "dontInvert" })),
+    ourInvertFalse: median("ours invert=false", exp, () => decode_js(frame, WIDTH, HEIGHT, false)),
   };
 }
 
@@ -156,12 +178,21 @@ for (const frameName of ["hit", "miss"]) {
 }
 console.log(`\njudgment (rubric 2, ours <= jsQR * ${RATIO_MAX} on BOTH frames): ${allPass ? "PASS" : "FAIL"}`);
 
-// --- RESULT.md 追記（冪等: 既に追記済みならスキップ） ---
+// --- RESULT.md 追記（冪等: 既存セクションがあれば置換、なければ追記） ---
 function commitHash() {
   try {
     return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: repoRoot }).toString().trim();
   } catch {
     return "(unknown, not a git repo checkout at bench time)";
+  }
+}
+
+function moonVersion() {
+  try {
+    // `moon version` の1行目（例: "moon 0.1.20260703 (6fbf8c3 2026-07-03)"）
+    return execFileSync("moon", ["version"]).toString().trim().split("\n")[0];
+  } catch {
+    return "(unknown, moon not on PATH at bench time)";
   }
 }
 
@@ -178,6 +209,7 @@ const summary = `
 ### 環境
 
 - node: \`${process.version}\`
+- moon: \`${moonVersion()}\`
 - arch: \`${process.arch}\` / platform: \`${process.platform}\`
 - jsqr (npm): \`1.4.0\`
 - commit: \`${commitHash()}\`
@@ -198,6 +230,13 @@ jsQR は \`inversionAttempts\` オプションで対応: 主計測は \`"attempt
 （自前 \`invert=true\` に相当）、参考計測は \`"dontInvert"\`（自前
 \`invert=false\` に相当）。
 
+計測フェアネスの注記:
+- 各イテレーションの戻り値を sink に集計・検証している（JIT のデッドコード
+  除去対策。hit で sink=ITERS、miss で sink=0 になることを assert 済み）。
+- 実行順序は各フレームにつき jsQR → 自前 の固定順・非インターリーブ。時間
+  経過によるドリフト（サーマル・GC）は後に走る自前側に不利に働くため、
+  報告される自前優位に対して保守的なバイアス（rubric 判定を甘くしない方向）。
+
 ### 結果
 
 | frame | jsQR attemptBoth (ms) | ours invert=true (ms) | ratio (ours/jsQR) | 判定 | jsQR dontInvert (ms, 参考) | ours invert=false (ms, 参考) | ratio (参考) |
@@ -213,8 +252,16 @@ ${tableRows}
 
 const sectionMarker = "## decode性能ベンチ jsQR比較（Task 11";
 const existingResultMd = existsSync(resultMdPath) ? readFileSync(resultMdPath, "utf8") : "";
-if (!existingResultMd.includes(sectionMarker)) {
+const markerIdx = existingResultMd.indexOf(sectionMarker);
+if (markerIdx === -1) {
   appendFileSync(resultMdPath, summary);
+} else {
+  // 既存セクションを最新の計測値で置換する（マーカーから次の "## " 見出し、
+  // なければ末尾まで）。再実行でRESULT.mdが肥大化せず、常に最新値を反映する。
+  const nextSection = existingResultMd.indexOf("\n## ", markerIdx + sectionMarker.length);
+  const before = existingResultMd.slice(0, markerIdx).replace(/\n+$/, "\n");
+  const after = nextSection === -1 ? "" : existingResultMd.slice(nextSection + 1);
+  writeFileSync(resultMdPath, before + summary.replace(/^\n+/, "\n") + after);
 }
 console.log(summary);
 
