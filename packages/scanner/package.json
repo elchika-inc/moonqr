@@ -1,0 +1,13 @@
+{
+  "name": "@elchika-inc/moonqr-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "QR code scanner with camera support for moonqr",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "git+https://github.com/naoto24kawa/moonqr.git" },
+  "keywords": ["qrcode", "scanner", "camera", "moonbit"],
+  "dependencies": {
+    "@elchika-inc/moonqr": "workspace:*"
+  }
+}

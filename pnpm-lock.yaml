@@ -19,10 +19,16 @@ importers:
         version: 1.5.4
 
   packages/moonqr:
-    dependencies:
+    devDependencies:
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
+
+  packages/scanner:
+    dependencies:
+      '@elchika-inc/moonqr':
+        specifier: workspace:*
+        version: link:../moonqr
 
 packages:
 
