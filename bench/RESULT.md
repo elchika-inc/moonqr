@@ -159,3 +159,42 @@ node scripts/fetch-fixtures.mjs   # 冪等: 既にfixtures/jsqr-e2e/があれば
 cd core && moon build --target js --release && cd ..
 node --test packages/moonqr/test/jsqr-parity.test.mjs
 ```
+
+
+## decode性能ベンチ jsQR比較（Task 11・2026-07-14）
+
+### 環境
+
+- node: `v24.18.0`
+- arch: `arm64` / platform: `darwin`
+- jsqr (npm): `1.4.0`
+- commit: `4f21690`
+
+### 方法
+
+Phase 1 (`bench/run-node.mjs`) と同一方法論: WARMUP=30, ITERS=200, median。
+フレームは 640x480 RGBA、2種:
+- **hit**: `bench/gen-frame.mjs` のノイズ背景（seed=42）に、`encode_js`
+  で生成した v2-M QR（"PERF BENCH DECODE TEST"）を `packages/moonqr/test/lib/rasterize.mjs`
+  でラスタ化（scale=5, margin=4, seed=7）し、オフセンター位置 (400,180) に
+  合成。計測前に jsQR・自前の両方が実際にデコードでき、テキストが一致する
+  ことを検証済み。
+- **miss**: `bench/gen-frame.mjs` の背景のみ（QR非合成）。計測前に両実装
+  とも null を返すことを検証済み。
+
+jsQR は `inversionAttempts` オプションで対応: 主計測は `"attemptBoth"`
+（自前 `invert=true` に相当）、参考計測は `"dontInvert"`（自前
+`invert=false` に相当）。
+
+### 結果
+
+| frame | jsQR attemptBoth (ms) | ours invert=true (ms) | ratio (ours/jsQR) | 判定 | jsQR dontInvert (ms, 参考) | ours invert=false (ms, 参考) | ratio (参考) |
+|---|---|---|---|---|---|---|---|
+| hit | 77.050 | 57.914 | 0.752 | PASS | 76.649 | 58.043 | 0.757 |
+| miss | 174.594 | 138.757 | 0.795 | PASS | 90.246 | 70.483 | 0.781 |
+
+### 判定（スペック rubric 2）
+
+**基準: 自前 median ≤ jsQR median × 1.2 が hit・miss 両フレームで成立すること。**
+
+**判定: PASS**
