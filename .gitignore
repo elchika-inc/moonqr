@@ -5,3 +5,4 @@ _build/
 .mooncakes/
 fixtures/
 dist/
+packages/scanner/src/worker-inline.generated.ts

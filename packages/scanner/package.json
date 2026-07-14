@@ -9,24 +9,26 @@
   "repository": { "type": "git", "url": "git+https://github.com/naoto24kawa/moonqr.git" },
   "keywords": ["qrcode", "scanner", "camera", "moonbit"],
   "files": ["dist"],
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
   "scripts": {
-    "test:unit": "vitest run",
-    "build": "tsup"
+    "build:worker": "node scripts/build-worker.mjs",
+    "test:unit": "node scripts/build-worker.mjs && vitest run",
+    "build": "node scripts/build-worker.mjs && tsup"
   },
   "dependencies": {
     "@elchika-inc/moonqr": "workspace:*"
   },
   "devDependencies": {
+    "esbuild": "^0.27.7",
+    "jsdom": "^25.0.1",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"

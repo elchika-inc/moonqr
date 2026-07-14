@@ -1,11 +1,13 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  // 現時点ではルートエントリのみ（multiscale はカメラ非依存の純粋ロジックで
-  // サイズも小さく、Task 3/4 の encode/decode のようなサブパス分割の理由が
-  // ない。Task 6 でカメラ/Workerを追加する際に分割の要否を再検討する）。
+  // ルートエントリのみ（multiscale はカメラ非依存の純粋ロジックでサイズも小さく、
+  // Task 3/4 の encode/decode のようなサブパス分割の理由がない）。
   entry: ["src/index.ts"],
-  format: ["esm", "cjs"],
+  // ESMのみ: Worker起動をBlob URL化した文字列（src/worker-inline.generated.ts。
+  // scripts/build-worker.mjs が生成）に依存しており、CJS化する実利がない
+  // （Worker自体はブラウザAPIでNode CJSコンシューマを想定しない）。
+  format: ["esm"],
   dts: true,
   minify: true,
   treeshake: true,
