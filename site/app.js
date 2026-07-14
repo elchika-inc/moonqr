@@ -1,8 +1,7 @@
 // moonqr デモページのロジック。CDN不使用・importmap経由でビルド済みdistのみを読む
 // （site/index.html の importmap と scripts/build-site.mjs 参照）。
 import { encode, toSvgString } from "@elchika-inc/moonqr/encode";
-import { decode } from "@elchika-inc/moonqr/decode";
-import { QrScanner, multiScaleDecode } from "@elchika-inc/moonqr-scanner";
+import { QrScanner } from "@elchika-inc/moonqr-scanner";
 
 // ---------------------------------------------------------------------------
 // 1. 生成
@@ -110,37 +109,22 @@ function escapeHtml(text) {
 }
 
 /**
- * ファイル → RGBA画素抽出 → multiScaleDecode（scanner公開API）で「どのスケールで
- * 成功したか」まで含めて読み取る。QrScanner.scanImage() は同じ multiScaleDecode を
- * 内部で使うが結果のみを返し scale を捨てるため（decode-core.ts の decodeMultiScale
- * 参照）、"成功スケール" 表示のためにここでは multiScaleDecode を直接呼ぶ。
+ * File（Blob）をそのまま公開API `QrScanner.scanImage()` に渡して読み取る。
+ * 戻り値の `ScanImageResult` は DecodeResult に加えて成功スケール（scale）と
+ * 試行スケール列（attemptedScales）を含むため、内部APIを迂回せずに
+ * 「どのスケールで読めたか」まで表示できる（このデモは公開APIのリファレンス実装）。
  */
 async function decodeImageFile(file) {
   const card = document.createElement("div");
   card.className = "result-card";
+  const thumbUrl = URL.createObjectURL(file);
 
   try {
-    const bitmap = await createImageBitmap(file);
-    const { width, height } = bitmap;
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(bitmap, 0, 0);
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = new Uint8Array(
-      imageData.data.buffer,
-      imageData.data.byteOffset,
-      imageData.data.byteLength,
-    );
+    const result = await QrScanner.scanImage(file);
 
-    const decodeFn = (d, w, h) => decode(d, w, h, { invert: true });
-    const outcome = multiScaleDecode(decodeFn, data, width, height);
-
-    const thumbUrl = canvas.toDataURL("image/png");
     let body;
-    if (outcome) {
-      const { result, scale, attemptedScales } = outcome;
+    if (result) {
+      const { scale, attemptedScales } = result;
       const attemptsNote = attemptedScales.map((s) => `1/${s}`).join(" → ");
       body = `
         <p class="status-ok">✓ 読取成功（${scale === 1 ? "等倍" : `1/${scale} スケール`}）</p>

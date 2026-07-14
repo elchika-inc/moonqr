@@ -71,8 +71,11 @@ class InlineWorkerHandle implements WorkerHandle {
       if (this.terminated) return;
       try {
         const data = new Uint8Array(message.buffer);
+        // decodeMultiScale は MultiScaleOutcome（result + scale + attemptedScales）を返すため
+        // .result を取り出す。WorkerResponse の契約は worker.ts と揃える（DecodeResult|null）
+        // ——ライブフレームでは scale を消費者へ運ばない（worker.ts のコメント参照）。
         const result = message.multiscale
-          ? decodeMultiScale(data, message)
+          ? (decodeMultiScale(data, message)?.result ?? null)
           : decodeNative(data, message);
         this.onmessage?.({ data: { id: message.id, result } });
       } catch (error) {

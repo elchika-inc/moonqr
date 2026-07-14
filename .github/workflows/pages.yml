@@ -59,6 +59,12 @@ jobs:
       - name: Assemble site (copy dist into site/assets/)
         run: pnpm run build:site
 
+      # Pages-from-Actions の標準手順。リポジトリ Settings の Pages source が
+      # 「GitHub Actions」であることを前提に、デプロイに必要なメタデータを整える
+      # （初回の source 設定自体は Task 10 の human-gate で一度だけ手動で行う）。
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

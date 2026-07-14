@@ -9,7 +9,7 @@
 // バンドルサイズが不必要に膨らむ。
 import { decode } from "@elchika-inc/moonqr/decode";
 import type { DecodeResult } from "@elchika-inc/moonqr/decode";
-import { multiScaleDecode } from "./multiscale.js";
+import { multiScaleDecode, type MultiScaleOutcome } from "./multiscale.js";
 
 export type { DecodeResult } from "@elchika-inc/moonqr/decode";
 
@@ -47,16 +47,22 @@ export function decodeNative(
 /**
  * マルチスケールピラミッドでデコードを試みる（静止画の一発読取、および
  * ライブフレームでの失敗エスカレーション用）。
+ *
+ * 戻り値は `MultiScaleOutcome`（`result` に加えて成功した `scale` と試行した
+ * `attemptedScales` を含む）——**成否だけでなく「どのスケールで成功したか」まで
+ * 返すのが契約**。`QrScanner.scanImage()` はこれをそのまま公開APIへ通す
+ * （消費者が「モニター越しの撮影だったので1/8で読めた」等を提示できるようにするため。
+ * この情報を握りつぶすと消費者は multiScaleDecode を自前で呼び直すしかなくなる）。
+ * 結果のみが必要な呼び出し元（Worker境界を越えるライブフレーム経路）は `?.result` を取る。
  */
 export function decodeMultiScale(
   data: Uint8Array | Uint8ClampedArray,
   params: DecodeParams,
-): DecodeResult | null {
-  const outcome = multiScaleDecode(
+): MultiScaleOutcome<DecodeResult> | null {
+  return multiScaleDecode(
     (d, w, h) => decode(d, w, h, { invert: params.invert }),
     toUint8Array(data),
     params.width,
     params.height,
   );
-  return outcome?.result ?? null;
 }

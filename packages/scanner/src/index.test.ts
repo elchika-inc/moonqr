@@ -11,7 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encode } from "@elchika-inc/moonqr/encode";
 import { QrScanner } from "./index.js";
-import { applyMonitorLattice, rasterizeMatrix } from "./test-raster.js";
+import { applyMonitorLattice, rasterizeMatrix, type RasterImage } from "./test-raster.js";
 
 // ---- 共有フィクスチャ ----------------------------------------------------
 
@@ -21,12 +21,41 @@ const cleanMatrix = encode(CLEAN_TEXT, { ecLevel: "M", version: 2 });
 if (!cleanMatrix) throw new Error("fixture setup: encode() failed for CLEAN_TEXT");
 const cleanImage = rasterizeMatrix(cleanMatrix, { scale: 6, margin: 4 });
 
+// 等倍で読め、かつ **ピラミッドが作られない** サイズのQRラスタ（scanImage の scale=1 検証用）。
+// multiScaleDecode は max(width, height) >= 150 の間だけ半減レベルを積むため、
+// 132px（=(25+8)*4）四方のこの画像は等倍1段のみ＝scale は必ず1になる
+// （cleanImage は198px四方でレベルが2段積まれるため scale=1 の断定に使えない）。
+const tinyCleanImage = rasterizeMatrix(cleanMatrix, { scale: 4, margin: 4 });
+
 // 等倍decodeは失敗し、multiScaleDecodeの段階的縮小でのみ成功するフィクスチャ
 // （packages/moonqr/test/monitor-lattice.test.mjs と同じ手法。test-raster.ts参照）。
 const LATTICE_TEXT = "MONITOR LATTICE";
 const latticeMatrix = encode(LATTICE_TEXT, { ecLevel: "M", version: 2 });
 if (!latticeMatrix) throw new Error("fixture setup: encode() failed for LATTICE_TEXT");
 const latticeImage = applyMonitorLattice(rasterizeMatrix(latticeMatrix, { scale: 28, margin: 4 }));
+
+/** `image` を `size`x`size` の白キャンバスの左上に貼り付ける（周囲は白で埋める）。 */
+function padToWhiteCanvas(image: RasterImage, size: number): RasterImage {
+  const data = new Uint8Array(size * size * 4).fill(255);
+  for (let y = 0; y < image.height; y++) {
+    for (let x = 0; x < image.width; x++) {
+      const src = (y * image.width + x) * 4;
+      const dst = (y * size + x) * 4;
+      data[dst] = image.data[src] as number;
+      data[dst + 1] = image.data[src + 1] as number;
+      data[dst + 2] = image.data[src + 2] as number;
+      data[dst + 3] = 255;
+    }
+  }
+  return { data, width: size, height: size };
+}
+
+// 「大きな画像の中に小さく写ったQR」——縮小レベルではモジュールが潰れて読めず、
+// より大きい（＝縮小率の小さい）レベルまで降りて初めて読める。multiScaleDecode が
+// 小スケールから順に**複数レベルを試行して**いることを attemptedScales で観測するための
+// フィクスチャ（latticeImage は最小レベルで即成功するため試行が1回で終わり、順序の検証に
+// 使えない）。
+const smallQrInLargeImage = padToWhiteCanvas(rasterizeMatrix(cleanMatrix, { scale: 4, margin: 4 }), 640);
 
 // ---- canvas モック ---------------------------------------------------------
 // jsdomは<canvas>の2Dコンテキストで実ピクセル操作を行わない（getContextはnullを返す）ため、
@@ -368,6 +397,72 @@ describe("QrScanner.scanImage", () => {
 
     const result = await QrScanner.scanImage(source);
     expect(result).toBeNull();
+  });
+
+  // --- scale / attemptedScales の公開契約（ScanImageResult） -------------------
+  // scanImage は DecodeResult だけでなく「どのスケールで読めたか」まで返す
+  // （index.ts の ScanImageResult 参照）。この情報を落とすと消費者は成功スケールを
+  // 知るために multiScaleDecode を自前で呼び直す＝公開APIを迂回するしかなくなる。
+
+  it("reports scale=1 when the image decodes at native resolution (no pyramid built)", async () => {
+    // tinyImage は max(w,h) < 150 のため multiScaleDecode はピラミッドを作らず
+    // 等倍レベル1段のみを試す → scale は必ず 1（等倍成功）。
+    mockCanvasWith(tinyCleanImage);
+    const source = document.createElement("canvas");
+    source.width = tinyCleanImage.width;
+    source.height = tinyCleanImage.height;
+
+    const result = await QrScanner.scanImage(source);
+
+    expect(result?.text).toBe(CLEAN_TEXT);
+    expect(result?.scale).toBe(1);
+    expect(result?.attemptedScales).toEqual([1]);
+  });
+
+  it("reports the reduced scale (>1) that recovered the monitor-lattice QR", async () => {
+    // 等倍では格子に阻まれて読めず、段階的ボックス平均縮小でのみ読める
+    // （multiscale.ts 冒頭の root cause）。scale は縮小が効いたことを示す >1 になり、
+    // 「等倍でも読めた」場合と区別できていること（＝scaleが定数1でベタ書きされていない）を
+    // 保証する。
+    mockCanvasWith(latticeImage);
+    const source = document.createElement("canvas");
+    source.width = latticeImage.width;
+    source.height = latticeImage.height;
+
+    const result = await QrScanner.scanImage(source);
+
+    expect(result?.text).toBe(LATTICE_TEXT);
+    expect(result?.scale).toBeGreaterThan(1);
+    // scale は必ず2の冪（逐次半減の総縮小率）
+    expect(Number.isInteger(Math.log2(result?.scale ?? 0))).toBe(true);
+    // 成功したスケールは、実際に試行した列の最後（＝そこで打ち切られた）に来る。
+    const attempted = result?.attemptedScales ?? [];
+    expect(attempted[attempted.length - 1]).toBe(result?.scale);
+  });
+
+  it("lists attemptedScales from the smallest image (largest reduction) upward", async () => {
+    // 契約: attemptedScales は「小さい画像から」の試行順（= scale値としては降順）。
+    // 安価な小スケールから試すのが multiScaleDecode の性能設計の要（multiscale.ts 参照）。
+    // 大画像に小さく写ったQRは小スケールでは潰れて読めず、複数レベルを試行する
+    // ——順序を観測できる唯一のフィクスチャ（lattice は最小レベルで即成功する）。
+    mockCanvasWith(smallQrInLargeImage);
+    const source = document.createElement("canvas");
+    source.width = smallQrInLargeImage.width;
+    source.height = smallQrInLargeImage.height;
+
+    const result = await QrScanner.scanImage(source);
+
+    expect(result?.text).toBe(CLEAN_TEXT);
+    const attempted = result?.attemptedScales ?? [];
+    expect(attempted.length).toBeGreaterThan(1); // 小スケールで失敗し、実際に複数レベルを試している
+    for (let i = 1; i < attempted.length; i++) {
+      const prev = attempted[i - 1] as number;
+      const cur = attempted[i] as number;
+      // scale値が単調減少 = 画像サイズが単調増加（小さい画像から大きい画像へ）
+      expect(cur).toBeLessThan(prev);
+    }
+    // 成功レベルは試行列の末尾（そこで打ち切られた）
+    expect(attempted[attempted.length - 1]).toBe(result?.scale);
   });
 });
 

@@ -9,15 +9,28 @@
       content="MoonBit製 QRコードライブラリ moonqr のブラウザデモ（生成・画像読取・カメラスキャン）"
     />
     <link rel="stylesheet" href="./style.css" />
+    <!-- インラインSVGのfavicon（外部リクエストなし・404回避）。 -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><rect width='8' height='8' fill='%23fff'/><path d='M1 1h2v2H1zM5 1h2v2H5zM1 5h2v2H1zM4 4h1v1H4zM6 4h1v1H6zM4 6h1v1H4zM6 6h1v1H6z' fill='%23000'/></svg>"
+    />
     <!--
       importmap: scanner/dist/index.js は `@elchika-inc/moonqr/decode` をベア指定子で
       importする（パッケージ間依存はバンドルに巻き込まない設計。scripts/build-site.mjs
       冒頭コメント参照）。ブラウザにNode解決はないため、ここで ./assets/ 配下の
       コピー済みファイルへ明示的に解決する。CDN不使用・自己完結。
+
+      **app.js の import 文と同期を保つこと**——ここに無いベア指定子を app.js が
+      （あるいは assets/ 配下のdistが推移的に）importすると、ブラウザは解決できず
+      モジュール読込ごと失敗する（サイレントに真っ白な画面になる）。dist のサブパス名は
+      scripts/build-site.mjs のコピー先ディレクトリ名と一致させること。
+      ルート指定子（`@elchika-inc/moonqr`）は現状 app.js からは未使用だが、
+      リファレンスとして辿れるよう併せて解決しておく。
     -->
     <script type="importmap">
       {
         "imports": {
+          "@elchika-inc/moonqr": "./assets/moonqr/index.js",
           "@elchika-inc/moonqr/encode": "./assets/moonqr/encode.js",
           "@elchika-inc/moonqr/decode": "./assets/moonqr/decode.js",
           "@elchika-inc/moonqr/dom": "./assets/moonqr/dom.js",

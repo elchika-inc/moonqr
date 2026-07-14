@@ -8,6 +8,22 @@ import { decodeMultiScale, type DecodeResult } from "./decode-core.js";
 import { createWorkerHandle, type WorkerHandle } from "./worker-handle.js";
 import type { WorkerResponse } from "./worker.js";
 
+/**
+ * `QrScanner.scanImage()` の戻り値。`DecodeResult`（text/bytes/version/ecLevel/corners）に
+ * **どのスケールで読み取れたか**を加えたもの。
+ *
+ * なぜ scale を返すか: 静止画のマルチスケール読取は「等倍では読めず 1/8 縮小で初めて
+ * 読めた」（モニター越しの撮影など。multiscale.ts 冒頭の root cause 参照）という結果が
+ * 日常的に起きる。この情報を握りつぶすと、消費者は成功スケールを知るために
+ * `multiScaleDecode` を自前で呼び直す（＝公開APIを迂回する）しかなくなる。
+ */
+export interface ScanImageResult extends DecodeResult {
+  /** 入力ネイティブ解像度に対する総縮小率（1 = 等倍で成功、8 = 1/8縮小で成功）。 */
+  scale: number;
+  /** 実際に試行したスケールの列（昇順＝小さい画像から。先頭が最初に試したレベル）。 */
+  attemptedScales: number[];
+}
+
 export interface QrScannerOptions {
   /** "environment"（背面・既定）または "user" */
   preferredCamera?: "environment" | "user";
@@ -211,12 +227,19 @@ export class QrScanner {
     }
   }
 
-  /** 静止画の一発読取（マルチスケール込み） */
+  /**
+   * 静止画の一発読取（マルチスケール込み）。読み取れなければ null。
+   *
+   * 戻り値は `DecodeResult` に成功スケール（`scale`）と試行スケール列
+   * （`attemptedScales`）を加えた `ScanImageResult`。
+   */
   static async scanImage(
     source: HTMLImageElement | HTMLCanvasElement | ImageBitmap | Blob,
-  ): Promise<DecodeResult | null> {
+  ): Promise<ScanImageResult | null> {
     const { data, width, height } = await sourceToRGBA(source);
-    return decodeMultiScale(data, { width, height, invert: true });
+    const outcome = decodeMultiScale(data, { width, height, invert: true });
+    if (!outcome) return null;
+    return { ...outcome.result, scale: outcome.scale, attemptedScales: outcome.attemptedScales };
   }
 
   /** カメラが利用可能か（getUserMedia の有無・HTTPS 文脈） */
