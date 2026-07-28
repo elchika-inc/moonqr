@@ -13,11 +13,10 @@ browser (no WASM, no native addons).
 
 ## Live demo
 
-**TODO(Task 10):** GitHub Pages demo link — the `site/` app (encode text into a QR code, decode
-an uploaded image, or scan with your camera, all client-side) is built by
-[`.github/workflows/pages.yml`](.github/workflows/pages.yml), but Pages hasn't been enabled for
-this repository yet (human-gated step). Once enabled it will be live at
-`https://elchika-inc.github.io/moonqr/`.
+**<https://elchika-inc.github.io/moonqr/>** — encode text into a QR code, decode an uploaded
+image, or scan with your camera. Everything runs client-side: no server, no external requests.
+The page is the `site/` app, built and deployed by
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml).
 
 ## Why MoonBit
 
