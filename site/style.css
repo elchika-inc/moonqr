@@ -659,10 +659,6 @@ footer {
   color: var(--accent);
 }
 
-.footer-pending {
-  color: var(--muted-2);
-}
-
 .footer-attribution {
   max-width: 720px;
   margin: 0;

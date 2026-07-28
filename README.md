@@ -57,9 +57,28 @@ monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md
 | [`@elchika-inc/moonqr`](packages/moonqr) | Encode/decode core + DOM canvas rendering. Subpath exports (`/encode`, `/decode`, `/dom`) so you only bundle what you use. | [README](packages/moonqr/README.md) |
 | [`@elchika-inc/moonqr-scanner`](packages/scanner) | Camera-based live QR scanner (`QrScanner` class), decode loop runs in a Web Worker off the main thread. | [README](packages/scanner/README.md) |
 
+```sh
+npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
+```
+
 Both packages are pure ESM+CJS (moonqr) / ESM (scanner), have no runtime dependencies outside
 each other (`moonqr-scanner` depends on `moonqr`), and declare `sideEffects: false` for clean
 tree-shaking.
+
+### Using it from MoonBit
+
+The `core/` module is published to [mooncakes.io](https://mooncakes.io/docs/naoto24kawa/moonqr)
+as `naoto24kawa/moonqr`, so MoonBit projects can depend on the encoder/decoder directly instead
+of going through the JS packages:
+
+```sh
+moon add naoto24kawa/moonqr
+```
+
+```moonbit
+// in moon.pkg: import { "naoto24kawa/moonqr/encode" }
+let matrix = @encode.encode("HELLO", @encode.EcLevel::M, None)
+```
 
 ## Development
 

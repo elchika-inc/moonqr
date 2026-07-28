@@ -124,7 +124,7 @@ export const translations = {
 
     "install.heading": "Install",
     "install.note":
-      "@elchika-inc/moonqr and @elchika-inc/moonqr-scanner aren't published to npm yet — the snippets below show the API you'll use once they are. To try it today, clone the repo and build it locally.",
+      "Both packages are on npm, zero runtime dependencies. The MoonBit core is also on mooncakes.io as naoto24kawa/moonqr — add it with moon add naoto24kawa/moonqr.",
     "install.encodeTitle": "Encode → SVG",
     "install.decodeTitle": "Decode → from ImageData",
     "install.cameraTitle": "Live camera scan",
@@ -143,7 +143,6 @@ export const translations = {
     "footer.license": "License",
     "footer.attribution":
       'Portions of the decoder are ported from <a href="https://github.com/cozmo/jsQR" target="_blank" rel="noopener">jsQR</a> (Apache-2.0); the Reed–Solomon block / alignment-pattern position tables are derived from <a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noopener">qrcode-generator</a> (MIT).',
-    "footer.comingSoon": "(coming soon)",
   },
 
   ja: {
@@ -250,7 +249,7 @@ export const translations = {
 
     "install.heading": "インストール",
     "install.note":
-      "@elchika-inc/moonqr と @elchika-inc/moonqr-scanner はまだnpmに公開されていません — 以下のコードは公開後に使えるAPIです。今すぐ試すにはリポジトリをcloneしてローカルビルドしてください。",
+      "両パッケージともnpmで公開中です（ランタイム依存ゼロ）。MoonBitコアは mooncakes.io でも naoto24kawa/moonqr として公開しています — moon add naoto24kawa/moonqr で追加できます。",
     "install.encodeTitle": "エンコード → SVG",
     "install.decodeTitle": "デコード → ImageDataから",
     "install.cameraTitle": "カメラ・ライブスキャン",
@@ -269,7 +268,6 @@ export const translations = {
     "footer.license": "ライセンス",
     "footer.attribution":
       'デコーダの一部は<a href="https://github.com/cozmo/jsQR" target="_blank" rel="noopener">jsQR</a>（Apache-2.0）から移植。Reed–Solomonブロック/アライメントパターン位置テーブルは<a href="https://github.com/kazuhikoarase/qrcode-generator" target="_blank" rel="noopener">qrcode-generator</a>（MIT）由来です。',
-    "footer.comingSoon": "（公開準備中）",
   },
 };
 
