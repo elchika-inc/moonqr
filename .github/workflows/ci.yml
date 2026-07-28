@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # MoonBit の CDN (cli.moonbitlang.com) は "latest"/"nightly" チャンネルしか配信せず、
       # 日付/バージョン指定の過去ビルドを保持していない（unix.sh の ARGUMENTS /

@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # See .github/workflows/ci.yml for why this can't be a real version pin (upstream only
       # serves latest/nightly) — this is a build-speed cache, not a pin, keyed on the moon
