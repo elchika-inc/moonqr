@@ -1,0 +1,51 @@
+name: Feature request
+description: Suggest a capability moonqr doesn't have yet
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The known gaps are listed under "Limitations" in the README — Kanji-mode encoding,
+        mixed-mode segment optimization, and ECI / Structured Append / Micro QR. If your
+        request is one of those, say so: knowing which ones people actually need is what
+        decides the order they get built in.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: >
+        Describe the use case, not only the feature. What are you building, and where does
+        moonqr fall short?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like moonqr to do
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Encoder
+        - Decoder
+        - Scanner (camera)
+        - Build / packaging
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: >
+            I would be willing to open a pull request for this (please read CONTRIBUTING.md
+            first — provenance rules apply to ported and AI-generated code)
