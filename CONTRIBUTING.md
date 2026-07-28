@@ -103,6 +103,24 @@ Each layer proves something different — run all four before opening a PR.
   in a header comment. Don't hand-edit the generated `.mbt` files — change the generator script
   and regenerate, then `git diff` the result to confirm the change is what you expect.
 
+## Branch protection
+
+`main` is protected. Every change — including from maintainers — goes through a pull request:
+
+```sh
+git switch -c <branch>
+git push -u origin <branch>
+gh pr create
+```
+
+The ruleset requires a pull request (0 approvals — this is a solo-maintained project), requires
+the `test` CI job to pass, forbids force pushes and branch deletion, and has an empty bypass list,
+so it applies to administrators too. AI agents share their operator's GitHub token, so a
+protection that admins could bypass would not protect anything.
+
+See [RELEASING.md](RELEASING.md) for how to disable it in an emergency — and for the reminder to
+turn it back on.
+
 ## PR expectations
 
 - All four test layers green (see above), plus `pnpm -r typecheck`.
