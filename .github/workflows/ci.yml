@@ -36,7 +36,7 @@ jobs:
       # オフ。詳細・アップグレード手順は docs/TOOLCHAIN.md）。
       - name: Cache MoonBit toolchain
         id: moon-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.moon
           key: moonbit-toolchain-${{ runner.os }}-0.1.20260713
@@ -89,7 +89,7 @@ jobs:
       # SHA（＝スクリプトの内容）が変わらない限り再取得しないようキャッシュする。
       - name: Cache jsQR e2e fixtures
         id: fixtures-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: fixtures/jsqr-e2e
           key: fixtures-jsqr-e2e-${{ hashFiles('scripts/fetch-fixtures.mjs') }}
