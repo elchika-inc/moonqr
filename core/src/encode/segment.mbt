@@ -56,7 +56,7 @@ pub fn detect_mode(text : String) -> Mode {
 
 ///| その文字を表現できる最も制限的なモード。
 ///| 表現力の包含関係は Numeric ⊂ Alphanumeric ⊂ Byte。
-pub fn char_mode(c : Char) -> Mode {
+fn char_mode(c : Char) -> Mode {
   let code = c.to_int()
   if code >= 48 && code <= 57 {
     Mode::Numeric
@@ -68,14 +68,14 @@ pub fn char_mode(c : Char) -> Mode {
 }
 
 ///| 文字種のラン。start は文字単位のインデックス（UTF-8 バイト位置ではない）。
-pub(all) struct Run {
+struct Run {
   mode : Mode
   start : Int
   len : Int
 } derive(Eq, Debug)
 
 ///| 連続する同じ char_mode の文字をまとめる。
-pub fn runs_of(text : String) -> Array[Run] {
+fn runs_of(text : String) -> Array[Run] {
   let out : Array[Run] = []
   let mut idx = 0
   for c in text {
@@ -92,7 +92,7 @@ pub fn runs_of(text : String) -> Array[Run] {
 }
 
 ///| run_mode の文字を mode で表現できるか（Numeric ⊂ Alphanumeric ⊂ Byte）。
-pub fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
+fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
   match mode {
     Mode::Byte => true
     Mode::Alphanumeric =>
@@ -136,7 +136,7 @@ fn segment_bits_for_lengths(
 ///| chars[from..from+len) を mode で符号化したときの総ビット数。
 ///| モード指示子 4bit + 文字数指示子 + データ部。
 ///| 端数の扱いがモードごとに異なるため、1文字あたりへ均さずに計算する。
-pub fn segment_bits(
+fn segment_bits(
   chars : Array[Char],
   from : Int,
   len : Int,
@@ -164,7 +164,7 @@ pub fn segment_bits(
 }
 
 ///| 最適分割の1区間。start / len は文字単位。
-pub(all) struct Segment {
+struct Segment {
   mode : Mode
   start : Int
   len : Int
@@ -174,7 +174,7 @@ pub(all) struct Segment {
 ///| ラン単位の DP。最適な分割境界は文字種が変わる位置にしか来ないため、
 ///| ランへ圧縮してから探索する（数字列の途中で切って両側とも Numeric に
 ///| するのは切替コストが増えるだけで常に損）。
-pub fn optimal_segments(text : String, version : Int) -> Array[Segment] {
+fn optimal_segments(text : String, version : Int) -> Array[Segment] {
   if !input_within_model2_capacity(text) {
     return []
   }
@@ -292,7 +292,7 @@ fn write_segment_list(
 
 ///| 最適分割に基づいて複数セグメントを書く。
 ///| デコーダ側は Phase 2 で複数セグメントの読み取りに対応済み。
-pub fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
+fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
   write_segment_list(w, text, version, optimal_segments(text, version))
 }
 
