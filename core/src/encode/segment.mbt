@@ -85,6 +85,67 @@ pub fn runs_of(text : String) -> Array[Run] {
   out
 }
 
+///| run_mode の文字を mode で表現できるか（Numeric ⊂ Alphanumeric ⊂ Byte）。
+pub fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
+  match mode {
+    Mode::Byte => true
+    Mode::Alphanumeric =>
+      match run_mode {
+        Mode::Byte => false
+        _ => true
+      }
+    Mode::Numeric =>
+      match run_mode {
+        Mode::Numeric => true
+        _ => false
+      }
+  }
+}
+
+///| chars[from..from+len) を mode で符号化したときの総ビット数。
+///| モード指示子 4bit + 文字数指示子 + データ部。
+///| 端数の扱いがモードごとに異なるため、1文字あたりへ均さずに計算する。
+pub fn segment_bits(
+  chars : Array[Char],
+  from : Int,
+  len : Int,
+  mode : Mode,
+  version : Int,
+) -> Int {
+  let header = 4 + cci_bits(mode, version)
+  match mode {
+    Mode::Numeric => {
+      let full = len / 3
+      let rest = len % 3
+      let data = full * 10 + (if rest == 2 { 7 } else if rest == 1 { 4 } else { 0 })
+      header + data
+    }
+    Mode::Alphanumeric => {
+      let pairs = len / 2
+      let rest = len % 2
+      header + pairs * 11 + (if rest == 1 { 6 } else { 0 })
+    }
+    Mode::Byte => {
+      // 文字数ではなく UTF-8 バイト数で数える
+      let mut bytes = 0
+      for i = from; i < from + len; i = i + 1 {
+        let cp = chars[i].to_int()
+        bytes = bytes +
+          (if cp < 0x80 {
+            1
+          } else if cp < 0x800 {
+            2
+          } else if cp < 0x10000 {
+            3
+          } else {
+            4
+          })
+      }
+      header + bytes * 8
+    }
+  }
+}
+
 ///| 文字数指示子のビット数（ISO 18004 Table 3）
 pub fn cci_bits(mode : Mode, version : Int) -> Int {
   if version <= 9 {

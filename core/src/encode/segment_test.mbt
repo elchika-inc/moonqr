@@ -70,3 +70,48 @@ test "runs_of on a single-mode string yields one run" {
 test "runs_of on empty string yields no runs" {
   assert_eq(@encode.runs_of("").length(), 0)
 }
+
+test "mode_can_encode follows Numeric ⊂ Alphanumeric ⊂ Byte" {
+  assert_eq(@encode.mode_can_encode(@encode.Mode::Numeric, @encode.Mode::Numeric), true)
+  assert_eq(@encode.mode_can_encode(@encode.Mode::Alphanumeric, @encode.Mode::Numeric), true)
+  assert_eq(@encode.mode_can_encode(@encode.Mode::Byte, @encode.Mode::Numeric), true)
+  assert_eq(@encode.mode_can_encode(@encode.Mode::Numeric, @encode.Mode::Alphanumeric), false)
+  assert_eq(@encode.mode_can_encode(@encode.Mode::Alphanumeric, @encode.Mode::Byte), false)
+  assert_eq(@encode.mode_can_encode(@encode.Mode::Byte, @encode.Mode::Byte), true)
+}
+
+test "segment_bits matches write_segment for numeric" {
+  // "01234567" v1 numeric: 4 + 10 + (10+10+7) = 41
+  let chars : Array[Char] = []
+  for c in "01234567" {
+    chars.push(c)
+  }
+  assert_eq(@encode.segment_bits(chars, 0, 8, @encode.Mode::Numeric, 1), 4 + 10 + 10 + 10 + 7)
+}
+
+test "segment_bits matches write_segment for alphanumeric" {
+  // "AC-42" v1 alnum: 4 + 9 + (11+11+6) = 41
+  let chars : Array[Char] = []
+  for c in "AC-42" {
+    chars.push(c)
+  }
+  assert_eq(@encode.segment_bits(chars, 0, 5, @encode.Mode::Alphanumeric, 1), 4 + 9 + 11 + 11 + 6)
+}
+
+test "segment_bits counts UTF-8 bytes for byte mode" {
+  // "あ" は UTF-8 で 3 バイト: 4 + 8 + 24 = 36 (v1)
+  let chars : Array[Char] = []
+  for c in "あ" {
+    chars.push(c)
+  }
+  assert_eq(@encode.segment_bits(chars, 0, 1, @encode.Mode::Byte, 1), 4 + 8 + 24)
+}
+
+test "segment_bits handles a sub-range" {
+  // "XX123" の後半 3 文字を numeric として測る: 4 + 10 + 10 = 24 (v1)
+  let chars : Array[Char] = []
+  for c in "XX123" {
+    chars.push(c)
+  }
+  assert_eq(@encode.segment_bits(chars, 2, 3, @encode.Mode::Numeric, 1), 4 + 10 + 10)
+}
