@@ -1,3 +1,5 @@
+# エージェントツールの作業用ディレクトリ。設計・実装計画は .docs/plans/ が正本
+# （二重の保存先を作らない）。
 .superpowers/
 docs/superpowers/
 node_modules/

@@ -15,6 +15,18 @@ zero-dependency npm packages. See [README.md](README.md) for the user-facing des
 [bench/RESULT.md](bench/RESULT.md) for the measurements behind every number quoted in the docs,
 and [RELEASING.md](RELEASING.md) for how a release is cut.
 
+Working documents live under `.docs/`:
+
+- [`.docs/PROJECT_GOAL.md`](.docs/PROJECT_GOAL.md) — what this builds, and the criteria it has to meet
+- [`.docs/plans/`](.docs/plans/) — design documents and implementation plans (`*-design.md` / `*-plan.md`)
+- [`.docs/risk-registry.md`](.docs/risk-registry.md) — risks accepted on purpose, with the reasoning
+- [`.docs/actions/`](.docs/actions/) — queued work for a later session
+
+**Write design documents and implementation plans to `.docs/plans/`, not to a tool-specific
+directory.** Some agent tooling defaults to `docs/<tool>/specs/` or similar; those paths are
+gitignored here, so anything written there is invisible to everyone reading the repository. One
+location, tracked in git.
+
 ## Tech Stack
 
 - MoonBit (`core/`, compiled with `moon build --target js`) + TypeScript packages bundled by tsup.
