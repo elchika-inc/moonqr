@@ -43,8 +43,18 @@ Terminal cells are roughly twice as tall as they are wide, so drawing one module
 stretch the code vertically past the point of being readable. Two module rows are packed into each
 cell using half-block characters instead.
 
-A URL typically renders in about 17–19 rows by 33–37 columns, which fits an 80×24 terminal without
-scrolling.
+Measured output sizes:
+
+| Input | Rows × columns |
+|---|---|
+| `http://192.168.1.10:3000` | 17 × 33 |
+| `https://github.com/elchika-inc/moonqr/pull/17` | 21 × 41 |
+| A 76-character deploy-preview URL | 23 × 45 |
+
+An 80×24 terminal fits all of these. Longer payloads keep growing — the code is `modules + 8`
+columns wide and `ceil((modules + 8) / 2)` rows tall, where `modules` is 21 for the smallest QR
+version and 177 for the largest. Text long enough to need a high version will not fit on screen;
+that is a limitation of the medium rather than something this tool can work around.
 
 ## Development
 
