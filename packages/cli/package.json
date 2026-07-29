@@ -1,0 +1,42 @@
+{
+  "name": "@elchika-inc/moonqr-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Print a QR code to your terminal. Hand a URL from your CLI to your phone by pointing a camera at it.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elchika-inc/moonqr.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/elchika-inc/moonqr/tree/main/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/elchika-inc/moonqr/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["qrcode", "qr", "cli", "terminal", "moonbit"],
+  "files": ["dist", "bin", "README.md", "LICENSE", "NOTICE", "THIRD_PARTY_LICENSES"],
+  "bin": {
+    "moonqr": "./bin/moonqr.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "node ../../scripts/copy-legal-files.mjs"
+  },
+  "dependencies": {
+    "@elchika-inc/moonqr": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}
