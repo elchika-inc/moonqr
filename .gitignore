@@ -1,7 +1,10 @@
 # エージェントツールの作業用ディレクトリ。設計・実装計画は .docs/plans/ が正本
 # （二重の保存先を作らない）。
+# .codex/ は agmsg が生成する hook 設定で、絶対パスとエージェント名が
+# ハードコードされる。他の環境では動かないためリポジトリに含めない。
 .superpowers/
 docs/superpowers/
+.codex/
 node_modules/
 target/
 _build/
