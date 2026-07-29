@@ -21,7 +21,7 @@ and [RELEASING.md](RELEASING.md) for how a release is cut.
 - pnpm workspace. Node.js 18.18+.
 - Not the standard Cloudflare web-service stack — this is a published library, so there is no app,
   no database, and no deploy target beyond npm / mooncakes.io / GitHub Pages.
-- standards_version: 2026-07-28 (rev.45).
+- standards_version: 2026-07-29 (rev.46).
 - branch_policy: protected — `main` requires a pull request and a passing `test` check, with an
   empty bypass list, so the rule applies to administrators as well. An agent and its operator
   share one GitHub token, so a bypass for administrators would also be a bypass for the agent.
