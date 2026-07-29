@@ -100,11 +100,12 @@ jobs:
       - name: Node test suite (moonqr, incl. jsQR parity + encode sweep)
         run: node --test packages/moonqr/test/*.test.mjs
 
-      - name: Vitest (moonqr)
-        run: pnpm --filter @elchika-inc/moonqr test:unit
-
-      - name: Vitest (scanner)
-        run: pnpm --filter @elchika-inc/moonqr-scanner test:unit
+      # 個別に --filter で列挙せず -r で全パッケージを回す。列挙式だと
+      # パッケージを追加したときに書き忘れてもCIは緑のままになり、
+      # そのパッケージのテストだけが静かに実行されない状態が生まれる
+      # （実際 packages/cli の追加時にこれが起きかけた）。
+      - name: Vitest (all packages)
+        run: pnpm -r test:unit
 
       - name: Report bundle sizes
         if: always()
