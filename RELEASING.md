@@ -3,11 +3,12 @@
 Publishing is deliberately manual. npm's 2FA prompt is the human gate — there is no CI job that
 can publish on its own, and that is by design.
 
-Three registries are involved, published in this order:
+Four artifacts are involved, published in this order:
 
 1. `@elchika-inc/moonqr` (npm)
 2. `@elchika-inc/moonqr-scanner` (npm) — depends on the above, so the order is not optional
-3. `naoto24kawa/moonqr` (mooncakes.io) — the MoonBit source module
+3. `@elchika-inc/moonqr-cli` (npm) — also depends on the core
+4. `naoto24kawa/moonqr` (mooncakes.io) — the MoonBit source module
 
 ## 1. Preflight
 
@@ -27,11 +28,23 @@ moon whoami         # "Logged in as <user>"
 
 ## 2. Bump versions
 
-All three carry the same version number:
+These three carry the same version number:
 
 - `packages/moonqr/package.json`
 - `packages/scanner/package.json`
 - `core/moon.mod.json`
+
+**`@elchika-inc/moonqr-cli` is versioned independently** — it does not have to match the core. Its
+version lives in two places that must be updated together:
+
+- `packages/cli/package.json`
+- `packages/cli/src/cli.ts` — the `VERSION` constant backing `moonqr --version`
+
+After bumping, confirm the two agree:
+
+```sh
+node -e 'const p=require("./packages/cli/package.json");const s=require("node:fs").readFileSync("packages/cli/src/cli.ts","utf8");const m=s.match(/VERSION = "([^"]+)"/);console.log(p.version === m[1] ? "ok " + p.version : `MISMATCH package.json=${p.version} cli.ts=${m[1]}`)'
+```
 
 Open a pull request for the bump like any other change — `main` is protected.
 

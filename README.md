@@ -59,6 +59,7 @@ monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md
 |---|---|---|
 | [`@elchika-inc/moonqr`](packages/moonqr) | Encode/decode core + DOM canvas rendering. Subpath exports (`/encode`, `/decode`, `/dom`) so you only bundle what you use. | [README](packages/moonqr/README.md) |
 | [`@elchika-inc/moonqr-scanner`](packages/scanner) | Camera-based live QR scanner (`QrScanner` class), decode loop runs in a Web Worker off the main thread. | [README](packages/scanner/README.md) |
+| [`@elchika-inc/moonqr-cli`](packages/cli) | Command-line tool that prints a QR code to your terminal — hand a URL from your shell to your phone. | [README](packages/cli/README.md) |
 
 ```sh
 npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
