@@ -48,6 +48,43 @@ pub fn detect_mode(text : String) -> Mode {
   }
 }
 
+///| その文字を表現できる最も制限的なモード。
+///| 表現力の包含関係は Numeric ⊂ Alphanumeric ⊂ Byte。
+pub fn char_mode(c : Char) -> Mode {
+  let code = c.to_int()
+  if code >= 48 && code <= 57 {
+    Mode::Numeric
+  } else if alnum_index(c) >= 0 {
+    Mode::Alphanumeric
+  } else {
+    Mode::Byte
+  }
+}
+
+///| 文字種のラン。start は文字単位のインデックス（UTF-8 バイト位置ではない）。
+pub(all) struct Run {
+  mode : Mode
+  start : Int
+  len : Int
+} derive(Eq, Debug)
+
+///| 連続する同じ char_mode の文字をまとめる。
+pub fn runs_of(text : String) -> Array[Run] {
+  let out : Array[Run] = []
+  let mut idx = 0
+  for c in text {
+    let m = char_mode(c)
+    if out.length() > 0 && out[out.length() - 1].mode == m {
+      let last = out[out.length() - 1]
+      out[out.length() - 1] = Run::{ mode: m, start: last.start, len: last.len + 1 }
+    } else {
+      out.push(Run::{ mode: m, start: idx, len: 1 })
+    }
+    idx = idx + 1
+  }
+  out
+}
+
 ///| 文字数指示子のビット数（ISO 18004 Table 3）
 pub fn cci_bits(mode : Mode, version : Int) -> Int {
   if version <= 9 {
