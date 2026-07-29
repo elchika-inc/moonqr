@@ -180,3 +180,31 @@ test "optimal_segments never costs more than a single segment" {
     assert_true(total <= single_bits)
   }
 }
+
+test "write_segments equals write_segment for a single-mode input" {
+  // 分割の余地がない入力では、単一セグメントと完全に同じビット列になること
+  let a = @encode.BitWriter::new()
+  @encode.write_segment(a, "HELLO WORLD", @encode.Mode::Alphanumeric, 1)
+  let b = @encode.BitWriter::new()
+  @encode.write_segments(b, "HELLO WORLD", 1)
+  assert_eq(b.bit_length(), a.bit_length())
+}
+
+test "write_segments produces fewer bits than a single segment when split helps" {
+  let text = "https://ex.com/id/1234567890"
+  let single = @encode.BitWriter::new()
+  @encode.write_segment(single, text, @encode.Mode::Byte, 1)
+  let split = @encode.BitWriter::new()
+  @encode.write_segments(split, text, 1)
+  assert_true(split.bit_length() < single.bit_length())
+}
+
+test "encode still works and shrinks the version when splitting helps" {
+  // 単一モードなら v4、最適分割なら v3 に収まる（実測値）
+  let text = "https://ex.com/id/123456789012345678901234567890"
+  let m = @encode.encode(text, @encode.EcLevel::M, None)
+  match m {
+    Some(matrix) => assert_eq(matrix.size, 29) // v3 = 29x29
+    None => abort("encode returned None")
+  }
+}

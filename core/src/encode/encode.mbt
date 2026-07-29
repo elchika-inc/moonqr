@@ -6,10 +6,9 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
   if text.length() == 0 {
     return None
   }
-  let mode = detect_mode(text)
   let try_version = fn(v : Int) -> Matrix? {
     let w = BitWriter::new()
-    write_segment(w, text, mode, v)
+    write_segments(w, text, v)
     match assemble(w, v, ec) {
       None => None
       Some(cw) => {

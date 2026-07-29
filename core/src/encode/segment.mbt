@@ -226,6 +226,24 @@ pub fn optimal_segments(text : String, version : Int) -> Array[Segment] {
   out
 }
 
+///| 最適分割に基づいて複数セグメントを書く。
+///| デコーダ側は Phase 2 で複数セグメントの読み取りに対応済み。
+pub fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
+  let chars : Array[Char] = []
+  for c in text {
+    chars.push(c)
+  }
+  for s in optimal_segments(text, version) {
+    // このコードベースは StringBuilder を使わず、文字列連結と補間で組み立てる
+    // （svg.mbt の to_svg_string と同じ書き方）
+    let mut part = ""
+    for i = s.start; i < s.start + s.len; i = i + 1 {
+      part = part + chars[i].to_string()
+    }
+    write_segment(w, part, s.mode, version)
+  }
+}
+
 ///| 文字数指示子のビット数（ISO 18004 Table 3）
 pub fn cci_bits(mode : Mode, version : Int) -> Int {
   if version <= 9 {
