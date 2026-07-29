@@ -3,13 +3,24 @@
 ///| 容量超過は None。空文字は None（仕様上の決定: qrcode npm は throw するが、
 ///| 本ライブラリは例外を投げず Option で表現する方針のため None に倒す）。
 pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
-  if text.length() == 0 {
+  if text.length() == 0 || !input_within_model2_capacity(text) {
     return None
   }
-  let mode = detect_mode(text)
+  // 文字数指示子は 1-9 / 10-26 / 27-40 の帯でのみ変わるため、
+  // 最適分割は帯ごとに1回だけ求めてバージョン試行間で再利用する。
+  let segments_low = optimal_segments(text, 1)
+  let segments_mid = optimal_segments(text, 10)
+  let segments_high = optimal_segments(text, 27)
   let try_version = fn(v : Int) -> Matrix? {
     let w = BitWriter::new()
-    write_segment(w, text, mode, v)
+    let segments = if v <= 9 {
+      segments_low
+    } else if v <= 26 {
+      segments_mid
+    } else {
+      segments_high
+    }
+    write_segment_list(w, text, v, segments)
     match assemble(w, v, ec) {
       None => None
       Some(cw) => {

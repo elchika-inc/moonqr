@@ -28,7 +28,7 @@ export const translations = {
     "hero.ctaGithub": "View on GitHub",
     "hero.badge1": "214/214 decoder parity with jsQR",
     "hero.badge2": "faster than jsQR",
-    "hero.badge3": "6.4 KB gzip encoder",
+    "hero.badge3": "7.3 KB gzip encoder",
 
     "demo.heading": "Try it now",
     "demo.intro":
@@ -101,9 +101,9 @@ export const translations = {
     "numbers.encodeTitle": "Encoder parity",
     "numbers.encodeValue": "160 / 160",
     "numbers.encodeDesc":
-      "Cell-for-cell match against the qrcode npm package across every version × EC-level combination.",
+      "Cell-for-cell match against the qrcode npm package across every version × EC-level combination. At EC M, mixed-mode optimization shrinks https://ex.com/id/<100-digit ID> from single-Byte v7 to v4.",
     "numbers.bundleTitle": "Bundle size",
-    "numbers.bundleValue": "6.4 KB / ~50 KB",
+    "numbers.bundleValue": "7.3 KB / ~50 KB",
     "numbers.bundleDesc":
       "gzip, encode-only subpath / full decoder. Import just the part you use.",
     "numbers.evidence": "See bench/RESULT.md →",
@@ -132,8 +132,6 @@ export const translations = {
     "limitations.heading": "Limitations",
     "limitations.kanji":
       "Kanji-mode encoding is not supported — Japanese (and other non-ASCII) text is always encoded as byte-mode UTF-8, which is valid but not maximally compact. Decoding Kanji-mode QR codes made by other encoders is fully supported.",
-    "limitations.segments":
-      "No mixed-mode segment optimization — the encoder picks one mode (Numeric / Alphanumeric / Byte) for the whole input rather than splitting mixed content into per-segment optimal modes.",
     "limitations.eci":
       "No ECI, Structured Append, or Micro QR — only standard (Model 2) QR codes with default byte-mode handling are supported.",
 
@@ -158,7 +156,7 @@ export const translations = {
     "hero.ctaGithub": "GitHubで見る",
     "hero.badge1": "jsQRとデコーダ完全パリティ 214/214",
     "hero.badge2": "jsQRより高速",
-    "hero.badge3": "エンコーダ 6.4KB gzip",
+    "hero.badge3": "エンコーダ 7.3KB gzip",
 
     "demo.heading": "今すぐ試す",
     "demo.intro":
@@ -226,9 +224,9 @@ export const translations = {
     "numbers.encodeTitle": "エンコーダ・パリティ",
     "numbers.encodeValue": "160 / 160",
     "numbers.encodeDesc":
-      "qrcode npmパッケージと全バージョン×ECレベルの組み合わせでセル単位一致。",
+      "qrcode npmパッケージと全バージョン×ECレベルの組み合わせでセル単位一致。EC Mでは、混在モード最適化により https://ex.com/id/<100桁ID> を単一Byteモードのv7からv4へ縮小。",
     "numbers.bundleTitle": "バンドルサイズ",
-    "numbers.bundleValue": "6.4KB / 約50KB",
+    "numbers.bundleValue": "7.3KB / 約50KB",
     "numbers.bundleDesc":
       "gzip、エンコード専用サブパス／フルデコーダ。使う分だけimportできます。",
     "numbers.evidence": "bench/RESULT.mdを見る →",
@@ -257,8 +255,6 @@ export const translations = {
     "limitations.heading": "制限事項",
     "limitations.kanji":
       "漢字モードでのエンコードは非対応です — 日本語（および非ASCII文字）は常にバイトモードUTF-8としてエンコードされます。これは有効なQRコードですが、最小サイズにはなりません。他のエンコーダが生成した漢字モードQRコードのデコードは完全にサポートしています。",
-    "limitations.segments":
-      "混在モードのセグメント最適化は非対応です — 入力全体に単一モード（数字/英数字/バイト）を選択し、混在コンテンツをセグメントごとの最適モードに分割することはしません。",
     "limitations.eci":
       "ECI・構造的連接・マイクロQRは非対応です — 標準（モデル2）QRコード、デフォルトのバイトモード処理のみに対応しています。",
 

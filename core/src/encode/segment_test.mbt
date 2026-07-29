@@ -36,3 +36,13 @@ test "utf8 encode multibyte" {
   assert_eq(@encode.utf8_encode("あ"), [0xE3, 0x81, 0x82])
   assert_eq(@encode.utf8_encode("🦑"), [0xF0, 0x9F, 0xA6, 0x91])
 }
+
+test "encode still works and shrinks the version when splitting helps" {
+  // 単一モードなら v4、最適分割なら v3 に収まる（実測値）
+  let text = "https://ex.com/id/123456789012345678901234567890"
+  let m = @encode.encode(text, @encode.EcLevel::M, None)
+  match m {
+    Some(matrix) => assert_eq(matrix.size, 29) // v3 = 29x29
+    None => abort("encode returned None")
+  }
+}

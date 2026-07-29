@@ -70,7 +70,7 @@
           <ul class="hero-badges">
             <li><span class="dot dot-ok"></span><span data-i18n="hero.badge1">214/214 decoder parity with jsQR</span></li>
             <li><span class="dot dot-accent"></span><span data-i18n="hero.badge2">faster than jsQR</span></li>
-            <li><span class="dot dot-accent"></span><span data-i18n="hero.badge3">6.4 KB gzip encoder</span></li>
+            <li><span class="dot dot-accent"></span><span data-i18n="hero.badge3">7.3 KB gzip encoder</span></li>
           </ul>
         </div>
       </section>
@@ -174,13 +174,14 @@
             <p class="stat-value">160 / 160</p>
             <p class="stat-desc" data-i18n="numbers.encodeDesc">
               Cell-for-cell match against the qrcode npm package across every version × EC-level
-              combination.
+              combination. At EC M, mixed-mode optimization shrinks
+              https://ex.com/id/&lt;100-digit ID&gt; from single-Byte v7 to v4.
             </p>
             <span class="stat-evidence" data-i18n="numbers.evidence">See bench/RESULT.md →</span>
           </a>
           <a class="stat-card" href="https://github.com/elchika-inc/moonqr/blob/main/packages/moonqr/README.md" target="_blank" rel="noopener">
             <p class="stat-label" data-i18n="numbers.bundleTitle">Bundle size</p>
-            <p class="stat-value">6.4 KB / ~50 KB</p>
+            <p class="stat-value">7.3 KB / ~50 KB</p>
             <p class="stat-desc" data-i18n="numbers.bundleDesc">
               gzip, encode-only subpath / full decoder. Import just the part you use.
             </p>
@@ -271,11 +272,6 @@ await scanner.start();
             Kanji-mode encoding is not supported — Japanese (and other non-ASCII) text is always
             encoded as byte-mode UTF-8, which is valid but not maximally compact. Decoding
             Kanji-mode QR codes made by other encoders is fully supported.
-          </li>
-          <li data-i18n="limitations.segments">
-            No mixed-mode segment optimization — the encoder picks one mode (Numeric /
-            Alphanumeric / Byte) for the whole input rather than splitting mixed content into
-            per-segment optimal modes.
           </li>
           <li data-i18n="limitations.eci">
             No ECI, Structured Append, or Micro QR — only standard (Model 2) QR codes with default

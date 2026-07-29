@@ -46,6 +46,9 @@ fetch or instantiate.
   [`qrcode`](https://www.npmjs.com/package/qrcode) npm package across all **160** version×EC-level
   combinations (versions 1–40 × levels L/M/Q/H), with the reference regenerated at our chosen mask
   pattern to make the comparison exact rather than mask-dependent.
+- **Encoder compaction**: mixed input is split into per-segment optimal modes. At EC level M,
+  `https://ex.com/id/` plus a 100-digit ID shrinks from single-Byte **v7** to mixed-mode **v4**;
+  moonqr matched or beat the `qrcode` npm package across **11 inputs × 4 EC levels (44 cases)**.
 
 Full measurement methodology, environment details, and additional gates (real-camera photos,
 monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md).
@@ -130,11 +133,6 @@ scripts/               repo-level dev scripts (fixtures, site build, table gener
   non-ASCII) text as byte-mode UTF-8, never as ISO 18004 Kanji mode — this produces a valid but
   slightly larger QR code than a Kanji-mode-aware encoder would. **Decoding** Kanji-mode QR
   codes produced by other encoders **is** fully supported.
-- **No mixed-mode segment optimization.** The encoder picks a single mode (Numeric,
-  Alphanumeric, or Byte) for the entire input based on its content, rather than splitting mixed
-  input into multiple segments with per-segment optimal modes. This is simpler and always
-  correct, but not always the smallest possible encoding for mixed content (e.g. mostly-numeric
-  text with a few letters).
 - **No ECI, Structured Append, or Micro QR support** on either encode or decode. Only standard
   (Model 2) QR codes with the default byte-mode ECI (implicit ISO-8859-1/UTF-8-ish handling
   matching common encoders, per Kanji-mode decode above) are handled.

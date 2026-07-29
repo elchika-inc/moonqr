@@ -69,10 +69,10 @@ toCanvas(matrix, document.querySelector("canvas")!, { margin: 4, cell: 8 });
 
 | Entry | Purpose | Size (CJS, minified) |
 |---|---|---|
-| `@elchika-inc/moonqr/encode` | Encode only | raw 21.3 KB / gzip 6.4 KB |
+| `@elchika-inc/moonqr/encode` | Encode only | raw 24.4 KB / gzip 7.3 KB |
 | `@elchika-inc/moonqr/decode` | Decode only | raw 129.5 KB / gzip 49.8 KB |
 | `@elchika-inc/moonqr/dom` | `toCanvas` (canvas rendering) | raw 0.3 KB / gzip 0.2 KB (no MoonBit dependency) |
-| `@elchika-inc/moonqr` | Everything (convenience) | raw 150.9 KB / gzip 56.7 KB |
+| `@elchika-inc/moonqr` | Everything (convenience) | raw 154.0 KB / gzip 57.5 KB |
 
 (Sizes are reproduced by `node scripts/report-bundle-sizes.mjs` at the repo root after
 `pnpm -r build`, and checked in CI on every push.)

@@ -4,6 +4,12 @@ pub(all) enum Mode {
   Byte
 } derive(Eq, Debug)
 
+///| QR Model 2 の絶対最大容量は version 40-L Numeric の 7,089 文字。
+///| この上限を超える入力はどのモードでも収まらない。
+fn input_within_model2_capacity(text : String) -> Bool {
+  text.length() <= 7089
+}
+
 ///| 英数字モードの文字集合における index。非対応は -1
 fn alnum_index(c : Char) -> Int {
   let code = c.to_int()
@@ -46,6 +52,248 @@ pub fn detect_mode(text : String) -> Mode {
   } else {
     Mode::Byte
   }
+}
+
+///| その文字を表現できる最も制限的なモード。
+///| 表現力の包含関係は Numeric ⊂ Alphanumeric ⊂ Byte。
+fn char_mode(c : Char) -> Mode {
+  let code = c.to_int()
+  if code >= 48 && code <= 57 {
+    Mode::Numeric
+  } else if alnum_index(c) >= 0 {
+    Mode::Alphanumeric
+  } else {
+    Mode::Byte
+  }
+}
+
+///| 文字種のラン。start は文字単位のインデックス（UTF-8 バイト位置ではない）。
+struct Run {
+  mode : Mode
+  start : Int
+  len : Int
+} derive(Eq, Debug)
+
+///| 連続する同じ char_mode の文字をまとめる。
+fn runs_of(text : String) -> Array[Run] {
+  let out : Array[Run] = []
+  let mut idx = 0
+  for c in text {
+    let m = char_mode(c)
+    if out.length() > 0 && out[out.length() - 1].mode == m {
+      let last = out[out.length() - 1]
+      out[out.length() - 1] = Run::{ mode: m, start: last.start, len: last.len + 1 }
+    } else {
+      out.push(Run::{ mode: m, start: idx, len: 1 })
+    }
+    idx = idx + 1
+  }
+  out
+}
+
+///| run_mode の文字を mode で表現できるか（Numeric ⊂ Alphanumeric ⊂ Byte）。
+fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
+  match mode {
+    Mode::Byte => true
+    Mode::Alphanumeric =>
+      match run_mode {
+        Mode::Byte => false
+        _ => true
+      }
+    Mode::Numeric =>
+      match run_mode {
+        Mode::Numeric => true
+        _ => false
+      }
+  }
+}
+
+///| 文字数と UTF-8 バイト数が既知の区間について総ビット数を返す。
+///| Byte 以外では byte_len を使わない。
+fn segment_bits_for_lengths(
+  len : Int,
+  byte_len : Int,
+  mode : Mode,
+  version : Int,
+) -> Int {
+  let header = 4 + cci_bits(mode, version)
+  match mode {
+    Mode::Numeric => {
+      let full = len / 3
+      let rest = len % 3
+      let data = full * 10 + (if rest == 2 { 7 } else if rest == 1 { 4 } else { 0 })
+      header + data
+    }
+    Mode::Alphanumeric => {
+      let pairs = len / 2
+      let rest = len % 2
+      header + pairs * 11 + (if rest == 1 { 6 } else { 0 })
+    }
+    Mode::Byte => header + byte_len * 8
+  }
+}
+
+///| chars[from..from+len) を mode で符号化したときの総ビット数。
+///| モード指示子 4bit + 文字数指示子 + データ部。
+///| 端数の扱いがモードごとに異なるため、1文字あたりへ均さずに計算する。
+fn segment_bits(
+  chars : Array[Char],
+  from : Int,
+  len : Int,
+  mode : Mode,
+  version : Int,
+) -> Int {
+  let mut bytes = 0
+  if mode == Mode::Byte {
+    // 文字数ではなく UTF-8 バイト数で数える
+    for i = from; i < from + len; i = i + 1 {
+      let cp = chars[i].to_int()
+      bytes = bytes +
+        (if cp < 0x80 {
+          1
+        } else if cp < 0x800 {
+          2
+        } else if cp < 0x10000 {
+          3
+        } else {
+          4
+        })
+    }
+  }
+  segment_bits_for_lengths(len, bytes, mode, version)
+}
+
+///| 最適分割の1区間。start / len は文字単位。
+struct Segment {
+  mode : Mode
+  start : Int
+  len : Int
+} derive(Eq, Debug)
+
+///| 最小ビット数になる分割を返す。
+///| ラン単位の DP。最適な分割境界は文字種が変わる位置にしか来ないため、
+///| ランへ圧縮してから探索する（数字列の途中で切って両側とも Numeric に
+///| するのは切替コストが増えるだけで常に損）。
+fn optimal_segments(text : String, version : Int) -> Array[Segment] {
+  if !input_within_model2_capacity(text) {
+    return []
+  }
+  let runs = runs_of(text)
+  let n = runs.length()
+  if n == 0 {
+    return []
+  }
+  let byte_prefix : Array[Int] = [0]
+  for c in text {
+    let cp = c.to_int()
+    let byte_len = if cp < 0x80 {
+      1
+    } else if cp < 0x800 {
+      2
+    } else if cp < 0x10000 {
+      3
+    } else {
+      4
+    }
+    byte_prefix.push(byte_prefix[byte_prefix.length() - 1] + byte_len)
+  }
+  let non_numeric_prefix : Array[Int] = [0]
+  let byte_run_prefix : Array[Int] = [0]
+  for r in runs {
+    non_numeric_prefix.push(
+      non_numeric_prefix[non_numeric_prefix.length() - 1] +
+      (if r.mode == Mode::Numeric { 0 } else { 1 }),
+    )
+    byte_run_prefix.push(
+      byte_run_prefix[byte_run_prefix.length() - 1] +
+      (if r.mode == Mode::Byte { 1 } else { 0 }),
+    )
+  }
+  let modes = [Mode::Numeric, Mode::Alphanumeric, Mode::Byte]
+  // dp[j] = 先頭から j 個のランを符号化する最小ビット数（dp[0] = 0）
+  let inf = 0x7FFFFFFF
+  let dp = Array::make(n + 1, inf)
+  dp[0] = 0
+  // from_run[j] / from_mode[j] = dp[j] を達成する直前の状態
+  let from_run = Array::make(n + 1, 0)
+  let from_mode = Array::make(n + 1, Mode::Byte)
+  for j = 1; j <= n; j = j + 1 {
+    for i = 0; i < j; i = i + 1 {
+      if dp[i] == inf {
+        continue
+      }
+      // ラン i..j-1 をまとめて1セグメントにする
+      let start = runs[i].start
+      let end = runs[j - 1].start + runs[j - 1].len
+      let len = end - start
+      let byte_len = byte_prefix[end] - byte_prefix[start]
+      let required_mode = if byte_run_prefix[j] - byte_run_prefix[i] > 0 {
+        Mode::Byte
+      } else if non_numeric_prefix[j] - non_numeric_prefix[i] > 0 {
+        Mode::Alphanumeric
+      } else {
+        Mode::Numeric
+      }
+      for m in modes {
+        if !mode_can_encode(m, required_mode) {
+          continue
+        }
+        let cost = dp[i] + segment_bits_for_lengths(len, byte_len, m, version)
+        if cost < dp[j] {
+          dp[j] = cost
+          from_run[j] = i
+          from_mode[j] = m
+        }
+      }
+    }
+  }
+  // 復元
+  let rev : Array[Segment] = []
+  let mut j = n
+  while j > 0 {
+    let i = from_run[j]
+    let start = runs[i].start
+    let mut len = 0
+    for k = i; k < j; k = k + 1 {
+      len = len + runs[k].len
+    }
+    rev.push(Segment::{ mode: from_mode[j], start, len })
+    j = i
+  }
+  let out : Array[Segment] = []
+  for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
+    out.push(rev[idx])
+  }
+  out
+}
+
+///| 最適分割に基づいて複数セグメントを書く。
+///| デコーダ側は Phase 2 で複数セグメントの読み取りに対応済み。
+fn write_segment_list(
+  w : BitWriter,
+  text : String,
+  version : Int,
+  segments : Array[Segment],
+) -> Unit {
+  let chars : Array[Char] = []
+  for c in text {
+    chars.push(c)
+  }
+  for s in segments {
+    // このコードベースは StringBuilder を使わず、文字列連結と補間で組み立てる
+    // （svg.mbt の to_svg_string と同じ書き方）
+    let mut part = ""
+    for i = s.start; i < s.start + s.len; i = i + 1 {
+      part = part + chars[i].to_string()
+    }
+    write_segment(w, part, s.mode, version)
+  }
+}
+
+///| 最適分割に基づいて複数セグメントを書く。
+///| デコーダ側は Phase 2 で複数セグメントの読み取りに対応済み。
+fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
+  write_segment_list(w, text, version, optimal_segments(text, version))
 }
 
 ///| 文字数指示子のビット数（ISO 18004 Table 3）
