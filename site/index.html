@@ -70,7 +70,7 @@
           <ul class="hero-badges">
             <li><span class="dot dot-ok"></span><span data-i18n="hero.badge1">214/214 decoder parity with jsQR</span></li>
             <li><span class="dot dot-accent"></span><span data-i18n="hero.badge2">faster than jsQR</span></li>
-            <li><span class="dot dot-accent"></span><span data-i18n="hero.badge3">7.2 KB gzip encoder</span></li>
+            <li><span class="dot dot-accent"></span><span data-i18n="hero.badge3">7.3 KB gzip encoder</span></li>
           </ul>
         </div>
       </section>
@@ -174,13 +174,14 @@
             <p class="stat-value">160 / 160</p>
             <p class="stat-desc" data-i18n="numbers.encodeDesc">
               Cell-for-cell match against the qrcode npm package across every version × EC-level
-              combination. Mixed-mode optimization shrinks a 100-digit URL from v7 to v4.
+              combination. At EC M, mixed-mode optimization shrinks
+              https://ex.com/id/&lt;100-digit ID&gt; from single-Byte v7 to v4.
             </p>
             <span class="stat-evidence" data-i18n="numbers.evidence">See bench/RESULT.md →</span>
           </a>
           <a class="stat-card" href="https://github.com/elchika-inc/moonqr/blob/main/packages/moonqr/README.md" target="_blank" rel="noopener">
             <p class="stat-label" data-i18n="numbers.bundleTitle">Bundle size</p>
-            <p class="stat-value">7.2 KB / ~50 KB</p>
+            <p class="stat-value">7.3 KB / ~50 KB</p>
             <p class="stat-desc" data-i18n="numbers.bundleDesc">
               gzip, encode-only subpath / full decoder. Import just the part you use.
             </p>

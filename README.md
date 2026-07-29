@@ -46,9 +46,9 @@ fetch or instantiate.
   [`qrcode`](https://www.npmjs.com/package/qrcode) npm package across all **160** version×EC-level
   combinations (versions 1–40 × levels L/M/Q/H), with the reference regenerated at our chosen mask
   pattern to make the comparison exact rather than mask-dependent.
-- **Encoder compaction**: mixed input is split into per-segment optimal modes, so a URL with a long
-  numeric ID encodes into a smaller symbol than a single-mode encoder would produce (measured:
-  **v7 → v4** for a 100-digit ID, matching or beating the `qrcode` npm package on every case tested).
+- **Encoder compaction**: mixed input is split into per-segment optimal modes. At EC level M,
+  `https://ex.com/id/` plus a 100-digit ID shrinks from single-Byte **v7** to mixed-mode **v4**;
+  moonqr matched or beat the `qrcode` npm package across **11 inputs × 4 EC levels (44 cases)**.
 
 Full measurement methodology, environment details, and additional gates (real-camera photos,
 monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md).

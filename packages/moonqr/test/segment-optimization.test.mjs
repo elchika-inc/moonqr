@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import QRCode from "qrcode";
 import jsQR from "jsqr";
 import { createRequire } from "node:module";
+import { performance } from "node:perf_hooks";
 
 const require = createRequire(import.meta.url);
 const enc = require("../../../core/_build/js/release/build/encode/encode.js");
@@ -93,4 +94,13 @@ test("split QR codes are readable by jsQR (independent decoder)", () => {
     assert.ok(got, `jsQR failed to read: ${text}`);
     assert.equal(got.data, text, `jsQR mismatch: ${text}`);
   }
+});
+
+test("auto version selection stays responsive for many short runs", () => {
+  const text = "a1".repeat(500);
+  const started = performance.now();
+  const flat = enc.encode_js(text, EC.M, 0);
+  const elapsed = performance.now() - started;
+  assert.notEqual(flat.length, 0, "alternating 1,000-char input must fit a QR code");
+  assert.ok(elapsed < 5_000, `encoding took ${elapsed.toFixed(0)}ms (limit: 5000ms)`);
 });
