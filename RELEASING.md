@@ -65,9 +65,9 @@ Check that:
 
 - Only `dist/`, `README.md`, `LICENSE`, `NOTICE`, and `THIRD_PARTY_LICENSES` are included — no
   sources, no tests, no configs.
-- The scanner's dependency on the core reads as a real version (`^0.1.0`), not `workspace:^`.
-  pnpm rewrites this automatically; verifying it is what proves the package works outside the
-  monorepo.
+- The scanner's dependency on the core reads as a real version (`^<the version you just set>`),
+  not `workspace:^`. pnpm rewrites this automatically; verifying it is what proves the package
+  works outside the monorepo.
 
 ## 5. Publish to npm
 
