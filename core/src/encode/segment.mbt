@@ -4,6 +4,12 @@ pub(all) enum Mode {
   Byte
 } derive(Eq, Debug)
 
+///| QR Model 2 の絶対最大容量は version 40-L Numeric の 7,089 文字。
+///| この上限を超える入力はどのモードでも収まらない。
+fn input_within_model2_capacity(text : String) -> Bool {
+  text.length() <= 7089
+}
+
 ///| 英数字モードの文字集合における index。非対応は -1
 fn alnum_index(c : Char) -> Int {
   let code = c.to_int()
@@ -169,6 +175,9 @@ pub(all) struct Segment {
 ///| ランへ圧縮してから探索する（数字列の途中で切って両側とも Numeric に
 ///| するのは切替コストが増えるだけで常に損）。
 pub fn optimal_segments(text : String, version : Int) -> Array[Segment] {
+  if !input_within_model2_capacity(text) {
+    return []
+  }
   let runs = runs_of(text)
   let n = runs.length()
   if n == 0 {

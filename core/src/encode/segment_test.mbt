@@ -162,6 +162,14 @@ test "optimal_segments on empty string yields no segments" {
   assert_eq(@encode.optimal_segments("", 1).length(), 0)
 }
 
+test "optimal_segments rejects input beyond the Model 2 absolute capacity" {
+  let mut text = ""
+  for i = 0; i < 7090; i = i + 1 {
+    text = text + "1"
+  }
+  assert_eq(@encode.optimal_segments(text, 40).length(), 0)
+}
+
 test "optimal_segments never costs more than a single segment" {
   // どの入力でも「全体を1モードで表現」以下のビット数になること
   let cases = ["https://ex.com/id/1234567890", "ABC12DEF", "123456", "hello world 42"]

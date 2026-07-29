@@ -3,7 +3,7 @@
 ///| 容量超過は None。空文字は None（仕様上の決定: qrcode npm は throw するが、
 ///| 本ライブラリは例外を投げず Option で表現する方針のため None に倒す）。
 pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
-  if text.length() == 0 {
+  if text.length() == 0 || !input_within_model2_capacity(text) {
     return None
   }
   // 文字数指示子は 1-9 / 10-26 / 27-40 の帯でのみ変わるため、

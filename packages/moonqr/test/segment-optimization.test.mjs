@@ -98,9 +98,26 @@ test("split QR codes are readable by jsQR (independent decoder)", () => {
 
 test("auto version selection stays responsive for many short runs", () => {
   const text = "a1".repeat(500);
-  const started = performance.now();
+  const autoStarted = performance.now();
   const flat = enc.encode_js(text, EC.M, 0);
-  const elapsed = performance.now() - started;
+  const autoElapsed = performance.now() - autoStarted;
+  const forcedStarted = performance.now();
+  const forcedVersion = minVersion(text, EC.M);
+  const forcedElapsed = performance.now() - forcedStarted;
   assert.notEqual(flat.length, 0, "alternating 1,000-char input must fit a QR code");
-  assert.ok(elapsed < 5_000, `encoding took ${elapsed.toFixed(0)}ms (limit: 5000ms)`);
+  assert.equal((flat[0] - 17) / 4, forcedVersion, "auto and forced search must choose the same version");
+  assert.ok(autoElapsed < 5_000, `encoding took ${autoElapsed.toFixed(0)}ms (limit: 5000ms)`);
+  assert.ok(
+    autoElapsed * 2 < forcedElapsed,
+    `band reuse ineffective: auto=${autoElapsed.toFixed(0)}ms forced=${forcedElapsed.toFixed(0)}ms`,
+  );
+});
+
+test("obviously over-capacity input is rejected before segment planning", () => {
+  const text = "a1".repeat(10_000);
+  const started = performance.now();
+  assert.deepEqual(enc.encode_js(text, EC.L, 0), [], "auto version must reject over-capacity input");
+  assert.deepEqual(enc.encode_js(text, EC.L, 40), [], "explicit version must reject over-capacity input");
+  const elapsed = performance.now() - started;
+  assert.ok(elapsed < 1_000, `over-capacity rejection took ${elapsed.toFixed(0)}ms (limit: 1000ms)`);
 });
