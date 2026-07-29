@@ -121,3 +121,18 @@ test("obviously over-capacity input is rejected before segment planning", () => 
   const elapsed = performance.now() - started;
   assert.ok(elapsed < 1_000, `over-capacity rejection took ${elapsed.toFixed(0)}ms (limit: 1000ms)`);
 });
+
+test("Model 2 absolute capacity boundary is inclusive", () => {
+  const atLimit = "1".repeat(7089);
+  const overLimit = atLimit + "1";
+  for (const version of [0, 40]) {
+    const flat = enc.encode_js(atLimit, EC.L, version);
+    assert.equal(flat[0], 177, `${version || "auto"} must accept 7,089 Numeric characters`);
+    assert.equal(flat.length, 1 + 177 * 177, `${version || "auto"} must return a complete matrix`);
+    assert.deepEqual(
+      enc.encode_js(overLimit, EC.L, version),
+      [],
+      `${version || "auto"} must reject 7,090 Numeric characters`,
+    );
+  }
+});
