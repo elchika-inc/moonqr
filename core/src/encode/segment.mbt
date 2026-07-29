@@ -146,6 +146,86 @@ pub fn segment_bits(
   }
 }
 
+///| 最適分割の1区間。start / len は文字単位。
+pub(all) struct Segment {
+  mode : Mode
+  start : Int
+  len : Int
+} derive(Eq, Debug)
+
+///| 最小ビット数になる分割を返す。
+///| ラン単位の DP。最適な分割境界は文字種が変わる位置にしか来ないため、
+///| ランへ圧縮してから探索する（数字列の途中で切って両側とも Numeric に
+///| するのは切替コストが増えるだけで常に損）。
+pub fn optimal_segments(text : String, version : Int) -> Array[Segment] {
+  let runs = runs_of(text)
+  let n = runs.length()
+  if n == 0 {
+    return []
+  }
+  let chars : Array[Char] = []
+  for c in text {
+    chars.push(c)
+  }
+  let modes = [Mode::Numeric, Mode::Alphanumeric, Mode::Byte]
+  // dp[j] = 先頭から j 個のランを符号化する最小ビット数（dp[0] = 0）
+  let inf = 0x7FFFFFFF
+  let dp = Array::make(n + 1, inf)
+  dp[0] = 0
+  // from_run[j] / from_mode[j] = dp[j] を達成する直前の状態
+  let from_run = Array::make(n + 1, 0)
+  let from_mode = Array::make(n + 1, Mode::Byte)
+  for j = 1; j <= n; j = j + 1 {
+    for i = 0; i < j; i = i + 1 {
+      if dp[i] == inf {
+        continue
+      }
+      // ラン i..j-1 をまとめて1セグメントにする
+      let start = runs[i].start
+      let mut len = 0
+      for k = i; k < j; k = k + 1 {
+        len = len + runs[k].len
+      }
+      for m in modes {
+        // 区間内の全ランを表現できるモードだけが候補
+        let mut ok = true
+        for k = i; k < j; k = k + 1 {
+          if !mode_can_encode(m, runs[k].mode) {
+            ok = false
+          }
+        }
+        if !ok {
+          continue
+        }
+        let cost = dp[i] + segment_bits(chars, start, len, m, version)
+        if cost < dp[j] {
+          dp[j] = cost
+          from_run[j] = i
+          from_mode[j] = m
+        }
+      }
+    }
+  }
+  // 復元
+  let rev : Array[Segment] = []
+  let mut j = n
+  while j > 0 {
+    let i = from_run[j]
+    let start = runs[i].start
+    let mut len = 0
+    for k = i; k < j; k = k + 1 {
+      len = len + runs[k].len
+    }
+    rev.push(Segment::{ mode: from_mode[j], start, len })
+    j = i
+  }
+  let out : Array[Segment] = []
+  for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
+    out.push(rev[idx])
+  }
+  out
+}
+
 ///| 文字数指示子のビット数（ISO 18004 Table 3）
 pub fn cci_bits(mode : Mode, version : Int) -> Int {
   if version <= 9 {

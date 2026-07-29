@@ -115,3 +115,68 @@ test "segment_bits handles a sub-range" {
   }
   assert_eq(@encode.segment_bits(chars, 2, 3, @encode.Mode::Numeric, 1), 4 + 10 + 10)
 }
+
+test "optimal_segments keeps a single-mode string as one segment" {
+  let segs = @encode.optimal_segments("HELLO WORLD", 1)
+  assert_eq(segs.length(), 1)
+  assert_eq(segs[0].mode, @encode.Mode::Alphanumeric)
+  assert_eq(segs[0].start, 0)
+  assert_eq(segs[0].len, 11)
+}
+
+test "optimal_segments splits byte prefix from a long digit run" {
+  // 実測の境界: 小文字を含む URL + 10桁以上の数字は分割した方が小さい
+  let segs = @encode.optimal_segments("https://ex.com/id/1234567890", 1)
+  assert_eq(segs.length(), 2)
+  assert_eq(segs[0].mode, @encode.Mode::Byte)
+  assert_eq(segs[1].mode, @encode.Mode::Numeric)
+  assert_eq(segs[1].len, 10)
+}
+
+test "optimal_segments does not split a very short digit run" {
+  // 単一Byte=172bit < 分割=177bit。桁数が少ないとモード切替の
+  // オーバーヘッド（モード指示子4bit + 文字数指示子）が上回る
+  let segs = @encode.optimal_segments("https://ex.com/id/12", 1)
+  assert_eq(segs.length(), 1)
+  assert_eq(segs[0].mode, @encode.Mode::Byte)
+}
+
+test "optimal_segments splits once the digit run is long enough" {
+  // 単一Byte=196bit > 分割=187bit。境界は3〜4桁の間にある
+  let segs = @encode.optimal_segments("https://ex.com/id/12345", 1)
+  assert_eq(segs.length(), 2)
+  assert_eq(segs[0].mode, @encode.Mode::Byte)
+  assert_eq(segs[1].mode, @encode.Mode::Numeric)
+  assert_eq(segs[1].len, 5)
+}
+
+test "optimal_segments absorbs digits into an alphanumeric span" {
+  // 英字・数字・英字は 3 分割より 1 つの Alphanumeric の方が小さい
+  let segs = @encode.optimal_segments("ABC12DEF", 1)
+  assert_eq(segs.length(), 1)
+  assert_eq(segs[0].mode, @encode.Mode::Alphanumeric)
+  assert_eq(segs[0].len, 8)
+}
+
+test "optimal_segments on empty string yields no segments" {
+  assert_eq(@encode.optimal_segments("", 1).length(), 0)
+}
+
+test "optimal_segments never costs more than a single segment" {
+  // どの入力でも「全体を1モードで表現」以下のビット数になること
+  let cases = ["https://ex.com/id/1234567890", "ABC12DEF", "123456", "hello world 42"]
+  for t in cases {
+    let chars : Array[Char] = []
+    for c in t {
+      chars.push(c)
+    }
+    let single = @encode.detect_mode(t)
+    let single_bits = @encode.segment_bits(chars, 0, chars.length(), single, 1)
+    let segs = @encode.optimal_segments(t, 1)
+    let mut total = 0
+    for s in segs {
+      total = total + @encode.segment_bits(chars, s.start, s.len, s.mode, 1)
+    }
+    assert_true(total <= single_bits)
+  }
+}
