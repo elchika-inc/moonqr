@@ -131,14 +131,14 @@ fn segment_candidate_is_better(
 ///| ラン単位の DP。最適な分割境界は文字種が変わる位置にしか来ないため、
 ///| ランへ圧縮してから探索する（数字列の途中で切って両側とも Numeric に
 ///| するのは切替コストが増えるだけで常に損）。
-fn optimal_segments(text : String, version : Int) -> Array[Segment] {
+fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   if !input_within_model2_capacity(text) {
-    return []
+    return None
   }
   let runs = runs_of(text)
   let n = runs.length()
   if n == 0 {
-    return []
+    return None
   }
   let byte_prefix : Array[Int] = [0]
   for c in text {
@@ -268,7 +268,7 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment] {
   for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
     out.push(rev[idx])
   }
-  out
+  Some(out)
 }
 
 ///| 最適分割に基づいて複数セグメントを書く。

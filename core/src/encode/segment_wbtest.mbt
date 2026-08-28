@@ -68,7 +68,10 @@ fn segment_bits(
 
 ///| 最適分割に基づいて複数セグメントを書く。
 fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
-  write_segment_list(w, text, version, optimal_segments(text, version))
+  match optimal_segments(text, version) {
+    Some(segments) => write_segment_list(w, text, version, segments)
+    None => abort("segment planning failed")
+  }
 }
 
 ///| O(n) 実装の差分テストに使う、変更前の全分割点探索。
@@ -185,6 +188,13 @@ fn patterned_digits_for_segment_test(count : Int) -> String {
   out
 }
 
+fn optimal_segments_or_abort(text : String, version : Int) -> Array[Segment] {
+  match optimal_segments(text, version) {
+    Some(segments) => segments
+    None => abort("segment planning failed")
+  }
+}
+
 test "linear segment DP exactly matches the reference corpus in every CCI band" {
   let corpus : Array[String] = [
     // packages/moonqr/test/segment-optimization.test.mjs の CASES 全件
@@ -240,7 +250,7 @@ test "linear segment DP exactly matches the reference corpus in every CCI band" 
   for version in [1, 10, 27] {
     for text in corpus {
       assert_eq(
-        optimal_segments(text, version),
+        optimal_segments_or_abort(text, version),
         optimal_segments_reference(text, version),
       )
     }
@@ -348,7 +358,7 @@ test "segment_bits handles a sub-range" {
 }
 
 test "optimal_segments keeps a single-mode string as one segment" {
-  let segs = optimal_segments("HELLO WORLD", 1)
+  let segs = optimal_segments_or_abort("HELLO WORLD", 1)
   assert_eq(segs.length(), 1)
   assert_eq(segs[0].mode, Mode::Alphanumeric)
   assert_eq(segs[0].start, 0)
@@ -357,7 +367,7 @@ test "optimal_segments keeps a single-mode string as one segment" {
 
 test "optimal_segments splits byte prefix from a long digit run" {
   // 実測の境界: 小文字を含む URL + 10桁以上の数字は分割した方が小さい
-  let segs = optimal_segments("https://ex.com/id/1234567890", 1)
+  let segs = optimal_segments_or_abort("https://ex.com/id/1234567890", 1)
   assert_eq(segs.length(), 2)
   assert_eq(segs[0].mode, Mode::Byte)
   assert_eq(segs[1].mode, Mode::Numeric)
@@ -367,14 +377,14 @@ test "optimal_segments splits byte prefix from a long digit run" {
 test "optimal_segments does not split a very short digit run" {
   // 単一Byte=172bit < 分割=177bit。桁数が少ないとモード切替の
   // オーバーヘッド（モード指示子4bit + 文字数指示子）が上回る
-  let segs = optimal_segments("https://ex.com/id/12", 1)
+  let segs = optimal_segments_or_abort("https://ex.com/id/12", 1)
   assert_eq(segs.length(), 1)
   assert_eq(segs[0].mode, Mode::Byte)
 }
 
 test "optimal_segments splits once the digit run is long enough" {
   // 単一Byte=196bit > 分割=187bit。境界は3〜4桁の間にある
-  let segs = optimal_segments("https://ex.com/id/12345", 1)
+  let segs = optimal_segments_or_abort("https://ex.com/id/12345", 1)
   assert_eq(segs.length(), 2)
   assert_eq(segs[0].mode, Mode::Byte)
   assert_eq(segs[1].mode, Mode::Numeric)
@@ -383,14 +393,14 @@ test "optimal_segments splits once the digit run is long enough" {
 
 test "optimal_segments absorbs digits into an alphanumeric span" {
   // 英字・数字・英字は 3 分割より 1 つの Alphanumeric の方が小さい
-  let segs = optimal_segments("ABC12DEF", 1)
+  let segs = optimal_segments_or_abort("ABC12DEF", 1)
   assert_eq(segs.length(), 1)
   assert_eq(segs[0].mode, Mode::Alphanumeric)
   assert_eq(segs[0].len, 8)
 }
 
-test "optimal_segments on empty string yields no segments" {
-  assert_eq(optimal_segments("", 1).length(), 0)
+test "optimal_segments on empty string reports failure" {
+  assert_eq(optimal_segments("", 1), None)
 }
 
 test "optimal_segments accepts the Model 2 limit and rejects one beyond it" {
@@ -398,9 +408,9 @@ test "optimal_segments accepts the Model 2 limit and rejects one beyond it" {
   for i = 0; i < 7089; i = i + 1 {
     text = text + "1"
   }
-  assert_eq(optimal_segments(text, 40).length(), 1)
+  assert_eq(optimal_segments_or_abort(text, 40).length(), 1)
   text = text + "1"
-  assert_eq(optimal_segments(text, 40).length(), 0)
+  assert_eq(optimal_segments(text, 40), None)
 }
 
 test "optimal_segments never costs more than a single segment" {
@@ -413,7 +423,7 @@ test "optimal_segments never costs more than a single segment" {
     }
     let single = detect_mode(t)
     let single_bits = segment_bits(chars, 0, chars.length(), single, 1)
-    let segs = optimal_segments(t, 1)
+    let segs = optimal_segments_or_abort(t, 1)
     let mut total = 0
     for s in segs {
       total = total + segment_bits(chars, s.start, s.len, s.mode, 1)
