@@ -41,6 +41,27 @@ test "mode_can_encode follows Numeric ⊂ Alphanumeric ⊂ Byte" {
   assert_eq(mode_can_encode(Mode::Byte, Mode::Byte), true)
 }
 
+test "segment candidate tie-break matches the reference DP traversal order" {
+  assert_true(
+    segment_candidate_is_better(99, 9, Mode::Byte, 100, 0, Mode::Numeric),
+  )
+  assert_true(
+    segment_candidate_is_better(100, 2, Mode::Byte, 100, 3, Mode::Numeric),
+  )
+  assert_true(
+    segment_candidate_is_better(100, 2, Mode::Numeric, 100, 2, Mode::Alphanumeric),
+  )
+  assert_true(
+    segment_candidate_is_better(100, 2, Mode::Alphanumeric, 100, 2, Mode::Byte),
+  )
+  assert_false(
+    segment_candidate_is_better(100, 2, Mode::Byte, 100, 2, Mode::Byte),
+  )
+  assert_false(
+    segment_candidate_is_better(100, 3, Mode::Numeric, 100, 2, Mode::Byte),
+  )
+}
+
 test "segment_bits matches write_segment for numeric" {
   // "01234567" v1 numeric: 4 + 10 + (10+10+7) = 41
   let chars : Array[Char] = []
