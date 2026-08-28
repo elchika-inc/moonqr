@@ -95,6 +95,85 @@ test "reference segment DP retains the pre-optimization behavior" {
   assert_eq(segments[1].mode, Mode::Numeric)
 }
 
+fn repeat_for_segment_test(part : String, count : Int) -> String {
+  let mut out = ""
+  for i = 0; i < count; i = i + 1 {
+    out = out + part
+  }
+  out
+}
+
+fn patterned_digits_for_segment_test(count : Int) -> String {
+  let mut out = ""
+  let digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+  for i = 0; i < count; i = i + 1 {
+    out = out + digits[(i * 7) % 10].to_string()
+  }
+  out
+}
+
+test "linear segment DP exactly matches the reference corpus in every CCI band" {
+  let corpus : Array[String] = [
+    // packages/moonqr/test/segment-optimization.test.mjs の CASES 全件
+    "https://ex.com/id/12345",
+    "https://ex.com/id/1234567890",
+    "https://ex.com/id/" + patterned_digits_for_segment_test(30),
+    "https://ex.com/id/" + patterned_digits_for_segment_test(100),
+    "注文番号は" + patterned_digits_for_segment_test(30) + "です",
+    "HTTPS://EX.COM/ID/" + patterned_digits_for_segment_test(60),
+    "HELLO WORLD",
+    "1234567890",
+    "hello",
+    "ABC12DEF",
+    "SKU-1234567890-ABCDEFGHIJ-9876543210",
+  ]
+  for count in [1, 2, 3, 5, 100, 1000] {
+    corpus.push(repeat_for_segment_test("1", count))
+    corpus.push(repeat_for_segment_test("A", count))
+    corpus.push(repeat_for_segment_test("a", count))
+  }
+  for count in [1, 2, 3, 10, 100] {
+    corpus.push(repeat_for_segment_test("a1", count))
+    corpus.push(repeat_for_segment_test("1A", count))
+    corpus.push(repeat_for_segment_test("aA1", count))
+  }
+  for text in [
+    "🦑",
+    "🦑A1",
+    "a🦑漢1Z",
+    "漢字123ABC🌕xyz",
+    "QRコード🚀-2026",
+    "😀😃😄😁",
+    "Aあ1🧚B2漢c3",
+    "􏿿",
+    "éΩ漢😀",
+    "byte😀ALNUM123漢字",
+  ] {
+    corpus.push(text)
+  }
+  let alphabet = ['0', '7', 'A', 'Z', '-', ':', 'a', 'z', '漢', '😀']
+  let mut seed = 0x4D2B
+  for case_index = 0; case_index < 256; case_index = case_index + 1 {
+    seed = (seed * 25173 + 13849) % 65536
+    let length = seed % 40 + 1
+    let mut text = ""
+    for char_index = 0; char_index < length; char_index = char_index + 1 {
+      seed = (seed * 25173 + 13849) % 65536
+      text = text + alphabet[seed % alphabet.length()].to_string()
+    }
+    corpus.push(text)
+  }
+  assert_true(corpus.length() >= 300)
+  for version in [1, 10, 27] {
+    for text in corpus {
+      assert_eq(
+        optimal_segments(text, version),
+        optimal_segments_reference(text, version),
+      )
+    }
+  }
+}
+
 test "char_mode classifies by the most restrictive mode" {
   assert_eq(char_mode('5'), Mode::Numeric)
   assert_eq(char_mode('A'), Mode::Alphanumeric)
