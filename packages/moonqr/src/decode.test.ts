@@ -90,6 +90,22 @@ describe("decode", () => {
     expect(decode(bad, 5, 5)).toBeNull();
   });
 
+  it.each([
+    [1, 1],
+    [8, 8],
+    [16, 16],
+    [21, 21],
+    [32, 32],
+    [33, 32],
+    [32, 33],
+    [24, 200],
+    [200, 24],
+  ])("returns null without throwing for a small %ix%i image", (width, height) => {
+    const data = new Uint8Array(width * height * 4);
+    expect(() => decode(data, width, height)).not.toThrow();
+    expect(decode(data, width, height)).toBeNull();
+  });
+
   // --- totality 契約: decode は「いかなる入力でも」例外を投げず DecodeResult|null を返す。
   // MoonBit 側 decode_js は width/height を BigInt(width) に通すため、NaN/小数/Infinity が
   // 境界を越えると RangeError で throw する（`width <= 0` ガードは NaN 比較が常に false に
