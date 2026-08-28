@@ -1,3 +1,100 @@
+///| O(n) 実装の差分テストに使う、変更前の全分割点探索。
+fn optimal_segments_reference(text : String, version : Int) -> Array[Segment] {
+  if !input_within_model2_capacity(text) {
+    return []
+  }
+  let runs = runs_of(text)
+  let n = runs.length()
+  if n == 0 {
+    return []
+  }
+  let byte_prefix : Array[Int] = [0]
+  for c in text {
+    let cp = c.to_int()
+    let byte_len = if cp < 0x80 {
+      1
+    } else if cp < 0x800 {
+      2
+    } else if cp < 0x10000 {
+      3
+    } else {
+      4
+    }
+    byte_prefix.push(byte_prefix[byte_prefix.length() - 1] + byte_len)
+  }
+  let non_numeric_prefix : Array[Int] = [0]
+  let byte_run_prefix : Array[Int] = [0]
+  for r in runs {
+    non_numeric_prefix.push(
+      non_numeric_prefix[non_numeric_prefix.length() - 1] +
+      (if r.mode == Mode::Numeric { 0 } else { 1 }),
+    )
+    byte_run_prefix.push(
+      byte_run_prefix[byte_run_prefix.length() - 1] +
+      (if r.mode == Mode::Byte { 1 } else { 0 }),
+    )
+  }
+  let modes = [Mode::Numeric, Mode::Alphanumeric, Mode::Byte]
+  let inf = 0x7FFFFFFF
+  let dp = Array::make(n + 1, inf)
+  dp[0] = 0
+  let from_run = Array::make(n + 1, 0)
+  let from_mode = Array::make(n + 1, Mode::Byte)
+  for j = 1; j <= n; j = j + 1 {
+    for i = 0; i < j; i = i + 1 {
+      if dp[i] == inf {
+        continue
+      }
+      let start = runs[i].start
+      let end = runs[j - 1].start + runs[j - 1].len
+      let len = end - start
+      let byte_len = byte_prefix[end] - byte_prefix[start]
+      let required_mode = if byte_run_prefix[j] - byte_run_prefix[i] > 0 {
+        Mode::Byte
+      } else if non_numeric_prefix[j] - non_numeric_prefix[i] > 0 {
+        Mode::Alphanumeric
+      } else {
+        Mode::Numeric
+      }
+      for m in modes {
+        if !mode_can_encode(m, required_mode) {
+          continue
+        }
+        let cost = dp[i] + segment_bits_for_lengths(len, byte_len, m, version)
+        if cost < dp[j] {
+          dp[j] = cost
+          from_run[j] = i
+          from_mode[j] = m
+        }
+      }
+    }
+  }
+  let rev : Array[Segment] = []
+  let mut j = n
+  while j > 0 {
+    let i = from_run[j]
+    let start = runs[i].start
+    let mut len = 0
+    for k = i; k < j; k = k + 1 {
+      len = len + runs[k].len
+    }
+    rev.push(Segment::{ mode: from_mode[j], start, len })
+    j = i
+  }
+  let out : Array[Segment] = []
+  for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
+    out.push(rev[idx])
+  }
+  out
+}
+
+test "reference segment DP retains the pre-optimization behavior" {
+  let segments = optimal_segments_reference("https://ex.com/id/1234567890", 1)
+  assert_eq(segments.length(), 2)
+  assert_eq(segments[0].mode, Mode::Byte)
+  assert_eq(segments[1].mode, Mode::Numeric)
+}
+
 test "char_mode classifies by the most restrictive mode" {
   assert_eq(char_mode('5'), Mode::Numeric)
   assert_eq(char_mode('A'), Mode::Alphanumeric)
