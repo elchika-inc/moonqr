@@ -375,6 +375,7 @@ describe("QrScanner worker crash", () => {
   });
 
   it("stops scanning after three consecutive worker crashes", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
     installFakeWorker();
     const { stream, tracks } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));
@@ -384,18 +385,60 @@ describe("QrScanner worker crash", () => {
     const onError = vi.fn();
     const scanner = new QrScanner(video, vi.fn(), { onError });
     await scanner.start();
+    const cancelFrame = vi.spyOn(globalThis, "cancelAnimationFrame");
 
-    for (let crash = 1; crash <= 3; crash++) {
-      const worker = FakeWorker.instances[crash - 1];
-      if (!worker) throw new Error(`expected worker ${crash}`);
-      worker.onerror?.(new ErrorEvent("error", { message: `boom ${crash}` }));
+    try {
+      for (let crash = 1; crash <= 3; crash++) {
+        const worker = FakeWorker.instances[crash - 1];
+        if (!worker) throw new Error(`expected worker ${crash}`);
+        worker.onerror?.(new ErrorEvent("error", { message: `boom ${crash}` }));
+      }
+
+      expect(onError).toHaveBeenCalledTimes(3);
+      expect(onError.mock.calls[2]?.[0]?.message).toContain("stopped after 3 consecutive crashes");
+      expect(FakeWorker.instances).toHaveLength(3);
+      for (const track of tracks) expect(track.stop).toHaveBeenCalledTimes(1);
+      expect(cancelFrame).toHaveBeenCalledTimes(1);
+    } finally {
+      scanner.stop();
     }
-    scanner.stop();
+  });
 
-    expect(onError).toHaveBeenCalledTimes(3);
-    expect(onError.mock.calls[2]?.[0]?.message).toContain("stopped after 3 consecutive crashes");
-    expect(FakeWorker.instances).toHaveLength(3);
-    for (const track of tracks) expect(track.stop).toHaveBeenCalledTimes(1);
+  it("resets the consecutive crash count after a normal worker response", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    installFakeWorker();
+    const { stream } = makeFakeStream();
+    mockGetUserMedia(() => Promise.resolve(stream));
+    mockCanvasWith(cleanImage);
+    mockVideoSize(video, cleanImage.width, cleanImage.height);
+
+    const onError = vi.fn();
+    const scanner = new QrScanner(video, vi.fn(), { onError });
+    await scanner.start();
+
+    try {
+      const firstWorker = FakeWorker.instances[0];
+      if (!firstWorker) throw new Error("expected first worker");
+      firstWorker.onerror?.(new ErrorEvent("error", { message: "boom 1" }));
+
+      await vi.advanceTimersByTimeAsync(50);
+      const secondWorker = FakeWorker.instances[1];
+      if (!secondWorker) throw new Error("expected second worker");
+      expect(secondWorker.postMessage).toHaveBeenCalled();
+      secondWorker.onerror?.(new ErrorEvent("error", { message: "boom 2" }));
+
+      const thirdWorker = FakeWorker.instances[2];
+      if (!thirdWorker) throw new Error("expected third worker");
+      thirdWorker.onerror?.(new ErrorEvent("error", { message: "boom 3" }));
+
+      expect(onError).toHaveBeenCalledTimes(3);
+      for (const call of onError.mock.calls) {
+        expect(call[0]?.message).not.toContain("stopped after");
+      }
+      expect(FakeWorker.instances).toHaveLength(4);
+    } finally {
+      scanner.stop();
+    }
   });
 });
 

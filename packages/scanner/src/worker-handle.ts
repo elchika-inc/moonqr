@@ -79,8 +79,10 @@ class InlineWorkerHandle implements WorkerHandle {
           : decodeNative(data, message);
         this.onmessage?.({ data: { id: message.id, result } });
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        this.onerror?.(new ErrorEvent("error", { error: err, message: err.message }));
+        // 実 Worker の worker.ts と同じく、入力依存のデコード例外は Worker
+        // インフラ障害へ昇格させず「このフレームは読めなかった」結果へ倒す。
+        // onerror は実 Worker 自体のクラッシュ通知に限定する。
+        this.onmessage?.({ data: { id: message.id, result: null } });
       }
     });
   }

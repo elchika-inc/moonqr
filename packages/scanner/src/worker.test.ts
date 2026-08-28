@@ -45,3 +45,25 @@ it.each([
   ).not.toThrow();
   expect(postMessage).toHaveBeenCalledWith({ id: 17, result: null });
 });
+
+it("returns result:null when the inline fallback decoder throws", async () => {
+  decoders.native.mockImplementation(() => {
+    throw new Error("decoder panic");
+  });
+  vi.stubGlobal("Worker", undefined);
+  const { createWorkerHandle } = await import("./worker-handle.js");
+  const handle = createWorkerHandle();
+  const onmessage = vi.fn();
+  const onerror = vi.fn();
+  handle.onmessage = onmessage;
+  handle.onerror = onerror;
+
+  handle.postMessage(
+    { id: 23, buffer: new ArrayBuffer(4), width: 1, height: 1 },
+    [],
+  );
+  await Promise.resolve();
+
+  expect(onmessage).toHaveBeenCalledWith({ data: { id: 23, result: null } });
+  expect(onerror).not.toHaveBeenCalled();
+});

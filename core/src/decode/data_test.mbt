@@ -21,8 +21,8 @@
 ///| 値を見ずbyteを常にUTF-8として解釈する仕様）+ Byteモードで"AB"を続けた
 ///| [0x71, 0xA4, 0x02, 0x41, 0x42] を使う。
 ///|
-///| ⑥ 異常系: garbage mode indicator（未定義モード値0011=0x3）+ 末尾2bitが非0
-///| （[0x10, 0x05, 0x4F]）→ jsQR の
+///| ⑥ 異常系: garbage mode indicator（未割り当てモード値0110=0x6）+ 末尾2bitが非0
+///| （[0x10, 0x05, 0x5B]）→ jsQR の
 ///| `stream.available() === 0 || stream.readBits(...) === 0` 判定が両方falseになり
 ///| decode()が暗黙にundefinedを返すケースを鏡映してNoneを期待する。
 ///| 対照として、末尾ビットがすべて0で終端子なしに使い切る場合（[0x10, 0x00]）は
@@ -108,8 +108,8 @@ test "decode_data: ECI(UTF-8 26) + byte segment \"AB\"" {
 
 test "decode_data: garbage mode indicator followed by non-zero remainder -> None" {
   // mode=0001(Numeric) cci(10bit)=1 digit(4bit)=5 -> "5" 読了後、
-  // 未定義モード0011(4bit,読み飛ばし) -> 残り2bitが "11"(非0) で終端。
-  let cw = [0x10, 0x05, 0x4F]
+  // 未割り当てモード0110(4bit,読み飛ばし) -> 残り2bitが "11"(非0) で終端。
+  let cw = [0x10, 0x05, 0x5B]
   match @decode.decode_data(cw, 1) {
     None => ()
     Some(_) => abort("expected None: non-zero remainder without terminator")
@@ -138,13 +138,20 @@ test "decode_data: structured append first symbol is not an empty success" {
   }
 }
 
-test "decode_data: FNC1 first position alone is not an empty success" {
-  // mode=0101(FNC1 first position) | terminator=0000。現在は mode だけを
-  // 読み飛ばして空文字の Some を返すが、未対応機能を成功扱いしてはならない。
-  let cw = [0x50]
+test "decode_data: FNC1 first position continues into the following data segment" {
+  // FNC1 first position は追加ヘッダを持たず、直後に通常のデータセグメントが続く。
+  // mode=0101 | Byte mode=0100 | CCI(v1)=2 | "AB" | Terminator を実在形として組む。
+  let w = @encode.BitWriter::new()
+  w.write(0b0101, 4)
+  w.write(0b0100, 4)
+  w.write(2, @encode.cci_bits(@encode.Mode::Byte, 1))
+  w.write(0x41, 8)
+  w.write(0x42, 8)
+  w.write(0b0000, 4)
+  let cw = w.to_codewords()
   match @decode.decode_data(cw, 1) {
-    Some(_) => abort("unsupported FNC1 first position must not decode as empty text")
-    None => assert_true(true)
+    Some(d) => assert_eq(d.text, "AB")
+    None => abort("FNC1 first position must continue into the Byte segment")
   }
 }
 
