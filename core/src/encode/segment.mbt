@@ -91,78 +91,6 @@ fn runs_of(text : String) -> Array[Run] {
   out
 }
 
-///| run_mode の文字を mode で表現できるか（Numeric ⊂ Alphanumeric ⊂ Byte）。
-fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
-  match mode {
-    Mode::Byte => true
-    Mode::Alphanumeric =>
-      match run_mode {
-        Mode::Byte => false
-        _ => true
-      }
-    Mode::Numeric =>
-      match run_mode {
-        Mode::Numeric => true
-        _ => false
-      }
-  }
-}
-
-///| 文字数と UTF-8 バイト数が既知の区間について総ビット数を返す。
-///| Byte 以外では byte_len を使わない。
-fn segment_bits_for_lengths(
-  len : Int,
-  byte_len : Int,
-  mode : Mode,
-  version : Int,
-) -> Int {
-  let header = 4 + cci_bits(mode, version)
-  match mode {
-    Mode::Numeric => {
-      let full = len / 3
-      let rest = len % 3
-      let data = full * 10 + (if rest == 2 { 7 } else if rest == 1 { 4 } else { 0 })
-      header + data
-    }
-    Mode::Alphanumeric => {
-      let pairs = len / 2
-      let rest = len % 2
-      header + pairs * 11 + (if rest == 1 { 6 } else { 0 })
-    }
-    Mode::Byte => header + byte_len * 8
-  }
-}
-
-///| chars[from..from+len) を mode で符号化したときの総ビット数。
-///| モード指示子 4bit + 文字数指示子 + データ部。
-///| 端数の扱いがモードごとに異なるため、1文字あたりへ均さずに計算する。
-fn segment_bits(
-  chars : Array[Char],
-  from : Int,
-  len : Int,
-  mode : Mode,
-  version : Int,
-) -> Int {
-  let mut bytes = 0
-  if mode == Mode::Byte {
-    // 文字数ではなく UTF-8 バイト数で数える
-    for i = from; i < from + len; i = i + 1 {
-      let cp = chars[i].to_int()
-      bytes = bytes +
-        (if cp < 0x80 {
-          1
-        } else if cp < 0x800 {
-          2
-        } else if cp < 0x10000 {
-          3
-        } else {
-          4
-        })
-    }
-  }
-  segment_bits_for_lengths(len, bytes, mode, version)
-}
-
 ///| 最適分割の1区間。start / len は文字単位。
 struct Segment {
   mode : Mode
@@ -364,12 +292,6 @@ fn write_segment_list(
     }
     write_segment(w, part, s.mode, version)
   }
-}
-
-///| 最適分割に基づいて複数セグメントを書く。
-///| デコーダ側は Phase 2 で複数セグメントの読み取りに対応済み。
-fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
-  write_segment_list(w, text, version, optimal_segments(text, version))
 }
 
 ///| 文字数指示子のビット数（ISO 18004 Table 3）

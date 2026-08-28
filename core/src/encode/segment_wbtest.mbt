@@ -1,3 +1,76 @@
+///| run_mode の文字を mode で表現できるか（Numeric ⊂ Alphanumeric ⊂ Byte）。
+fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
+  match mode {
+    Mode::Byte => true
+    Mode::Alphanumeric =>
+      match run_mode {
+        Mode::Byte => false
+        _ => true
+      }
+    Mode::Numeric =>
+      match run_mode {
+        Mode::Numeric => true
+        _ => false
+      }
+  }
+}
+
+///| 文字数と UTF-8 バイト数が既知の区間について総ビット数を返す。
+fn segment_bits_for_lengths(
+  len : Int,
+  byte_len : Int,
+  mode : Mode,
+  version : Int,
+) -> Int {
+  let header = 4 + cci_bits(mode, version)
+  match mode {
+    Mode::Numeric => {
+      let full = len / 3
+      let rest = len % 3
+      let data = full * 10 + (if rest == 2 { 7 } else if rest == 1 { 4 } else { 0 })
+      header + data
+    }
+    Mode::Alphanumeric => {
+      let pairs = len / 2
+      let rest = len % 2
+      header + pairs * 11 + (if rest == 1 { 6 } else { 0 })
+    }
+    Mode::Byte => header + byte_len * 8
+  }
+}
+
+///| chars[from..from+len) を mode で符号化したときの総ビット数。
+fn segment_bits(
+  chars : Array[Char],
+  from : Int,
+  len : Int,
+  mode : Mode,
+  version : Int,
+) -> Int {
+  let mut bytes = 0
+  if mode == Mode::Byte {
+    for i = from; i < from + len; i = i + 1 {
+      let cp = chars[i].to_int()
+      bytes = bytes +
+        (if cp < 0x80 {
+          1
+        } else if cp < 0x800 {
+          2
+        } else if cp < 0x10000 {
+          3
+        } else {
+          4
+        })
+    }
+  }
+  segment_bits_for_lengths(len, bytes, mode, version)
+}
+
+///| 最適分割に基づいて複数セグメントを書く。
+fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
+  write_segment_list(w, text, version, optimal_segments(text, version))
+}
+
 ///| O(n) 実装の差分テストに使う、変更前の全分割点探索。
 fn optimal_segments_reference(text : String, version : Int) -> Array[Segment] {
   if !input_within_model2_capacity(text) {
