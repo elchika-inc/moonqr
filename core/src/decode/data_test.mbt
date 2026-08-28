@@ -127,15 +127,46 @@ test "decode_data: terminator-less exhaustion with all-zero remainder -> gracefu
   assert_eq(got.bytes, [])
 }
 
+test "decode_data: structured append first symbol is not an empty success" {
+  // Structured Append header:
+  // mode=0011 | position=0000 (first symbol) | total-1=0001 | parity=00000000 |
+  // terminator=0000。未対応モードとして None を返し、空文字の成功と区別する。
+  let cw = [0x30, 0x10, 0x00]
+  match @decode.decode_data(cw, 1) {
+    Some(_) => abort("unsupported Structured Append must not decode as empty text")
+    None => assert_true(true)
+  }
+}
+
+test "decode_data: FNC1 first position alone is not an empty success" {
+  // mode=0101(FNC1 first position) | terminator=0000。現在は mode だけを
+  // 読み飛ばして空文字の Some を返すが、未対応機能を成功扱いしてはならない。
+  let cw = [0x50]
+  match @decode.decode_data(cw, 1) {
+    Some(_) => abort("unsupported FNC1 first position must not decode as empty text")
+    None => assert_true(true)
+  }
+}
+
+test "decode_data: FNC1 second position is not an empty success" {
+  // mode=1001 | application indicator=00000000 | terminator=0000。
+  // 4bitだけ読み飛ばすと application indicator 冒頭の0を終端子と誤認する。
+  let cw = [0x90, 0x00]
+  match @decode.decode_data(cw, 1) {
+    Some(_) => abort("unsupported FNC1 second position must not decode as empty text")
+    None => assert_true(true)
+  }
+}
+
 test "decode_data resumes after unknown mode nibble" {
-  // 未知モード(0011=StructuredAppend、この jsQR pin では未対応=ペイロード消費なしでスキップ)
-  // の直後に有効な Byte セグメントが続くケース。jsQR と同じく「4bitだけ読み飛ばして継続」
-  // する挙動を確認する。
+  // 真に未割り当てのモード(0110)の直後に有効な Byte セグメントが続くケース。
+  // 0x3 は Structured Append として定義済みなので、未知モードの例には使わない。
+  // jsQR と同じく「4bitだけ読み飛ばして継続」する挙動を確認する。
   // コードワードは手計算せず @encode.BitWriter で意図したビット列そのものを組み立てる:
-  //   0011(未知mode,4bit) | 0100(byteモード,4bit) | CCI(8bit,v1)=2 | 'A'(8bit) | 'B'(8bit) | 0000(終端,4bit)
+  //   0110(未知mode,4bit) | 0100(byteモード,4bit) | CCI(8bit,v1)=2 | 'A'(8bit) | 'B'(8bit) | 0000(終端,4bit)
   // 合計36bit -> to_codewords() で5バイトにパディングされる。
   let w = @encode.BitWriter::new()
-  w.write(0b0011, 4) // 未知モード（StructuredAppend想定）: 4bitのみ消費してスキップされるはず
+  w.write(0b0110, 4) // 未割り当てモード: 4bitのみ消費してスキップされるはず
   w.write(0b0100, 4) // Byteモード
   w.write(2, @encode.cci_bits(@encode.Mode::Byte, 1)) // CCI: length=2
   w.write(0x41, 8) // 'A'
