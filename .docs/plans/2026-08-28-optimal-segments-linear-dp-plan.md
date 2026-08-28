@@ -87,7 +87,7 @@
 - Consumes: 委任仕様の rubric と lens-review-cycle。
 - Produces: 全コマンド exit 0、flag 0、検証値を記載した PR。
 
-- [ ] 指定5コマンドを pipe なしで個別実行し、exit code、件数、警告数を採取する。
+- [x] 指定5コマンドを pipe なしで個別実行し、exit code、件数、警告数を採取する。
 - [x] read-only reviewer 1名に fresh-eyes / security / core-logic / tests / domain を順に適用させ、最大3ラウンドで確信度80%以上の flag を0にする。
 - [ ] diff、対象外ファイル、PR provenance、review結果を自己確認して commit・push・PR作成を行う。
-- [ ] PR の head/body/checks を read-back し、main へマージせず司令塔へ `worker_done` を1回送る。
+- [ ] PR の head/body/checks を read-back し、main へマージしない。
