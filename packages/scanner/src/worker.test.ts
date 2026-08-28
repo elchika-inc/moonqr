@@ -67,3 +67,23 @@ it("returns result:null when the inline fallback decoder throws", async () => {
   expect(onmessage).toHaveBeenCalledWith({ data: { id: 23, result: null } });
   expect(onerror).not.toHaveBeenCalled();
 });
+
+it("does not reinterpret an inline fallback consumer error as a decode failure", async () => {
+  decoders.native.mockReturnValue(null);
+  vi.stubGlobal("Worker", undefined);
+  vi.stubGlobal("queueMicrotask", (callback: VoidFunction) => callback());
+  const { createWorkerHandle } = await import("./worker-handle.js");
+  const handle = createWorkerHandle();
+  const onmessage = vi.fn(() => {
+    throw new Error("consumer failure");
+  });
+  handle.onmessage = onmessage;
+
+  expect(() =>
+    handle.postMessage(
+      { id: 29, buffer: new ArrayBuffer(4), width: 1, height: 1 },
+      [],
+    ),
+  ).toThrow("consumer failure");
+  expect(onmessage).toHaveBeenCalledTimes(1);
+});
