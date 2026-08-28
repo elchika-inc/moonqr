@@ -373,6 +373,30 @@ describe("QrScanner worker crash", () => {
 
     scanner.stop();
   });
+
+  it("stops scanning after three consecutive worker crashes", async () => {
+    installFakeWorker();
+    const { stream, tracks } = makeFakeStream();
+    mockGetUserMedia(() => Promise.resolve(stream));
+    mockCanvasWith(cleanImage);
+    mockVideoSize(video, cleanImage.width, cleanImage.height);
+
+    const onError = vi.fn();
+    const scanner = new QrScanner(video, vi.fn(), { onError });
+    await scanner.start();
+
+    for (let crash = 1; crash <= 3; crash++) {
+      const worker = FakeWorker.instances[crash - 1];
+      if (!worker) throw new Error(`expected worker ${crash}`);
+      worker.onerror?.(new ErrorEvent("error", { message: `boom ${crash}` }));
+    }
+    scanner.stop();
+
+    expect(onError).toHaveBeenCalledTimes(3);
+    expect(onError.mock.calls[2]?.[0]?.message).toContain("stopped after 3 consecutive crashes");
+    expect(FakeWorker.instances).toHaveLength(3);
+    for (const track of tracks) expect(track.stop).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("QrScanner.scanImage", () => {

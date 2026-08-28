@@ -50,6 +50,11 @@ const DEFAULT_MAX_SCANS_PER_SECOND = 25;
 // 落とし続けることを防ぐ）。
 const DEFAULT_ESCALATE_AFTER_FAILURES = 15;
 
+// Worker が連続でクラッシュしたときの circuit breaker。正常応答を1件でも受ければ
+// 連続回数はリセットする。3回目のクラッシュでは再生成せず、カメラ・rAF・Workerを
+// 全て stop() して onError へ停止理由を通知する。
+const MAX_CONSECUTIVE_WORKER_CRASHES = 3;
+
 /**
  * カメラ映像からQRコードを継続的に読み取るスキャナ。
  *
@@ -76,6 +81,7 @@ export class QrScanner {
   private pending = false;
   private lastScanAt = -Infinity;
   private consecutiveFailures = 0;
+  private consecutiveWorkerCrashes = 0;
   private nextRequestId = 0;
   // 現在Workerへ投げていて未応答のリクエストid（なければnull）。これと一致しない応答は
   // 捨てる（Worker再起動やstop()を跨いだ古い応答による状態汚染を防ぐ）。
@@ -143,6 +149,7 @@ export class QrScanner {
     this.inFlightId = null;
     // 再start()した際に前回セッションのエスカレーション状態を持ち越さない。
     this.consecutiveFailures = 0;
+    this.consecutiveWorkerCrashes = 0;
     this.lastScanAt = -Infinity;
   }
 
@@ -153,7 +160,10 @@ export class QrScanner {
     return worker;
   }
 
-  /** Worker クラッシュ時: 自動再起動しつつ onError へ surface する（握りつぶさない）。 */
+  /**
+   * Worker クラッシュ時は onError へ surface し、連続2回までは自動再起動する。
+   * 3回目では入力依存の障害による無限再生成を防ぐため、スキャン全体を停止する。
+   */
   private handleWorkerCrash(event: ErrorEvent | Event): void {
     // stop()後に届いた（イベントループに積まれ済みの）クラッシュ通知でコールバックを
     // 発火させない——stop()は「以後このスキャナは何も通知しない」という契約であり、
@@ -163,7 +173,18 @@ export class QrScanner {
     if (this.stopped) return;
     this.pending = false;
     this.inFlightId = null; // クラッシュしたWorkerへの投げは応答しない
+    this.consecutiveWorkerCrashes++;
     const message = event instanceof ErrorEvent ? event.message : "unknown worker error";
+    if (this.consecutiveWorkerCrashes >= MAX_CONSECUTIVE_WORKER_CRASHES) {
+      this.onError(
+        new Error(
+          `Scanner worker stopped after ${MAX_CONSECUTIVE_WORKER_CRASHES} consecutive crashes: ${message}`,
+          { cause: event },
+        ),
+      );
+      this.stop();
+      return;
+    }
     this.onError(new Error(`Scanner worker crashed: ${message}`, { cause: event }));
     this.worker?.terminate();
     this.worker = this.createWorker();
@@ -211,6 +232,9 @@ export class QrScanner {
     // pending/consecutiveFailures を汚染するのを防ぐ）。
     if (response.id !== this.inFlightId) return;
 
+    // 1件でも正常に応答できた Worker は健全とみなし、散発的な過去クラッシュを
+    // 次の circuit-breaker 判定へ持ち越さない。
+    this.consecutiveWorkerCrashes = 0;
     this.pending = false;
     this.inFlightId = null;
     if (response.result) {
