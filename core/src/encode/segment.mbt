@@ -91,78 +91,6 @@ fn runs_of(text : String) -> Array[Run] {
   out
 }
 
-///| run_mode の文字を mode で表現できるか（Numeric ⊂ Alphanumeric ⊂ Byte）。
-fn mode_can_encode(mode : Mode, run_mode : Mode) -> Bool {
-  match mode {
-    Mode::Byte => true
-    Mode::Alphanumeric =>
-      match run_mode {
-        Mode::Byte => false
-        _ => true
-      }
-    Mode::Numeric =>
-      match run_mode {
-        Mode::Numeric => true
-        _ => false
-      }
-  }
-}
-
-///| 文字数と UTF-8 バイト数が既知の区間について総ビット数を返す。
-///| Byte 以外では byte_len を使わない。
-fn segment_bits_for_lengths(
-  len : Int,
-  byte_len : Int,
-  mode : Mode,
-  version : Int,
-) -> Int {
-  let header = 4 + cci_bits(mode, version)
-  match mode {
-    Mode::Numeric => {
-      let full = len / 3
-      let rest = len % 3
-      let data = full * 10 + (if rest == 2 { 7 } else if rest == 1 { 4 } else { 0 })
-      header + data
-    }
-    Mode::Alphanumeric => {
-      let pairs = len / 2
-      let rest = len % 2
-      header + pairs * 11 + (if rest == 1 { 6 } else { 0 })
-    }
-    Mode::Byte => header + byte_len * 8
-  }
-}
-
-///| chars[from..from+len) を mode で符号化したときの総ビット数。
-///| モード指示子 4bit + 文字数指示子 + データ部。
-///| 端数の扱いがモードごとに異なるため、1文字あたりへ均さずに計算する。
-fn segment_bits(
-  chars : Array[Char],
-  from : Int,
-  len : Int,
-  mode : Mode,
-  version : Int,
-) -> Int {
-  let mut bytes = 0
-  if mode == Mode::Byte {
-    // 文字数ではなく UTF-8 バイト数で数える
-    for i = from; i < from + len; i = i + 1 {
-      let cp = chars[i].to_int()
-      bytes = bytes +
-        (if cp < 0x80 {
-          1
-        } else if cp < 0x800 {
-          2
-        } else if cp < 0x10000 {
-          3
-        } else {
-          4
-        })
-    }
-  }
-  segment_bits_for_lengths(len, bytes, mode, version)
-}
-
 ///| 最適分割の1区間。start / len は文字単位。
 struct Segment {
   mode : Mode
@@ -170,18 +98,47 @@ struct Segment {
   len : Int
 } derive(Eq, Debug)
 
+///| 旧 DP の探索順（開始 run 昇順、Numeric → Alphanumeric → Byte）を
+///| コストが同じ候補同士の優先順位として表す。
+fn segment_candidate_is_better(
+  cost : Int,
+  from_run : Int,
+  mode : Mode,
+  best_cost : Int,
+  best_from_run : Int,
+  best_mode : Mode,
+) -> Bool {
+  if cost != best_cost {
+    cost < best_cost
+  } else if from_run != best_from_run {
+    from_run < best_from_run
+  } else {
+    let priority = match mode {
+      Mode::Numeric => 0
+      Mode::Alphanumeric => 1
+      Mode::Byte => 2
+    }
+    let best_priority = match best_mode {
+      Mode::Numeric => 0
+      Mode::Alphanumeric => 1
+      Mode::Byte => 2
+    }
+    priority < best_priority
+  }
+}
+
 ///| 最小ビット数になる分割を返す。
 ///| ラン単位の DP。最適な分割境界は文字種が変わる位置にしか来ないため、
 ///| ランへ圧縮してから探索する（数字列の途中で切って両側とも Numeric に
 ///| するのは切替コストが増えるだけで常に損）。
-fn optimal_segments(text : String, version : Int) -> Array[Segment] {
+fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   if !input_within_model2_capacity(text) {
-    return []
+    return None
   }
   let runs = runs_of(text)
   let n = runs.length()
   if n == 0 {
-    return []
+    return None
   }
   let byte_prefix : Array[Int] = [0]
   for c in text {
@@ -197,53 +154,103 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment] {
     }
     byte_prefix.push(byte_prefix[byte_prefix.length() - 1] + byte_len)
   }
-  let non_numeric_prefix : Array[Int] = [0]
-  let byte_run_prefix : Array[Int] = [0]
+  let charpos : Array[Int] = []
+  let bytepos : Array[Int] = []
   for r in runs {
-    non_numeric_prefix.push(
-      non_numeric_prefix[non_numeric_prefix.length() - 1] +
-      (if r.mode == Mode::Numeric { 0 } else { 1 }),
-    )
-    byte_run_prefix.push(
-      byte_run_prefix[byte_run_prefix.length() - 1] +
-      (if r.mode == Mode::Byte { 1 } else { 0 }),
-    )
+    charpos.push(r.start)
+    bytepos.push(byte_prefix[r.start])
   }
-  let modes = [Mode::Numeric, Mode::Alphanumeric, Mode::Byte]
-  // dp[j] = 先頭から j 個のランを符号化する最小ビット数（dp[0] = 0）
+  let text_len = runs[n - 1].start + runs[n - 1].len
+  charpos.push(text_len)
+  bytepos.push(byte_prefix[text_len])
+  // dp6[j] = 先頭から j 個のランを符号化する最小ビット数の6倍（dp6[0] = 0）
   let inf = 0x7FFFFFFF
-  let dp = Array::make(n + 1, inf)
-  dp[0] = 0
-  // from_run[j] / from_mode[j] = dp[j] を達成する直前の状態
+  let dp6 = Array::make(n + 1, inf)
+  dp6[0] = 0
+  // from_run[j] / from_mode[j] = dp6[j] を達成する直前の状態
   let from_run = Array::make(n + 1, 0)
   let from_mode = Array::make(n + 1, Mode::Byte)
+  // Byte は任意の run 区間を覆えるため、開始点 i の変換済みコストの最小値を持つ。
+  let mut best_byte = inf
+  let mut best_byte_i = 0
+  // Alphanumeric は Byte run を跨げず、データ部の端数は開始文字位置の偶奇で決まる。
+  let best_alnum = Array::make(2, inf)
+  let best_alnum_i = Array::make(2, 0)
   for j = 1; j <= n; j = j + 1 {
-    for i = 0; i < j; i = i + 1 {
-      if dp[i] == inf {
-        continue
+    let i = j - 1
+    if dp6[i] != inf {
+      let byte_cand = dp6[i] - 48 * bytepos[i]
+      if byte_cand < best_byte {
+        best_byte = byte_cand
+        best_byte_i = i
       }
-      // ラン i..j-1 をまとめて1セグメントにする
-      let start = runs[i].start
-      let end = runs[j - 1].start + runs[j - 1].len
-      let len = end - start
-      let byte_len = byte_prefix[end] - byte_prefix[start]
-      let required_mode = if byte_run_prefix[j] - byte_run_prefix[i] > 0 {
-        Mode::Byte
-      } else if non_numeric_prefix[j] - non_numeric_prefix[i] > 0 {
-        Mode::Alphanumeric
+      if runs[i].mode == Mode::Byte {
+        best_alnum[0] = inf
+        best_alnum[1] = inf
       } else {
-        Mode::Numeric
+        let parity = charpos[i] % 2
+        let alnum_cand = dp6[i] - 33 * charpos[i]
+        if alnum_cand < best_alnum[parity] {
+          best_alnum[parity] = alnum_cand
+          best_alnum_i[parity] = i
+        }
       }
-      for m in modes {
-        if !mode_can_encode(m, required_mode) {
-          continue
+    }
+
+    if best_byte != inf {
+      let cost = 6 * (4 + cci_bits(Mode::Byte, version)) +
+        48 * bytepos[j] + best_byte
+      if segment_candidate_is_better(
+        cost,
+        best_byte_i,
+        Mode::Byte,
+        dp6[j],
+        from_run[j],
+        from_mode[j],
+      ) {
+        dp6[j] = cost
+        from_run[j] = best_byte_i
+        from_mode[j] = Mode::Byte
+      }
+    }
+
+    for parity = 0; parity < 2; parity = parity + 1 {
+      if best_alnum[parity] != inf {
+        let remainder = (charpos[j] - parity) % 2
+        let cost = 6 * (4 + cci_bits(Mode::Alphanumeric, version)) +
+          33 * charpos[j] + 3 * remainder + best_alnum[parity]
+        if segment_candidate_is_better(
+          cost,
+          best_alnum_i[parity],
+          Mode::Alphanumeric,
+          dp6[j],
+          from_run[j],
+          from_mode[j],
+        ) {
+          dp6[j] = cost
+          from_run[j] = best_alnum_i[parity]
+          from_mode[j] = Mode::Alphanumeric
         }
-        let cost = dp[i] + segment_bits_for_lengths(len, byte_len, m, version)
-        if cost < dp[j] {
-          dp[j] = cost
-          from_run[j] = i
-          from_mode[j] = m
-        }
+      }
+    }
+
+    if runs[i].mode == Mode::Numeric && dp6[i] != inf {
+      let len = runs[i].len
+      let remainder = len % 3
+      let c3 = if remainder == 1 { 2 } else if remainder == 2 { 1 } else { 0 }
+      let cost = dp6[i] + 6 * (4 + cci_bits(Mode::Numeric, version)) +
+        20 * len + 2 * c3
+      if segment_candidate_is_better(
+        cost,
+        i,
+        Mode::Numeric,
+        dp6[j],
+        from_run[j],
+        from_mode[j],
+      ) {
+        dp6[j] = cost
+        from_run[j] = i
+        from_mode[j] = Mode::Numeric
       }
     }
   }
@@ -252,19 +259,16 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment] {
   let mut j = n
   while j > 0 {
     let i = from_run[j]
-    let start = runs[i].start
-    let mut len = 0
-    for k = i; k < j; k = k + 1 {
-      len = len + runs[k].len
-    }
-    rev.push(Segment::{ mode: from_mode[j], start, len })
+    rev.push(
+      Segment::{ mode: from_mode[j], start: charpos[i], len: charpos[j] - charpos[i] },
+    )
     j = i
   }
   let out : Array[Segment] = []
   for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
     out.push(rev[idx])
   }
-  out
+  Some(out)
 }
 
 ///| 最適分割に基づいて複数セグメントを書く。
@@ -288,12 +292,6 @@ fn write_segment_list(
     }
     write_segment(w, part, s.mode, version)
   }
-}
-
-///| 最適分割に基づいて複数セグメントを書く。
-///| デコーダ側は Phase 2 で複数セグメントの読み取りに対応済み。
-fn write_segments(w : BitWriter, text : String, version : Int) -> Unit {
-  write_segment_list(w, text, version, optimal_segments(text, version))
 }
 
 ///| 文字数指示子のビット数（ISO 18004 Table 3）

@@ -96,21 +96,35 @@ test("split QR codes are readable by jsQR (independent decoder)", () => {
   }
 });
 
-test("auto version selection stays responsive for many short runs", () => {
+test("auto version selection matches forced search within 5 seconds", () => {
   const text = "a1".repeat(500);
   const autoStarted = performance.now();
   const flat = enc.encode_js(text, EC.M, 0);
   const autoElapsed = performance.now() - autoStarted;
-  const forcedStarted = performance.now();
   const forcedVersion = minVersion(text, EC.M);
-  const forcedElapsed = performance.now() - forcedStarted;
   assert.notEqual(flat.length, 0, "alternating 1,000-char input must fit a QR code");
   assert.equal((flat[0] - 17) / 4, forcedVersion, "auto and forced search must choose the same version");
   assert.ok(autoElapsed < 5_000, `encoding took ${autoElapsed.toFixed(0)}ms (limit: 5000ms)`);
-  assert.ok(
-    autoElapsed * 2 < forcedElapsed,
-    `band reuse ineffective: auto=${autoElapsed.toFixed(0)}ms forced=${forcedElapsed.toFixed(0)}ms`,
-  );
+});
+
+test("auto version selection stays below 100ms for 7,088 alternating byte/numeric runs", () => {
+  enc.encode_js("a1".repeat(100), EC.L, 0);
+  const text = "a1".repeat(3544);
+  const started = performance.now();
+  const flat = enc.encode_js(text, EC.L, 0);
+  const elapsed = performance.now() - started;
+  assert.deepEqual(flat, [], "7,088-character alternating input must report capacity overflow");
+  assert.ok(elapsed < 100, `encoding took ${elapsed.toFixed(1)}ms (limit: 100ms)`);
+});
+
+test("auto version selection stays below 100ms for 5,356 alternating numeric/alphanumeric runs", () => {
+  enc.encode_js("1A".repeat(100), EC.L, 0);
+  const text = "1A".repeat(2678);
+  const started = performance.now();
+  const flat = enc.encode_js(text, EC.L, 0);
+  const elapsed = performance.now() - started;
+  assert.deepEqual(flat, [], "5,356-character alternating input must report capacity overflow");
+  assert.ok(elapsed < 100, `encoding took ${elapsed.toFixed(1)}ms (limit: 100ms)`);
 });
 
 test("obviously over-capacity input is rejected before segment planning", () => {

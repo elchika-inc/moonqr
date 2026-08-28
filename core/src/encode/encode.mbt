@@ -8,9 +8,18 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
   }
   // 文字数指示子は 1-9 / 10-26 / 27-40 の帯でのみ変わるため、
   // 最適分割は帯ごとに1回だけ求めてバージョン試行間で再利用する。
-  let segments_low = optimal_segments(text, 1)
-  let segments_mid = optimal_segments(text, 10)
-  let segments_high = optimal_segments(text, 27)
+  let segments_low = match optimal_segments(text, 1) {
+    Some(segments) => segments
+    None => return None
+  }
+  let segments_mid = match optimal_segments(text, 10) {
+    Some(segments) => segments
+    None => return None
+  }
+  let segments_high = match optimal_segments(text, 27) {
+    Some(segments) => segments
+    None => return None
+  }
   let try_version = fn(v : Int) -> Matrix? {
     let w = BitWriter::new()
     let segments = if v <= 9 {
