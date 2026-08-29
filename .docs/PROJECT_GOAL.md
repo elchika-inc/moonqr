@@ -41,6 +41,7 @@ MoonBit で実用ライブラリを書き、既存実装と同等以上の正し
 
 ```sh
 export PATH="$HOME/.moon/bin:$PATH"
+pnpm install --frozen-lockfile
 cd core && moon test --target js && moon build --target js --release && cd ..
 pnpm -r build
 pnpm -r typecheck
