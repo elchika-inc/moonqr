@@ -161,9 +161,10 @@ Branch protection applies to administrators, so a broken `main` cannot be fixed 
 push. If a pull request is genuinely not viable:
 
 ```sh
-gh api repos/elchika-inc/moonqr/rulesets/19899601 -X PUT -f enforcement=disabled
+RULESET_ID=$(gh api repos/elchika-inc/moonqr/rulesets --jq 'map(select(.name == "main protection")) | if length == 1 then .[0].id else error("expected exactly one main protection ruleset") end')
+gh api "repos/elchika-inc/moonqr/rulesets/$RULESET_ID" -X PUT -f enforcement=disabled
 # fix main
-gh api repos/elchika-inc/moonqr/rulesets/19899601 -X PUT -f enforcement=active
+gh api "repos/elchika-inc/moonqr/rulesets/$RULESET_ID" -X PUT -f enforcement=active
 ```
 
 The partial update preserves the rules — verified by round-tripping it when the ruleset was
