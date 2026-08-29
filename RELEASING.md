@@ -52,12 +52,12 @@ Open a pull request for the bump like any other change — `main` is protected.
 
 ```sh
 export PATH="$HOME/.moon/bin:$PATH"
-cd core && moon test --target js && cd ..
+cd core && moon test --target js && moon build --target js --release && cd ..
+pnpm -r build
+pnpm -r typecheck
 node scripts/fetch-fixtures.mjs
 node --test packages/moonqr/test/*.test.mjs
 pnpm -r test:unit
-pnpm -r typecheck
-pnpm -r build
 ```
 
 All layers must be green before anything is published.
