@@ -61,9 +61,13 @@ match result {
     // r.ec : @encode.EcLevel, r.corners : Array[Point] (TL, TR, BR, BL, in pixel space)
     ...
   }
-  None => ... // no QR code found in the frame
+  None => ... // invalid dimensions/data length, or no QR code found in the frame
 }
 ```
+
+`decode(data, width, height, invert)` returns `None` when `width` or `height` is
+not positive, the image exceeds the supported pixel limit, or `data.length()`
+does not equal `width * height * 4`.
 
 ## License and attribution
 

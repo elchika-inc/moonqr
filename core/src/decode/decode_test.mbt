@@ -98,6 +98,16 @@ test "decode_js: wrong data length returns empty string" {
   assert_eq(@decode.decode_js(truncated, w, h, false), "")
 }
 
+test "decode: invalid data length or dimensions return None" {
+  let one_pixel = Bytes::from_array(FixedArray::make(4, b'\x00')[:])
+  let short = Bytes::from_array(FixedArray::make(12, b'\x00')[:])
+  assert_true(@decode.decode(short, 2, 2, false) is None)
+  assert_true(@decode.decode(one_pixel, 0, 1, false) is None)
+  assert_true(@decode.decode(one_pixel, 1, 0, false) is None)
+  assert_true(@decode.decode(one_pixel, -1, 1, false) is None)
+  assert_true(@decode.decode(one_pixel, 1, -1, false) is None)
+}
+
 test "decode: small images return None without panicking" {
   let dimensions : Array[(Int, Int)] = [
     (1, 1),
