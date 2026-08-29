@@ -42,10 +42,10 @@ location, tracked in git.
 
 Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.moon/bin:$PATH"`.
 
-- build: `cd core && moon build --target js && cd .. && pnpm -r build` — **order matters**, see
+- build: `cd core && moon build --target js --release && cd .. && pnpm -r build` — **order matters**, see
   Architecture below.
 - test: `cd core && moon test --target js` (MoonBit), `node --test packages/moonqr/test/*.test.mjs`
-  (jsQR parity + encoder sweep), `pnpm -r test:unit` (vitest, both packages).
+  (jsQR parity + encoder sweep), `pnpm -r test:unit` (vitest, all packages).
 - check: `pnpm -r typecheck`.
 - fixtures: `node scripts/fetch-fixtures.mjs` — required once before the parity test; downloads the
   jsQR corpus at a pinned commit and caches it.
