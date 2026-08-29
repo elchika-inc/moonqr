@@ -45,9 +45,10 @@ match matrix {
 }
 ```
 
-`encode(text, ec, version)` returns `Matrix?`: `None` for an empty string or when the
-text doesn't fit the given/selected version. Pass `version=None` to auto-select the
-smallest QR version (1–40) that fits; pass `Some(v)` to force one.
+`encode(text, ec, version)` returns `Matrix?`: `None` for an empty string, when the
+text doesn't fit the given/selected version, or when an explicit version is outside
+1–40. Pass `version=None` to auto-select the smallest QR version (1–40) that fits;
+pass `Some(v)` to force one.
 
 ### Decode
 

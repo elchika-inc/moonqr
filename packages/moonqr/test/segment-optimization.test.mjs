@@ -107,24 +107,56 @@ test("auto version selection matches forced search within 5 seconds", () => {
   assert.ok(autoElapsed < 5_000, `encoding took ${autoElapsed.toFixed(0)}ms (limit: 5000ms)`);
 });
 
-test("auto version selection stays below 100ms for 7,088 alternating byte/numeric runs", () => {
+// 旧 O(n^2) 実装は開発機で中央値約 889ms、CI は開発機の 3〜4 倍遅いため、
+// 退化時は CI で 3,000ms 以上になる。一方、現行 O(n) 実装は開発機で約
+// 20〜40ms、CI で約 130ms。1,000ms は現状に約 7 倍の余裕を持たせながら、
+// O(n^2) 退化とは 3 倍以上分離する。旧 100ms は開発機の値だけに基づき、
+// CI で偽陽性になったため引き上げた。
+test("auto version selection stays below 1000ms for 7,088 alternating byte/numeric runs", () => {
   enc.encode_js("a1".repeat(100), EC.L, 0);
   const text = "a1".repeat(3544);
   const started = performance.now();
   const flat = enc.encode_js(text, EC.L, 0);
   const elapsed = performance.now() - started;
   assert.deepEqual(flat, [], "7,088-character alternating input must report capacity overflow");
-  assert.ok(elapsed < 100, `encoding took ${elapsed.toFixed(1)}ms (limit: 100ms)`);
+  assert.ok(elapsed < 1_000, `encoding took ${elapsed.toFixed(1)}ms (limit: 1000ms)`);
 });
 
-test("auto version selection stays below 100ms for 5,356 alternating numeric/alphanumeric runs", () => {
+test("auto version selection stays below 1000ms for 5,356 alternating numeric/alphanumeric runs", () => {
   enc.encode_js("1A".repeat(100), EC.L, 0);
   const text = "1A".repeat(2678);
   const started = performance.now();
   const flat = enc.encode_js(text, EC.L, 0);
   const elapsed = performance.now() - started;
   assert.deepEqual(flat, [], "5,356-character alternating input must report capacity overflow");
-  assert.ok(elapsed < 100, `encoding took ${elapsed.toFixed(1)}ms (limit: 100ms)`);
+  assert.ok(elapsed < 1_000, `encoding took ${elapsed.toFixed(1)}ms (limit: 1000ms)`);
+});
+
+test("alternating-run planning stays below three times a single-run baseline", () => {
+  const alternating = "a1".repeat(3544);
+  const singleRun = "1".repeat(7089);
+  enc.encode_js(alternating, EC.L, 0);
+  enc.encode_js(singleRun, EC.L, 0);
+
+  const medianElapsed = (text) => {
+    const samples = [];
+    for (let i = 0; i < 7; i++) {
+      const started = performance.now();
+      enc.encode_js(text, EC.L, 0);
+      samples.push(performance.now() - started);
+    }
+    samples.sort((a, b) => a - b);
+    return samples[3];
+  };
+
+  const alternatingMedian = medianElapsed(alternating);
+  const singleRunMedian = medianElapsed(singleRun);
+  // singleRun は v40 の行列を組み立て、alternating は容量超過で終了するため、
+  // 両者は等価な仕事量ではない。これは O(n^2) 退化を検知する粗い上限としてのみ使う。
+  assert.ok(
+    alternatingMedian < singleRunMedian * 3,
+    `alternating median ${alternatingMedian.toFixed(1)}ms exceeded 3x single-run median ${singleRunMedian.toFixed(1)}ms`,
+  );
 });
 
 test("obviously over-capacity input is rejected before segment planning", () => {

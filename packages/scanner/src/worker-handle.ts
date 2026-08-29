@@ -69,19 +69,24 @@ class InlineWorkerHandle implements WorkerHandle {
   postMessage(message: WorkerRequest, _transfer: Transferable[]): void {
     queueMicrotask(() => {
       if (this.terminated) return;
+      let result: WorkerResponse["result"] = null;
       try {
         const data = new Uint8Array(message.buffer);
         // decodeMultiScale は MultiScaleOutcome（result + scale + attemptedScales）を返すため
         // .result を取り出す。WorkerResponse の契約は worker.ts と揃える（DecodeResult|null）
         // ——ライブフレームでは scale を消費者へ運ばない（worker.ts のコメント参照）。
-        const result = message.multiscale
+        result = message.multiscale
           ? (decodeMultiScale(data, message)?.result ?? null)
           : decodeNative(data, message);
-        this.onmessage?.({ data: { id: message.id, result } });
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        this.onerror?.(new ErrorEvent("error", { error: err, message: err.message }));
+      } catch {
+        // 実 Worker の worker.ts と同じく、入力依存のデコード例外は Worker
+        // インフラ障害へ昇格させず「このフレームは読めなかった」結果へ倒す。
+        // onerror は実 Worker 自体のクラッシュ通知に限定する。
+        result = null;
       }
+      // 消費者の onmessage 例外は decoder 例外ではないため、
+      // try の外で配送し、原因を握りつぶさず呼び出し側へ返す。
+      this.onmessage?.({ data: { id: message.id, result } });
     });
   }
 

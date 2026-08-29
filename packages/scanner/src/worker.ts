@@ -32,13 +32,20 @@ declare const self: {
 
 self.onmessage = (event: { data: WorkerRequest }) => {
   const { id, buffer, width, height, invert, multiscale } = event.data;
-  const data = new Uint8Array(buffer);
-  // ライブフレーム経路は結果のみを返す（scale/attemptedScales は onResult の契約に
-  // 含まれない——ライブスキャンでは「どのスケールで読めたか」は消費者に意味を持たず、
-  // 毎フレームWorker境界を越えて運ぶ価値がない）。静止画の scanImage は
-  // decodeMultiScale の outcome をそのまま公開する（index.ts の ScanImageResult）。
-  const result = multiscale
-    ? (decodeMultiScale(data, { width, height, invert })?.result ?? null)
-    : decodeNative(data, { width, height, invert });
+  let result: DecodeResult | null = null;
+  try {
+    const data = new Uint8Array(buffer);
+    // ライブフレーム経路は結果のみを返す（scale/attemptedScales は onResult の契約に
+    // 含まれない——ライブスキャンでは「どのスケールで読めたか」は消費者に意味を持たず、
+    // 毎フレームWorker境界を越えて運ぶ価値がない）。静止画の scanImage は
+    // decodeMultiScale の outcome をそのまま公開する（index.ts の ScanImageResult）。
+    result = multiscale
+      ? (decodeMultiScale(data, { width, height, invert })?.result ?? null)
+      : decodeNative(data, { width, height, invert });
+  } catch {
+    // 入力依存のデコード例外を Worker 自体のクラッシュへ昇格させない。
+    // 同スレッド fallback と同じく、このフレームは「読めなかった」結果へ倒す。
+    result = null;
+  }
   self.postMessage({ id, result });
 };

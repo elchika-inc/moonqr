@@ -46,6 +46,16 @@ test "encode rejects empty text" {
   }
 }
 
+test "encode rejects an explicit version outside 1 through 40" {
+  let versions = [-1, 0, 41]
+  for i = 0; i < versions.length(); i = i + 1 {
+    match @encode.encode("HI", @encode.EcLevel::M, Some(versions[i])) {
+      Some(_) => abort("out-of-range explicit version must be rejected")
+      None => assert_true(true)
+    }
+  }
+}
+
 test "to_svg_string_js produces svg or empty on failure" {
   let svg = @encode.to_svg_string_js("HI", 1, 0, 4, 10)
   assert_true(svg.contains("<svg"))

@@ -4,6 +4,7 @@
 import { encode, toSvgString } from "@elchika-inc/moonqr/encode";
 import { QrScanner } from "@elchika-inc/moonqr-scanner";
 import { t, getLang, setLang, onLangChange, initI18n } from "./i18n.js";
+import { buildCameraResult, buildResultCard } from "./result-card.js";
 
 initI18n();
 
@@ -120,12 +121,6 @@ fileInput.addEventListener("change", (e) => {
   handleFiles(e.target.files);
 });
 
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 // 過去の読取結果を記述子として保持し、言語切替時に再レンダリングできるようにする
 // （dt/dd のラベルや状態テキストは言語依存のため、生成時の言語に固定されないようにする）。
 const readResultDescriptors = [];
@@ -157,36 +152,10 @@ async function decodeImageFile(file) {
   }
 }
 
-function buildResultCard(desc) {
-  const card = document.createElement("div");
-  card.className = "result-card";
-
-  let body;
-  if (desc.kind === "ok") {
-    const scaleNote =
-      desc.scale === 1 ? t("read.scaleNative") : t("read.scaleN", { scale: desc.scale });
-    const attemptsNote = desc.attemptedScales.map((s) => `1/${s}`).join(" → ");
-    body = `
-      <p class="status-ok">${escapeHtml(t("read.success", { scaleNote }))}</p>
-      <dl>
-        <dt>${escapeHtml(t("read.text"))}</dt><dd>${escapeHtml(desc.text)}</dd>
-        <dt>${escapeHtml(t("read.version"))}</dt><dd>${desc.version}</dd>
-        <dt>${escapeHtml(t("read.ecLevel"))}</dt><dd>${desc.ecLevel}</dd>
-        <dt>${escapeHtml(t("read.attempts"))}</dt><dd>${escapeHtml(attemptsNote)}</dd>
-      </dl>`;
-  } else if (desc.kind === "fail") {
-    body = `<p class="status-err">${escapeHtml(t("read.fail"))}</p>`;
-  } else {
-    body = `<p class="status-err">${escapeHtml(t("read.error", { message: desc.message }))}</p>`;
-  }
-  card.innerHTML = `<img src="${desc.thumbUrl}" alt="${escapeHtml(desc.fileName)}"><div><strong>${escapeHtml(desc.fileName)}</strong>${body}</div>`;
-  return card;
-}
-
 function renderReadResults() {
   readResults.innerHTML = "";
   for (const desc of readResultDescriptors) {
-    readResults.appendChild(buildResultCard(desc));
+    readResults.appendChild(buildResultCard(desc, t));
   }
 }
 
@@ -194,7 +163,7 @@ async function handleFiles(files) {
   for (const file of files) {
     const desc = await decodeImageFile(file);
     readResultDescriptors.unshift(desc);
-    readResults.prepend(buildResultCard(desc));
+    readResults.prepend(buildResultCard(desc, t));
   }
 }
 
@@ -249,22 +218,11 @@ function drawCorners(corners) {
 }
 
 function renderCameraResult() {
+  cameraResult.replaceChildren();
   if (!lastCameraResult) {
-    cameraResult.innerHTML = "";
     return;
   }
-  const { text, version, ecLevel } = lastCameraResult;
-  cameraResult.innerHTML = `
-    <div class="result-card" style="border:none; padding:0; margin-top:10px;">
-      <div>
-        <p class="status-ok">${escapeHtml(t("camera.detected"))}</p>
-        <dl>
-          <dt>${escapeHtml(t("read.text"))}</dt><dd>${escapeHtml(text)}</dd>
-          <dt>${escapeHtml(t("read.version"))}</dt><dd>${version}</dd>
-          <dt>${escapeHtml(t("read.ecLevel"))}</dt><dd>${ecLevel}</dd>
-        </dl>
-      </div>
-    </div>`;
+  cameraResult.append(buildCameraResult(lastCameraResult, t));
 }
 
 function onScanResult(result) {

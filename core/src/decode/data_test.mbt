@@ -21,8 +21,8 @@
 ///| 値を見ずbyteを常にUTF-8として解釈する仕様）+ Byteモードで"AB"を続けた
 ///| [0x71, 0xA4, 0x02, 0x41, 0x42] を使う。
 ///|
-///| ⑥ 異常系: garbage mode indicator（未定義モード値0011=0x3）+ 末尾2bitが非0
-///| （[0x10, 0x05, 0x4F]）→ jsQR の
+///| ⑥ 異常系: garbage mode indicator（未割り当てモード値0110=0x6）+ 末尾2bitが非0
+///| （[0x10, 0x05, 0x5B]）→ jsQR の
 ///| `stream.available() === 0 || stream.readBits(...) === 0` 判定が両方falseになり
 ///| decode()が暗黙にundefinedを返すケースを鏡映してNoneを期待する。
 ///| 対照として、末尾ビットがすべて0で終端子なしに使い切る場合（[0x10, 0x00]）は
@@ -108,8 +108,8 @@ test "decode_data: ECI(UTF-8 26) + byte segment \"AB\"" {
 
 test "decode_data: garbage mode indicator followed by non-zero remainder -> None" {
   // mode=0001(Numeric) cci(10bit)=1 digit(4bit)=5 -> "5" 読了後、
-  // 未定義モード0011(4bit,読み飛ばし) -> 残り2bitが "11"(非0) で終端。
-  let cw = [0x10, 0x05, 0x4F]
+  // 未割り当てモード0110(4bit,読み飛ばし) -> 残り2bitが "11"(非0) で終端。
+  let cw = [0x10, 0x05, 0x5B]
   match @decode.decode_data(cw, 1) {
     None => ()
     Some(_) => abort("expected None: non-zero remainder without terminator")
@@ -127,15 +127,53 @@ test "decode_data: terminator-less exhaustion with all-zero remainder -> gracefu
   assert_eq(got.bytes, [])
 }
 
+test "decode_data: structured append first symbol is not an empty success" {
+  // Structured Append header:
+  // mode=0011 | position=0000 (first symbol) | total-1=0001 | parity=00000000 |
+  // terminator=0000。未対応モードとして None を返し、空文字の成功と区別する。
+  let cw = [0x30, 0x10, 0x00]
+  match @decode.decode_data(cw, 1) {
+    Some(_) => abort("unsupported Structured Append must not decode as empty text")
+    None => assert_true(true)
+  }
+}
+
+test "decode_data: FNC1 first position continues into the following data segment" {
+  // FNC1 first position は追加ヘッダを持たず、直後に通常のデータセグメントが続く。
+  // mode=0101 | Byte mode=0100 | CCI(v1)=2 | "AB" | Terminator を実在形として組む。
+  let w = @encode.BitWriter::new()
+  w.write(0b0101, 4)
+  w.write(0b0100, 4)
+  w.write(2, @encode.cci_bits(@encode.Mode::Byte, 1))
+  w.write(0x41, 8)
+  w.write(0x42, 8)
+  w.write(0b0000, 4)
+  let cw = w.to_codewords()
+  match @decode.decode_data(cw, 1) {
+    Some(d) => assert_eq(d.text, "AB")
+    None => abort("FNC1 first position must continue into the Byte segment")
+  }
+}
+
+test "decode_data: FNC1 second position is not an empty success" {
+  // mode=1001 | application indicator=00000000 | terminator=0000。
+  // 4bitだけ読み飛ばすと application indicator 冒頭の0を終端子と誤認する。
+  let cw = [0x90, 0x00]
+  match @decode.decode_data(cw, 1) {
+    Some(_) => abort("unsupported FNC1 second position must not decode as empty text")
+    None => assert_true(true)
+  }
+}
+
 test "decode_data resumes after unknown mode nibble" {
-  // 未知モード(0011=StructuredAppend、この jsQR pin では未対応=ペイロード消費なしでスキップ)
-  // の直後に有効な Byte セグメントが続くケース。jsQR と同じく「4bitだけ読み飛ばして継続」
-  // する挙動を確認する。
+  // 真に未割り当てのモード(0110)の直後に有効な Byte セグメントが続くケース。
+  // 0x3 は Structured Append として定義済みなので、未知モードの例には使わない。
+  // jsQR と同じく「4bitだけ読み飛ばして継続」する挙動を確認する。
   // コードワードは手計算せず @encode.BitWriter で意図したビット列そのものを組み立てる:
-  //   0011(未知mode,4bit) | 0100(byteモード,4bit) | CCI(8bit,v1)=2 | 'A'(8bit) | 'B'(8bit) | 0000(終端,4bit)
+  //   0110(未知mode,4bit) | 0100(byteモード,4bit) | CCI(8bit,v1)=2 | 'A'(8bit) | 'B'(8bit) | 0000(終端,4bit)
   // 合計36bit -> to_codewords() で5バイトにパディングされる。
   let w = @encode.BitWriter::new()
-  w.write(0b0011, 4) // 未知モード（StructuredAppend想定）: 4bitのみ消費してスキップされるはず
+  w.write(0b0110, 4) // 未割り当てモード: 4bitのみ消費してスキップされるはず
   w.write(0b0100, 4) // Byteモード
   w.write(2, @encode.cci_bits(@encode.Mode::Byte, 1)) // CCI: length=2
   w.write(0x41, 8) // 'A'
