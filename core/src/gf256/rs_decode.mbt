@@ -154,6 +154,7 @@ fn correct_errors(
 }
 
 ///| RS復号: 訂正済み符号語を返す。訂正不能は None。
+///| 訂正不要時は入力配列そのものを返し、訂正時は入力を変更せず新しい配列を返す。
 pub fn rs_decode(msg : Array[Int], n_ec : Int) -> Array[Int]? {
   let synd = calc_syndromes(msg, n_ec)
   let mut clean = true
