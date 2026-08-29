@@ -68,7 +68,9 @@ uploaded without risking a publish.
 pnpm --filter @elchika-inc/moonqr pack --pack-destination /tmp
 pnpm --filter @elchika-inc/moonqr-scanner pack --pack-destination /tmp
 pnpm --filter @elchika-inc/moonqr-cli pack --pack-destination /tmp
-tar tzf /tmp/elchika-inc-moonqr-*.tgz | sort
+for archive in /tmp/elchika-inc-moonqr-[0-9]*.tgz; do tar tzf "$archive" | sort; done
+for archive in /tmp/elchika-inc-moonqr-scanner-*.tgz; do tar tzf "$archive" | sort; done
+for archive in /tmp/elchika-inc-moonqr-cli-*.tgz; do tar tzf "$archive" | sort; done
 tar xzOf /tmp/elchika-inc-moonqr-scanner-*.tgz package/package.json | grep -A3 '"dependencies"'
 tar xzOf /tmp/elchika-inc-moonqr-cli-*.tgz package/package.json | grep -A3 '"dependencies"'
 ```
