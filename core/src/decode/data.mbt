@@ -5,9 +5,12 @@
 ///| jsQR の `decode()` は「モード指示子を読む→対応するセグメントを読む」をストリーム終端
 ///| （4bit未満）まで繰り返し、終端子(0000)で即終了、ループを抜けたときは残りビットが
 ///| 0個または全0であれば成功、そうでなければ失敗（jsQR は暗黙 undefined を返す＝本ポートでは
-///| None）という構造。未定義のモード値（0x3, 0x5, 0x6, 0x9-0xF。StructuredAppendの0x3も
-///| jsQR 側に分岐が無いため含む）は jsQR に対応する分岐が無く、4bit消費のみでペイロードを
-///| 一切読まずループへ戻る——本ポートもこれをそのまま鏡映する（=独自の解釈を足さない）。
+///| None）という構造。真に未割り当てのモード値（0x6, 0xA-0xF）は jsQR と同じく
+///| 4bit消費のみでループへ戻る。一方、追加ヘッダを持つが本ライブラリでは未対応の
+///| Structured Append (0x3) / FNC1 second (0x9) は None を返す。追加ヘッダを読まず
+///| 継続すると、その途中の0を Terminator と誤認して空文字の成功を返し、利用側が
+///| 「読めなかった」結果と区別できなくなるためである。FNC1 first (0x5) は追加ヘッダを
+///| 持たないため、指示子だけを消費して直後の通常データセグメントへ継続する。
 ///|
 ///| ECI逸脱: jsQR は1/2/3バイト designator を正しくパースして assignmentNumber を
 ///| chunks に記録するが、本ポートは「UTF-8(26)のみ対応、他のECI指定もbyteをUTF-8として
@@ -378,6 +381,14 @@ pub fn decode_data(codewords : Array[Int], version : Int) -> DecodedData? {
     if mode == 0x0 {
       // Terminator
       return Some({ text: chars_to_string(chars), bytes })
+    } else if mode == 0x3 || mode == 0x9 {
+      // Structured Append / FNC1 second position は追加ヘッダを持つが未対応。
+      // ペイロードを誤って別モードとして読まず失敗へ倒す。
+      return None
+    } else if mode == 0x5 {
+      // FNC1 first position は追加ヘッダを持たない。指示子だけを消費し、
+      // 直後の通常データセグメントを次のループで読む。
+      ()
     } else if mode == 0x7 {
       // ECI
       match decode_eci(r) {
@@ -409,8 +420,8 @@ pub fn decode_data(codewords : Array[Int], version : Int) -> DecodedData? {
         None => return None
       }
     }
-    // それ以外（0x3, 0x5, 0x6, 0x9-0xF。StructuredAppendの0x3含む）は
-    // jsQRに対応分岐が無いため、モード4bitの消費のみでペイロードを読まず継続する。
+    // それ以外の未割り当て値（0x6, 0xA-0xF）は、jsQR と同じく
+    // モード4bitの消費のみでペイロードを読まず継続する。
   }
   // ループを available() < 4 で抜けた（終端子に到達しないまま消費し切った）場合。
   // 残りが0bit、または残り全ビットが0なら暗黙の終端子とみなして成功（jsQRの

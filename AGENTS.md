@@ -33,7 +33,7 @@ location, tracked in git.
 - pnpm workspace. Node.js 18.18+.
 - Not the standard Cloudflare web-service stack — this is a published library, so there is no app,
   no database, and no deploy target beyond npm / mooncakes.io / GitHub Pages.
-- standards_version: 2026-07-29 (rev.46).
+- standards_version: 2026-08-15 (rev.71).
 - branch_policy: protected — `main` requires a pull request and a passing `test` check, with an
   empty bypass list, so the rule applies to administrators as well. An agent and its operator
   share one GitHub token, so a bypass for administrators would also be a bypass for the agent.
@@ -42,10 +42,10 @@ location, tracked in git.
 
 Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.moon/bin:$PATH"`.
 
-- build: `cd core && moon build --target js && cd .. && pnpm -r build` — **order matters**, see
+- build: `cd core && moon build --target js --release && cd .. && pnpm -r build` — **order matters**, see
   Architecture below.
 - test: `cd core && moon test --target js` (MoonBit), `node --test packages/moonqr/test/*.test.mjs`
-  (jsQR parity + encoder sweep), `pnpm -r test:unit` (vitest, both packages).
+  (jsQR parity + encoder sweep), `pnpm -r test:unit` (vitest, all packages).
 - check: `pnpm -r typecheck`.
 - fixtures: `node scripts/fetch-fixtures.mjs` — required once before the parity test; downloads the
   jsQR corpus at a pinned commit and caches it.

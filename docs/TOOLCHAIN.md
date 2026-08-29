@@ -6,7 +6,7 @@
 moon 0.1.20260713 (75c7e1f 2026-07-13)
 ```
 
-This is the toolchain `core/` is currently developed and verified against (98/98 `moon test`
+This is the toolchain `core/` is currently developed and verified against (`moon test` fully
 passing, zero warnings). It was `latest` on 2026-07-14, the day this migration landed. Treat
 it as the baseline for any toolchain-related CI/local debugging — but see the next section
 before assuming it will still be installable by the time you read this.
@@ -105,7 +105,7 @@ or assertion changes** — purely mechanical toolchain-compatibility updates:
   (`core/src/encode/matrix.mbt`: `get`, `set`, `is_function`, `set_function`).
 - **`BytesView::to_bytes()` → `BytesView::to_owned()`** (`core/src/decode/decode_test.mbt`).
 
-Result: `moon test --target js` in `core/` is 98/98 passing with **zero warnings** (down from
+Result: `moon test --target js` in `core/` passes in full with **zero warnings** (down from
 14 errors + ~40 deprecation warnings on `0.1.20260713` before this migration). The jsQR e2e
 parity corpus (`packages/moonqr/test/jsqr-parity.test.mjs`) still resolves 214/214 ground-truth
 cases — the migration did not change decode behavior.
@@ -120,7 +120,7 @@ cases — the migration did not change decode behavior.
    written).
 3. Fix all resulting errors (add `derive(Debug)`, replace deprecated APIs, etc.) across all
    touched files in one PR — this is a real code change, not a CI config change, and needs
-   its own review pass (all 4 test layers per `CONTRIBUTING.md`, not just `moon test`).
+   its own review pass (all test layers per `CONTRIBUTING.md`, not just `moon test`).
 4. Once green locally, update the "verified-good version" at the top of this file and in
    `CONTRIBUTING.md`, and bump the `actions/cache` key (e.g.
    `moonbit-toolchain-<os>-<new-moon-version>`) in both `.github/workflows/ci.yml` and

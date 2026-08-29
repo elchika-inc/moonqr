@@ -40,11 +40,8 @@ version lives in two places that must be updated together:
 - `packages/cli/package.json`
 - `packages/cli/src/cli.ts` — the `VERSION` constant backing `moonqr --version`
 
-After bumping, confirm the two agree:
-
-```sh
-node -e 'const p=require("./packages/cli/package.json");const s=require("node:fs").readFileSync("packages/cli/src/cli.ts","utf8");const m=s.match(/VERSION = "([^"]+)"/);console.log(p.version === m[1] ? "ok " + p.version : `MISMATCH package.json=${p.version} cli.ts=${m[1]}`)'
-```
+`packages/cli/test/cli.test.ts` verifies that the two agree whenever `pnpm -r test:unit` runs, so
+there is no separate manual version check.
 
 Open a pull request for the bump like any other change — `main` is protected.
 
@@ -52,12 +49,12 @@ Open a pull request for the bump like any other change — `main` is protected.
 
 ```sh
 export PATH="$HOME/.moon/bin:$PATH"
-cd core && moon test --target js && cd ..
+cd core && moon test --target js && moon build --target js --release && cd ..
+pnpm -r build
+pnpm -r typecheck
 node scripts/fetch-fixtures.mjs
 node --test packages/moonqr/test/*.test.mjs
 pnpm -r test:unit
-pnpm -r typecheck
-pnpm -r build
 ```
 
 All layers must be green before anything is published.
@@ -70,23 +67,28 @@ uploaded without risking a publish.
 ```sh
 pnpm --filter @elchika-inc/moonqr pack --pack-destination /tmp
 pnpm --filter @elchika-inc/moonqr-scanner pack --pack-destination /tmp
-tar tzf /tmp/elchika-inc-moonqr-*.tgz | sort
-tar xzOf /tmp/elchika-inc-moonqr-scanner-*.tgz package/package.json | grep -A3 '"dependencies"'
+pnpm --filter @elchika-inc/moonqr-cli pack --pack-destination /tmp
+for archive in /tmp/elchika-inc-moonqr-[0-9]*.tgz; do tar tzf "$archive" | sort; done
+for archive in /tmp/elchika-inc-moonqr-scanner-*.tgz; do tar tzf "$archive" | sort; done
+for archive in /tmp/elchika-inc-moonqr-cli-*.tgz; do tar tzf "$archive" | sort; done
+for archive in /tmp/elchika-inc-moonqr-scanner-*.tgz; do tar xzOf "$archive" package/package.json | grep -A3 '"dependencies"'; done
+for archive in /tmp/elchika-inc-moonqr-cli-*.tgz; do tar xzOf "$archive" package/package.json | grep -A3 '"dependencies"'; done
 ```
 
 Check that:
 
 - Only `dist/`, `README.md`, `LICENSE`, `NOTICE`, and `THIRD_PARTY_LICENSES` are included — no
-  sources, no tests, no configs.
-- The scanner's dependency on the core reads as a real version (`^<the version you just set>`),
-  not `workspace:^`. pnpm rewrites this automatically; verifying it is what proves the package
-  works outside the monorepo.
+  sources, no tests, no configs. The CLI tarball also includes `bin/`.
+- The scanner's and CLI's dependencies on the core read as a real version
+  (`^<the version you just set>`), not `workspace:^`. pnpm rewrites this automatically; verifying
+  it is what proves the packages work outside the monorepo.
 
 ## 5. Publish to npm
 
 ```sh
 pnpm --filter @elchika-inc/moonqr publish --no-git-checks
 pnpm --filter @elchika-inc/moonqr-scanner publish --no-git-checks
+pnpm --filter @elchika-inc/moonqr-cli publish --no-git-checks
 ```
 
 npm asks for a one-time password. That prompt is the human gate.
@@ -98,13 +100,15 @@ nothing: pnpm's workspace links hide broken dependency declarations.
 
 ```sh
 mkdir /tmp/verify && cd /tmp/verify && npm init -y
-npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
+npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner @elchika-inc/moonqr-cli
 node -e 'import("@elchika-inc/moonqr/encode").then(m => console.log(m.encode("HELLO", {ecLevel:"M"}).size))'
 node -e 'console.log(typeof require("@elchika-inc/moonqr/encode").encode)'
+npx moonqr --version
 ```
 
 Expect a module count (`21` for `HELLO`) from the ESM path and `function` from the CJS path. Both
-matter — a broken `exports` map often fails in only one of them.
+matter — a broken `exports` map often fails in only one of them. The CLI command must print the
+version installed from npm.
 
 ## 7. Publish to mooncakes
 

@@ -98,6 +98,25 @@ test "decode_js: wrong data length returns empty string" {
   assert_eq(@decode.decode_js(truncated, w, h, false), "")
 }
 
+test "decode: small images return None without panicking" {
+  let dimensions : Array[(Int, Int)] = [
+    (1, 1),
+    (8, 8),
+    (16, 16),
+    (21, 21),
+    (32, 32),
+    (33, 32),
+    (32, 33),
+    (24, 200),
+    (200, 24),
+  ]
+  for i = 0; i < dimensions.length(); i = i + 1 {
+    let (w, h) = dimensions[i]
+    let data = Bytes::from_array(FixedArray::make(w * h * 4, b'\x00')[:])
+    assert_true(@decode.decode(data, w, h, false) is None)
+  }
+}
+
 test "decode_js: noise-only image returns empty string" {
   let w = 64
   let h = 64

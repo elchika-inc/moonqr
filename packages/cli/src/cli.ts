@@ -2,7 +2,7 @@ import { encode } from "@elchika-inc/moonqr/encode";
 import type { EcLevel } from "@elchika-inc/moonqr/encode";
 import { render } from "./render.js";
 
-// package.json の version と手動で揃える。リリース手順（RELEASING.md）で確認する。
+// package.json の version と手動で揃える。cli.test.ts が一致を検証する。
 // 実行時に package.json を読むとパス解決が bundle の配置に依存し、bin から
 // 呼ぶときと dist から読むときで壊れ方が変わるため、定数として持つ。
 const VERSION = "0.1.0";

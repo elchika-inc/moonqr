@@ -46,14 +46,18 @@ pnpm -r typecheck
 `.github/workflows/ci.yml` follows this exact order; if you change it there, mirror the change
 here.
 
-## The four test layers
+## The test layers
 
-Each layer proves something different — run all four before opening a PR.
+Each layer proves something different — run every layer before opening a PR. Do not use a fixed
+test count as the acceptance threshold. Use the pull request's merge base with its base branch as
+the baseline: compare each layer's runner-reported total at the baseline and at `HEAD`, and review
+the test-file diff. A lower total or any unexplained removed or replaced test case fails the check;
+every layer must also pass.
 
-1. **`moon test --target js`** (run from `core/`, 98 tests) — MoonBit unit tests for the
+1. **`moon test --target js`** (run from `core/`) — MoonBit unit tests for the
    encode/decode algorithms themselves (bit packing, Reed–Solomon, binarization, finder-pattern
    location, mask scoring, etc.), independent of the JS/TS wrapper layer.
-2. **`node --test` in `packages/moonqr`** (273 tests) — end-to-end correctness against two
+2. **`node --test` in `packages/moonqr`** — end-to-end correctness against two
    external references:
    - **Decoder parity**: every ground-truth-decodable case in jsQR's own `tests/end-to-end/`
      corpus (214/214) must decode to the exact expected text.
@@ -70,11 +74,12 @@ Each layer proves something different — run all four before opening a PR.
    `fixtures/` is gitignored; the script shallow-clones jsQR's `tests/end-to-end/` at a
    **pinned commit SHA** (see "Code provenance" below) into `fixtures/jsqr-e2e/`. It's
    idempotent — it skips re-fetching if the expected case count is already present.
-3. **`pnpm --filter @elchika-inc/moonqr test:unit`** (vitest, 44 tests) — wrapper-level
-   behavior for the `moonqr` package (subpath exports, `/dom` canvas rendering, error handling
-   at the JS boundary).
-4. **`pnpm --filter @elchika-inc/moonqr-scanner test:unit`** (vitest, 24 tests) — `QrScanner`
-   behavior (camera lifecycle, worker fallback, multiscale retry), run against a DOM shim.
+3. **`pnpm -r test:unit`** (vitest across all packages) — wrapper-level behavior for the
+   `moonqr` package, CLI behavior including terminal rendering and round trips, and `QrScanner`
+   behavior against a DOM shim. Use the recursive command instead of enumerating packages with
+   `--filter`:
+   an enumerated list can silently skip a newly added package while the remaining tests stay green,
+   which nearly happened when `packages/cli` was added.
 
 ## Generated files that are gitignored but required
 
@@ -123,7 +128,7 @@ turn it back on.
 
 ## PR expectations
 
-- All four test layers green (see above), plus `pnpm -r typecheck`.
+- No existing tests removed and all test layers green (see above), plus `pnpm -r typecheck`.
 - **Do not run `moon fmt`.** On some toolchain versions it triggers a repo-wide MoonBit config
   migration that touches unrelated files; format MoonBit code by hand to match the surrounding
   style instead.

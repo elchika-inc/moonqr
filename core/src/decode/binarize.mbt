@@ -117,7 +117,14 @@ pub fn binarize(data : Bytes, width : Int, height : Int) -> (BitMatrix, BitMatri
       let mut sum = 0
       for yr = -2; yr <= 2; yr = yr + 1 {
         for xr = -2; xr <= 2; xr = xr + 1 {
-          sum = sum + black_points[(top + yr) * h_regions + (left + xr)]
+          // jsQR の TypedArray は範囲外読みを undefined（後続で NaN）として
+          // 許容するが、MoonBit の FixedArray はパニックする。格子が 5x5 未満
+          // （画像の一辺が 33px 未満）のときだけ近傍座標を実在範囲へ寄せる。
+          // 5x5 以上では元の top/left ± 2 と同じ座標になるため、既存画像の
+          // 二値化結果は変わらない。
+          let neighbor_y = num_between(top + yr, 0, v_regions - 1)
+          let neighbor_x = num_between(left + xr, 0, h_regions - 1)
+          sum = sum + black_points[neighbor_y * h_regions + neighbor_x]
         }
       }
       let threshold = sum.to_double() / 25.0
