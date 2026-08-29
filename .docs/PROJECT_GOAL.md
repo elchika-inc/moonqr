@@ -41,10 +41,12 @@ MoonBit で実用ライブラリを書き、既存実装と同等以上の正し
 
 ```sh
 export PATH="$HOME/.moon/bin:$PATH"
-cd core && moon test --target js && cd ..
+pnpm install --frozen-lockfile
+cd core && moon test --target js && moon build --target js --release && cd ..
+pnpm -r build
+pnpm -r typecheck
 node scripts/fetch-fixtures.mjs
 node --test packages/moonqr/test/*.test.mjs   # jsQR パリティ・qrcode 比較・往復を含む
 pnpm -r test:unit
-pnpm -r typecheck
 node scripts/report-bundle-sizes.mjs          # バンドルサイズの実測値
 ```
