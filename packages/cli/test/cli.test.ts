@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { run } from "../src/cli.js";
 
@@ -6,6 +6,13 @@ const noEnv = {} as NodeJS.ProcessEnv;
 const packageJson = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 ) as { version: string };
+const cliSourceFiles = [
+  ...readdirSync(new URL("../src/", import.meta.url))
+    .filter((name) => name.endsWith(".ts"))
+    .sort()
+    .map((name) => new URL(`../src/${name}`, import.meta.url)),
+  new URL("../bin/moonqr.js", import.meta.url),
+];
 
 describe("run", () => {
   it("prints a QR to stdout and exits 0", () => {
@@ -30,12 +37,15 @@ describe("run", () => {
     expect(r.stdout).not.toContain("\x1b[");
   });
 
-  it("does not consult isTTY", () => {
+  it("does not consult isTTY anywhere in the package sources", () => {
     // 設計上の決定: 端末かどうかで色を変えない。QR における背景色は装飾では
     // なく機能であり、落とすと端末テーマ次第で反転する。加えてエージェント
     // 経由の実行では isTTY が undefined になるため、自動判定は主用途で必ず
     // 裏目に出る。将来この判定が足されないようテストで固定する。
-    expect(String(run)).not.toContain("isTTY");
+    const offenders = cliSourceFiles
+      .filter((file) => readFileSync(file, "utf8").includes("isTTY"))
+      .map((file) => file.pathname);
+    expect(offenders).toEqual([]);
   });
 
   it("accepts an error-correction level", () => {

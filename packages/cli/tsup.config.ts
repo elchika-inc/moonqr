@@ -6,9 +6,8 @@ export default defineConfig({
   entry: ["src/cli.ts"],
   format: ["esm"],
   dts: false,
-  // minify しない: cli.test.ts が「isTTY を参照していないこと」を関数のソース
-  // 文字列で検査する。minify すると識別子が変わり検査の前提が崩れる。
-  // CLI は起動のたびに読み込まれるだけでバンドルサイズの制約もない。
+  // CLI は起動時に読み込まれるだけでバンドルサイズの制約がないため、
+  // デバッグしやすい出力を優先して minify しない。
   minify: false,
   clean: true,
 });
