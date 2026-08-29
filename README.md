@@ -62,12 +62,12 @@ monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md
 | [`@elchika-inc/moonqr-cli`](packages/cli) | Command-line tool that prints a QR code to your terminal — hand a URL from your shell to your phone. | [README](packages/cli/README.md) |
 
 ```sh
-npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
+npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner @elchika-inc/moonqr-cli
 ```
 
-Both packages are pure ESM+CJS (moonqr) / ESM (scanner), have no runtime dependencies outside
-each other (`moonqr-scanner` depends on `moonqr`), and declare `sideEffects: false` for clean
-tree-shaking.
+All three packages are pure JavaScript at runtime: moonqr ships ESM+CJS, while the scanner and
+CLI ship ESM. They have no runtime dependencies outside this set (the scanner and CLI depend on
+moonqr); the two library packages declare `sideEffects: false` for clean tree-shaking.
 
 ### Using it from MoonBit
 
@@ -123,6 +123,7 @@ pnpm -r test:unit
 core/                MoonBit source (encode/decode algorithms) -> compiles to JS
 packages/moonqr/      npm package: encode/decode/dom TS wrappers around core's JS output
 packages/scanner/     npm package: camera QrScanner built on packages/moonqr
+packages/cli/         npm package: terminal QR code command built on packages/moonqr
 bench/                Benchmark harness + bench/RESULT.md (methodology + all results)
 site/                 GitHub Pages demo (built by scripts/build-site.mjs)
 scripts/               repo-level dev scripts (fixtures, site build, table generation, ...)

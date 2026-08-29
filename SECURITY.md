@@ -3,9 +3,9 @@
 ## Supported versions
 
 moonqr is pre-1.0 (`0.x`). Only the **latest published version** of each package
-(`@elchika-inc/moonqr`, `@elchika-inc/moonqr-scanner`) is supported with security fixes. There
-is no backport policy for older `0.x` releases — please upgrade to the latest version before
-reporting an issue.
+(`@elchika-inc/moonqr`, `@elchika-inc/moonqr-scanner`, `@elchika-inc/moonqr-cli`) is supported
+with security fixes. There is no backport policy for older `0.x` releases — please upgrade to
+the latest version before reporting an issue.
 
 ## Reporting a vulnerability
 
