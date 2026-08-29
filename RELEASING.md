@@ -71,8 +71,8 @@ pnpm --filter @elchika-inc/moonqr-cli pack --pack-destination /tmp
 for archive in /tmp/elchika-inc-moonqr-[0-9]*.tgz; do tar tzf "$archive" | sort; done
 for archive in /tmp/elchika-inc-moonqr-scanner-*.tgz; do tar tzf "$archive" | sort; done
 for archive in /tmp/elchika-inc-moonqr-cli-*.tgz; do tar tzf "$archive" | sort; done
-tar xzOf /tmp/elchika-inc-moonqr-scanner-*.tgz package/package.json | grep -A3 '"dependencies"'
-tar xzOf /tmp/elchika-inc-moonqr-cli-*.tgz package/package.json | grep -A3 '"dependencies"'
+for archive in /tmp/elchika-inc-moonqr-scanner-*.tgz; do tar xzOf "$archive" package/package.json | grep -A3 '"dependencies"'; done
+for archive in /tmp/elchika-inc-moonqr-cli-*.tgz; do tar xzOf "$archive" package/package.json | grep -A3 '"dependencies"'; done
 ```
 
 Check that:
