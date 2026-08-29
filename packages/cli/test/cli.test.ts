@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { run } from "../src/cli.js";
 
 const noEnv = {} as NodeJS.ProcessEnv;
+const packageJson = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 describe("run", () => {
   it("prints a QR to stdout and exits 0", () => {
@@ -58,6 +62,13 @@ describe("run", () => {
     const r = run(["--help"], noEnv);
     expect(r.code).toBe(0);
     expect(r.stdout).toContain("Usage");
+  });
+
+  it("reports the version declared in package.json", () => {
+    const r = run(["--version"], noEnv);
+    expect(r.code).toBe(0);
+    expect(r.stderr).toBe("");
+    expect(r.stdout).toBe(`${packageJson.version}\n`);
   });
 
   it("reports input that does not fit in a QR code", () => {

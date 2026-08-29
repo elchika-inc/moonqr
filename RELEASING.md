@@ -40,11 +40,8 @@ version lives in two places that must be updated together:
 - `packages/cli/package.json`
 - `packages/cli/src/cli.ts` — the `VERSION` constant backing `moonqr --version`
 
-After bumping, confirm the two agree:
-
-```sh
-node -e 'const p=require("./packages/cli/package.json");const s=require("node:fs").readFileSync("packages/cli/src/cli.ts","utf8");const m=s.match(/VERSION = "([^"]+)"/);console.log(p.version === m[1] ? "ok " + p.version : `MISMATCH package.json=${p.version} cli.ts=${m[1]}`)'
-```
+`packages/cli/test/cli.test.ts` verifies that the two agree whenever `pnpm -r test:unit` runs, so
+there is no separate manual version check.
 
 Open a pull request for the bump like any other change — `main` is protected.
 
