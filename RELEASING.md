@@ -70,23 +70,26 @@ uploaded without risking a publish.
 ```sh
 pnpm --filter @elchika-inc/moonqr pack --pack-destination /tmp
 pnpm --filter @elchika-inc/moonqr-scanner pack --pack-destination /tmp
+pnpm --filter @elchika-inc/moonqr-cli pack --pack-destination /tmp
 tar tzf /tmp/elchika-inc-moonqr-*.tgz | sort
 tar xzOf /tmp/elchika-inc-moonqr-scanner-*.tgz package/package.json | grep -A3 '"dependencies"'
+tar xzOf /tmp/elchika-inc-moonqr-cli-*.tgz package/package.json | grep -A3 '"dependencies"'
 ```
 
 Check that:
 
 - Only `dist/`, `README.md`, `LICENSE`, `NOTICE`, and `THIRD_PARTY_LICENSES` are included — no
-  sources, no tests, no configs.
-- The scanner's dependency on the core reads as a real version (`^<the version you just set>`),
-  not `workspace:^`. pnpm rewrites this automatically; verifying it is what proves the package
-  works outside the monorepo.
+  sources, no tests, no configs. The CLI tarball also includes `bin/`.
+- The scanner's and CLI's dependencies on the core read as a real version
+  (`^<the version you just set>`), not `workspace:^`. pnpm rewrites this automatically; verifying
+  it is what proves the packages work outside the monorepo.
 
 ## 5. Publish to npm
 
 ```sh
 pnpm --filter @elchika-inc/moonqr publish --no-git-checks
 pnpm --filter @elchika-inc/moonqr-scanner publish --no-git-checks
+pnpm --filter @elchika-inc/moonqr-cli publish --no-git-checks
 ```
 
 npm asks for a one-time password. That prompt is the human gate.
@@ -98,13 +101,15 @@ nothing: pnpm's workspace links hide broken dependency declarations.
 
 ```sh
 mkdir /tmp/verify && cd /tmp/verify && npm init -y
-npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
+npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner @elchika-inc/moonqr-cli
 node -e 'import("@elchika-inc/moonqr/encode").then(m => console.log(m.encode("HELLO", {ecLevel:"M"}).size))'
 node -e 'console.log(typeof require("@elchika-inc/moonqr/encode").encode)'
+npx moonqr --version
 ```
 
 Expect a module count (`21` for `HELLO`) from the ESM path and `function` from the CJS path. Both
-matter — a broken `exports` map often fails in only one of them.
+matter — a broken `exports` map often fails in only one of them. The CLI command must print the
+version installed from npm.
 
 ## 7. Publish to mooncakes
 
