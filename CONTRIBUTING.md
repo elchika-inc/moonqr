@@ -46,14 +46,16 @@ pnpm -r typecheck
 `.github/workflows/ci.yml` follows this exact order; if you change it there, mirror the change
 here.
 
-## The three test layers
+## The test layers
 
-Each layer proves something different — run all three before opening a PR.
+Each layer proves something different — run every layer before opening a PR. Do not use a fixed
+test count as the acceptance threshold: compare with the base, ensure no existing test disappears,
+and require every layer to pass.
 
-1. **`moon test --target js`** (run from `core/`, 98 tests) — MoonBit unit tests for the
+1. **`moon test --target js`** (run from `core/`) — MoonBit unit tests for the
    encode/decode algorithms themselves (bit packing, Reed–Solomon, binarization, finder-pattern
    location, mask scoring, etc.), independent of the JS/TS wrapper layer.
-2. **`node --test` in `packages/moonqr`** (273 tests) — end-to-end correctness against two
+2. **`node --test` in `packages/moonqr`** — end-to-end correctness against two
    external references:
    - **Decoder parity**: every ground-truth-decodable case in jsQR's own `tests/end-to-end/`
      corpus (214/214) must decode to the exact expected text.
@@ -124,7 +126,7 @@ turn it back on.
 
 ## PR expectations
 
-- All three test layers green (see above), plus `pnpm -r typecheck`.
+- No existing tests removed and all test layers green (see above), plus `pnpm -r typecheck`.
 - **Do not run `moon fmt`.** On some toolchain versions it triggers a repo-wide MoonBit config
   migration that touches unrelated files; format MoonBit code by hand to match the surrounding
   style instead.
