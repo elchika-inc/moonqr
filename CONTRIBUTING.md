@@ -49,8 +49,10 @@ here.
 ## The test layers
 
 Each layer proves something different — run every layer before opening a PR. Do not use a fixed
-test count as the acceptance threshold: compare with the base, ensure no existing test disappears,
-and require every layer to pass.
+test count as the acceptance threshold. Use the pull request's merge base with its base branch as
+the baseline: compare each layer's runner-reported total at the baseline and at `HEAD`, and review
+the test-file diff. A lower total or any unexplained removed or replaced test case fails the check;
+every layer must also pass.
 
 1. **`moon test --target js`** (run from `core/`) — MoonBit unit tests for the
    encode/decode algorithms themselves (bit packing, Reed–Solomon, binarization, finder-pattern
