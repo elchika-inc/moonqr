@@ -66,8 +66,9 @@ match result {
 ```
 
 `decode(data, width, height, invert)` returns `None` when `width` or `height` is
-not positive, the image exceeds the supported pixel limit, or `data.length()`
-does not equal `width * height * 4`.
+not positive, the image contains more than 16,777,216 pixels
+(`width * height > 16 * 1024 * 1024`), or `data.length()` does not equal
+`width * height * 4`.
 
 ## License and attribution
 
