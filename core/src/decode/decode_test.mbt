@@ -106,6 +106,8 @@ test "decode: invalid data length or dimensions return None" {
   assert_true(@decode.decode(one_pixel, 1, 0, false) is None)
   assert_true(@decode.decode(one_pixel, -1, 1, false) is None)
   assert_true(@decode.decode(one_pixel, 1, -1, false) is None)
+  assert_true(@decode.decode(one_pixel, 5000, 4000, false) is None)
+  assert_true(@decode.decode(one_pixel, 65536, 65536, false) is None)
 }
 
 test "decode: small images return None without panicking" {
