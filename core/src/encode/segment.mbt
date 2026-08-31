@@ -4,10 +4,10 @@ pub(all) enum Mode {
   Byte
 } derive(Eq, Debug)
 
-///| QR Model 2 の絶対最大容量（version 40-L Numeric の 7,089文字）を、
-///| String::length() が返すUTF-16コードユニット数で保守的に判定する。
-///| 非BMP文字は2コードユニットとして数えるため、そのような入力では
-///| 実際の容量上限より早く弾かれることがある。
+///| String::length() はUTF-16コードユニット数を返し、非BMP文字を2と数える。
+///| UTF-16ユニットあたりのビット数が最小なのはNumeric（10bit/3文字、
+///| 数字はすべてBMPで1ユニット）のため、7,089は全モード共通の真の上限。
+///| この判定は必要条件であり、実際の収容可否は後段の分割とversion探索で決まる。
 fn input_within_model2_capacity(text : String) -> Bool {
   text.length() <= 7089
 }
