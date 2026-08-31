@@ -53,9 +53,9 @@
 <!-- review-cycle:start moonqr-opt-e-20260831-doc-review-1 -->
 ## 2026-08-31 optional 文書指摘5件の修正と5件の明示受容
 - **Cycle ID**: moonqr-opt-e-20260831-doc-review-1
-- **対象 HEAD**: cc7eff46248ddabe16a0c2496f7fbab9f6f55ad8
-- **総ラウンド数**: 2
-- **終了理由**: 修正後のクリーンラウンドで全レンズ LGTM
+- **対象 HEAD**: 445e5e88984195abd12d82706297f2d65e96b43c
+- **総ラウンド数**: 3
+- **終了理由**: main 取り込み後の解消先更新まで再確認し、最終ラウンドで全レンズ LGTM
 - **レンズ別 flag 件数**: Security 0 / Core Logic 0 / Tests 0 / Domain 1 / Fresh Eyes 1 / Ambiguity 2 / Altitude 1
 - **確定した偽陽性**:
   - `README.md` の `moon.pkg` 例 — `moon.pkg` は JSON ではなく、`import { "package" }` を正規構文とする MoonBit DSL である。
@@ -63,4 +63,6 @@
 - **スコープ外として除外**:
   - `RELEASING.md` の CLI 依存先表現 — 基点前から存在し、E-4/E-5 以外を触らない明示制約の対象外。
   - `.docs/PROJECT_GOAL.md` の実測コマンド導入文 — 基点前から存在し、E-3 の DoneCriteria 修正範囲外。
+- **optional**:
+  - main sweep 内の PR リンク表記揺れ1件 — 意味・リンク先・追跡性に影響しないため変更しない。
 <!-- review-cycle:end moonqr-opt-e-20260831-doc-review-1 -->
