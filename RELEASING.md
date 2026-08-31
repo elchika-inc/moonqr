@@ -34,6 +34,12 @@ These three carry the same version number:
 - `packages/scanner/package.json`
 - `core/moon.mod.json`
 
+After editing them, verify that all three versions agree:
+
+```sh
+node -e 'const fs=require("node:fs"),files=["packages/moonqr/package.json","packages/scanner/package.json","core/moon.mod.json"],versions=files.map(file=>JSON.parse(fs.readFileSync(file,"utf8")).version);if(new Set(versions).size!==1)throw new Error(files.map((file,i)=>`${file}: ${versions[i]}`).join("\n"));console.log("ok")'
+```
+
 **`@elchika-inc/moonqr-cli` is versioned independently** — it does not have to match the core. Its
 version lives in two places that must be updated together:
 
