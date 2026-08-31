@@ -62,12 +62,12 @@ monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md
 | [`@elchika-inc/moonqr-cli`](packages/cli) | Command-line tool that prints a QR code to your terminal — hand a URL from your shell to your phone. | [README](packages/cli/README.md) |
 
 ```sh
-npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
+npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner @elchika-inc/moonqr-cli
 ```
 
-Both packages are pure ESM+CJS (moonqr) / ESM (scanner), have no runtime dependencies outside
-each other (`moonqr-scanner` depends on `moonqr`), and declare `sideEffects: false` for clean
-tree-shaking.
+All three packages are pure JavaScript at runtime: moonqr ships ESM+CJS, while the scanner and
+CLI ship ESM. They have no runtime dependencies outside this set (the scanner and CLI depend on
+moonqr); the two library packages declare `sideEffects: false` for clean tree-shaking.
 
 ### Using it from MoonBit
 
@@ -123,6 +123,7 @@ pnpm -r test:unit
 core/                MoonBit source (encode/decode algorithms) -> compiles to JS
 packages/moonqr/      npm package: encode/decode/dom TS wrappers around core's JS output
 packages/scanner/     npm package: camera QrScanner built on packages/moonqr
+packages/cli/         npm package: terminal QR code command built on packages/moonqr
 bench/                Benchmark harness + bench/RESULT.md (methodology + all results)
 site/                 GitHub Pages demo (built by scripts/build-site.mjs)
 scripts/               repo-level dev scripts (fixtures, site build, table generation, ...)
@@ -134,9 +135,13 @@ scripts/               repo-level dev scripts (fixtures, site build, table gener
   non-ASCII) text as byte-mode UTF-8, never as ISO 18004 Kanji mode — this produces a valid but
   slightly larger QR code than a Kanji-mode-aware encoder would. **Decoding** Kanji-mode QR
   codes produced by other encoders **is** fully supported.
-- **No ECI, Structured Append, or Micro QR support** on either encode or decode. Only standard
-  (Model 2) QR codes with the default byte-mode ECI (implicit ISO-8859-1/UTF-8-ish handling
-  matching common encoders, per Kanji-mode decode above) are handled.
+- **ECI charset selection is not supported.** The encoder does not emit ECI indicators. The
+  decoder parses and skips their one-, two-, or three-byte designators so it can read subsequent
+  data, but it always interprets byte segments as UTF-8. Non-UTF-8 ECI charsets therefore do not
+  decode correctly.
+- **Structured Append and Micro QR are not supported.** The decoder rejects Structured Append
+  symbols instead of returning partial or empty output. Only standard (Model 2) QR codes are
+  handled.
 
 ## License and attribution
 
@@ -146,6 +151,6 @@ Portions of the decoder are ported from [jsQR](https://github.com/cozmo/jsQR) (A
 the Reed–Solomon block / alignment-pattern position tables are derived from
 [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT). See
 [NOTICE](NOTICE) for the attribution summary and
-[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for the full upstream license texts. Both npm
+[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for the full upstream license texts. All three npm
 packages include copies of `LICENSE`, `NOTICE`, and `THIRD_PARTY_LICENSES` in their published
 tarballs.
