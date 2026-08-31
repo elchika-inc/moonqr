@@ -125,9 +125,23 @@ fn scan(matrix : BitMatrix) -> DecodeResult? {
   None
 }
 
+///| RGBAピクセル1枚あたりの上限画素数（16M = 16 * 1024 * 1024）。
+let max_pixels : Int = 16 * 1024 * 1024
+
 ///| RGBA ピクセル → 復号結果。invert=true なら反転行列でも試行
-///| （jsQR `jsQR()` の `attemptBoth` 相当）。
+///| （jsQR `jsQR()` の `attemptBoth` 相当）。不正な寸法、16M画素超、
+///| または `data.length() != width * height * 4` の場合は None。
 pub fn decode(data : Bytes, width : Int, height : Int, invert : Bool) -> DecodeResult? {
+  if width <= 0 || height <= 0 {
+    return None
+  }
+  let pixels : Int64 = width.to_int64() * height.to_int64()
+  if pixels > max_pixels.to_int64() {
+    return None
+  }
+  if data.length().to_int64() != pixels * 4L {
+    return None
+  }
   let (normal, inverted) = binarize(data, width, height)
   match scan(normal) {
     Some(r) => Some(r)
@@ -145,9 +159,6 @@ fn ec_level_str(ec : @encode.EcLevel) -> String {
   }
 }
 
-///| RGBAピクセル1枚あたりの上限画素数（16M = 16 * 1024 * 1024）。
-let max_pixels : Int = 16 * 1024 * 1024
-
 ///| JS境界（total）: `data.length == width*height*4` かつ `width>0`かつ`height>0`
 ///| かつ `width*height <= 16M` を満たさない不正入力は例外を出さず ""。
 ///| 画素数・バイト長の積は Int64 で計算する——Int(32bit) の積は
@@ -157,16 +168,6 @@ let max_pixels : Int = 16 * 1024 * 1024
 ///| 成功時は `{"text":...,"bytes":[...],"version":N,"ecLevel":"M","corners":[{"x":..,"y":..}x4]}`
 ///| のJSON文字列（moonbitlang/core `@json` の `Json::stringify` でエスケープ）。
 pub fn decode_js(data : Bytes, width : Int, height : Int, invert : Bool) -> String {
-  if width <= 0 || height <= 0 {
-    return ""
-  }
-  let pixels : Int64 = width.to_int64() * height.to_int64()
-  if pixels > max_pixels.to_int64() {
-    return ""
-  }
-  if data.length().to_int64() != pixels * 4L {
-    return ""
-  }
   match decode(data, width, height, invert) {
     None => ""
     Some(r) => {
