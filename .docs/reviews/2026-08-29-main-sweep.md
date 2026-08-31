@@ -68,4 +68,3 @@ PR [#22](https://github.com/elchika-inc/moonqr/pull/22) はこの main 全体レ
 - 当時の指摘内容と修正根拠: PR #23〜#25 の本文
 - 修正後のラウンド数、収束理由、確定した偽陽性: [`review-cycle-log.md`](review-cycle-log.md)
 - 修正しない optional の判断: [`../risk-registry.md`](../risk-registry.md)
-
