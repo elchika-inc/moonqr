@@ -54,9 +54,9 @@ PR [#22](https://github.com/elchika-inc/moonqr/pull/22) はこの main 全体レ
 - CLI の `minify: false` に関する誤ったコメント: [#24](https://github.com/elchika-inc/moonqr/pull/24)
 - CONTRIBUTING / TOOLCHAIN の変動テスト件数: [#25](https://github.com/elchika-inc/moonqr/pull/25)
 
-### 別ブランチで対応中: 4件
+### 別の修正束で解消済み: 4件
 
-2026-08-31 時点の照合では main の HEAD は `390e3f4`。次のコード・テスト側 optional は別ブランチで修正中であり、この時点で PR は未作成のため番号は記録しない。
+次のコード・テスト側 optional は [PR #26](https://github.com/elchika-inc/moonqr/pull/26) で解消した。
 
 - MoonBit native decode の入力長検証
 - セグメント容量ガードのコメント
@@ -65,6 +65,6 @@ PR [#22](https://github.com/elchika-inc/moonqr/pull/22) はこの main 全体レ
 
 ## 記録の読み方
 
-- 当時の指摘内容と修正根拠: PR #23〜#25 の本文
+- 当時の指摘内容と修正根拠: PR #23〜#26 の本文
 - 修正後のラウンド数、収束理由、確定した偽陽性: [`review-cycle-log.md`](review-cycle-log.md)
 - 修正しない optional の判断: [`../risk-registry.md`](../risk-registry.md)
