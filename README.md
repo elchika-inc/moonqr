@@ -151,6 +151,6 @@ Portions of the decoder are ported from [jsQR](https://github.com/cozmo/jsQR) (A
 the Reed–Solomon block / alignment-pattern position tables are derived from
 [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT). See
 [NOTICE](NOTICE) for the attribution summary and
-[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for the full upstream license texts. Both npm
+[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for the full upstream license texts. All three npm
 packages include copies of `LICENSE`, `NOTICE`, and `THIRD_PARTY_LICENSES` in their published
 tarballs.
