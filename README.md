@@ -62,8 +62,10 @@ monitor-glare multiscale retry, etc.) are in [`bench/RESULT.md`](bench/RESULT.md
 | [`@elchika-inc/moonqr-cli`](packages/cli) | Command-line tool that prints a QR code to your terminal — hand a URL from your shell to your phone. | [README](packages/cli/README.md) |
 
 ```sh
-npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner @elchika-inc/moonqr-cli
+npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner
 ```
+
+`@elchika-inc/moonqr-cli` is not published to npm yet. Until its first release, run it from a checkout of this repository (see [its README](packages/cli/README.md)).
 
 All three packages are pure JavaScript at runtime: moonqr ships ESM+CJS, while the scanner and
 CLI ship ESM. They have no runtime dependencies outside this set (the scanner and CLI depend on

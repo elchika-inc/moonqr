@@ -28,7 +28,7 @@ export const translations = {
     "hero.ctaGithub": "View on GitHub",
     "hero.badge1": "214/214 decoder parity with jsQR",
     "hero.badge2": "faster than jsQR",
-    "hero.badge3": "7.3 KB gzip encoder",
+    "hero.badge3": "7.5 KB gzip encoder",
 
     "demo.heading": "Try it now",
     "demo.intro":
@@ -103,7 +103,7 @@ export const translations = {
     "numbers.encodeDesc":
       "Cell-for-cell match against the qrcode npm package across every version × EC-level combination. At EC M, mixed-mode optimization shrinks https://ex.com/id/<100-digit ID> from single-Byte v7 to v4.",
     "numbers.bundleTitle": "Bundle size",
-    "numbers.bundleValue": "7.3 KB / ~50 KB",
+    "numbers.bundleValue": "7.5 KB / ~50 KB",
     "numbers.bundleDesc":
       "gzip, encode-only subpath / full decoder. Import just the part you use.",
     "numbers.evidence": "See bench/RESULT.md →",
@@ -156,7 +156,7 @@ export const translations = {
     "hero.ctaGithub": "GitHubで見る",
     "hero.badge1": "jsQRとデコーダ完全パリティ 214/214",
     "hero.badge2": "jsQRより高速",
-    "hero.badge3": "エンコーダ 7.3KB gzip",
+    "hero.badge3": "エンコーダ 7.5KB gzip",
 
     "demo.heading": "今すぐ試す",
     "demo.intro":
@@ -226,7 +226,7 @@ export const translations = {
     "numbers.encodeDesc":
       "qrcode npmパッケージと全バージョン×ECレベルの組み合わせでセル単位一致。EC Mでは、混在モード最適化により https://ex.com/id/<100桁ID> を単一Byteモードのv7からv4へ縮小。",
     "numbers.bundleTitle": "バンドルサイズ",
-    "numbers.bundleValue": "7.3KB / 約50KB",
+    "numbers.bundleValue": "7.5KB / 約50KB",
     "numbers.bundleDesc":
       "gzip、エンコード専用サブパス／フルデコーダ。使う分だけimportできます。",
     "numbers.evidence": "bench/RESULT.mdを見る →",

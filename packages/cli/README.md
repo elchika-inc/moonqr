@@ -2,6 +2,8 @@
 
 Print a QR code to your terminal.
 
+> **Not on npm yet.** The commands below describe usage after the first npm release. Until then, run the CLI from a checkout of this repository: `pnpm install --frozen-lockfile`, build the core and packages as described in the [root README](../../README.md), then `node packages/cli/bin/moonqr.js "https://example.com"`.
+
 Useful when something in your terminal produces a URL — a dev server address, a preview
 deployment, a pull request, an agent handing you a link — and you want it on your phone. Point a
 camera at the screen instead of retyping it.
