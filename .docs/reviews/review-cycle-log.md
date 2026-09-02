@@ -78,3 +78,15 @@
 - **確定した偽陽性**:
   - なし
 <!-- review-cycle:end moonqr-lp-drift-9a755cb -->
+<!-- review-cycle:start moonqr-cli-published-07a312e -->
+## 2026-09-02 `@elchika-inc/moonqr-cli` 0.1.0 の npm 公開反映
+- **Cycle ID**: moonqr-cli-published-07a312e
+- **対象 HEAD**: 07a312ed912c13a070e410b7fc804bf583f9aba5
+- **総ラウンド数**: 1
+- **終了理由**: 初回ラウンドで適用した全レンズ LGTM
+- **レンズ別 flag 件数**: Security - / Core Logic - / Tests - / Domain 0 / Fresh Eyes 0 / Ambiguity 0 / Altitude -
+- **対象外レンズ**: Security・Core Logic・Tests はコード変更がないため対象外。Altitude は委任仕様の適用レンズに含まれないため対象外
+- **レビュアー**: Codex 1名（read-only explorer が3レンズを直列適用）
+- **確定した偽陽性**:
+  - なし
+<!-- review-cycle:end moonqr-cli-published-07a312e -->
