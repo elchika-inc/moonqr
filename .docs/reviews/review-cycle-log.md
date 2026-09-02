@@ -66,3 +66,15 @@
 - **optional**:
   - main sweep 内の PR リンク表記揺れ1件 — 意味・リンク先・追跡性に影響しないため変更しない。
 <!-- review-cycle:end moonqr-opt-e-20260831-doc-review-1 -->
+<!-- review-cycle:start moonqr-lp-drift-9a755cb -->
+## 2026-09-02 LP・パッケージ文書のバンドルサイズ表記と CLI 公開状態
+- **Cycle ID**: moonqr-lp-drift-9a755cb
+- **対象 HEAD**: 9a755cb85f41c817341f895d92041883f0a0fec1
+- **総ラウンド数**: 1
+- **終了理由**: 初回ラウンドで適用した全レンズ LGTM
+- **レンズ別 flag 件数**: Security - / Core Logic - / Tests - / Domain 0 / Fresh Eyes 0 / Ambiguity 0 / Altitude -
+- **対象外レンズ**: Security・Core Logic・Tests はコード変更がないため対象外。Altitude は委任仕様の適用レンズに含まれないため対象外
+- **レビュアー**: Codex 1名（Orca の active worker から nested reviewer を作成できないため、lens-review-cycle の Codex 代替経路で直列適用）
+- **確定した偽陽性**:
+  - なし
+<!-- review-cycle:end moonqr-lp-drift-9a755cb -->
