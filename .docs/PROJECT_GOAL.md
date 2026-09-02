@@ -22,7 +22,7 @@ MoonBit で実用ライブラリを書き、既存実装と同等以上の正し
 | 条件 | 状態 |
 |---|---|
 | npm へ公開され、リポジトリ外から install して動く | ✅ ESM / CJS 両経路で検証 |
-| CLI パッケージを npm から install してターミナルへ QR コードを出力できる | ⬜ 未公開。`@elchika-inc/moonqr-cli` は pack と workspace 外検証まで済んでいる（PR #24）が、npm publish は未実行。`npm view @elchika-inc/moonqr-cli version` が版番号を返すようになった時点で達成済みへ戻す |
+| CLI パッケージを npm から install してターミナルへ QR コードを出力できる | ✅ `@elchika-inc/moonqr-cli` 0.1.0（2026-09-02 公開。リポジトリ外で `npm install` → `npx moonqr --version` を検証） |
 | MoonBit プロジェクトから使える | ✅ mooncakes.io に `naoto24kawa/moonqr` |
 | 動作を試せるデモがある | ✅ https://elchika-inc.github.io/moonqr/ |
 | 外部から Issue / PR を受けられる | ✅ CONTRIBUTING / SECURITY / PR・Issue テンプレート / ブランチ保護 |
