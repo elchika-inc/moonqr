@@ -139,6 +139,17 @@ git push origin vX.Y.Z
 gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <notes>
 ```
 
+The core and the scanner share the `vX.Y.Z` tag. The CLI is versioned independently (see step 2),
+so a CLI release gets its own tag, `cli-vX.Y.Z`, pointing at the `main` commit the tarball was
+published from. The first one is `cli-v0.1.0`. When a core release and a CLI release ship together,
+create both tags on the same commit, with one release note per tag.
+
+```sh
+git tag -a cli-vX.Y.Z <publish commit> -m "cli-vX.Y.Z"
+git push origin cli-vX.Y.Z
+gh release create cli-vX.Y.Z --title "cli-vX.Y.Z" --notes-file <notes>
+```
+
 ## 9. Update the docs that quote the release
 
 `README.md` and `site/` mention published versions and links. Update them in a pull request, then
