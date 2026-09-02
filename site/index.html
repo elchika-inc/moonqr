@@ -227,8 +227,9 @@
       <section id="install" class="section" aria-labelledby="install-heading">
         <h2 id="install-heading" data-i18n="install.heading">Install</h2>
         <p class="note" data-i18n="install.note">
-          Both packages are on npm, zero runtime dependencies. The MoonBit core is also on
-          mooncakes.io as naoto24kawa/moonqr — add it with moon add naoto24kawa/moonqr.
+          All three packages are on npm with no runtime dependencies outside this set. The MoonBit
+          core is also on mooncakes.io as naoto24kawa/moonqr — add it with moon add
+          naoto24kawa/moonqr.
         </p>
         <pre class="code-block"><code>npm install @elchika-inc/moonqr @elchika-inc/moonqr-scanner</code></pre>
 
@@ -263,6 +264,13 @@ const scanner = new QrScanner(
 
 await scanner.start();
 // scanner.stop() when you're done</code></pre>
+
+        <h3 data-i18n="install.cliTitle">CLI — QR code in your terminal</h3>
+        <pre class="code-block"><code>npx @elchika-inc/moonqr-cli "https://example.com"
+
+# or install it globally
+npm install -g @elchika-inc/moonqr-cli
+moonqr "https://example.com"</code></pre>
       </section>
 
       <section id="limitations" class="section" aria-labelledby="limitations-heading">

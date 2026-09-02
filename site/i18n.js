@@ -124,10 +124,11 @@ export const translations = {
 
     "install.heading": "Install",
     "install.note":
-      "Both packages are on npm, zero runtime dependencies. The MoonBit core is also on mooncakes.io as naoto24kawa/moonqr — add it with moon add naoto24kawa/moonqr.",
+      "All three packages are on npm with no runtime dependencies outside this set. The MoonBit core is also on mooncakes.io as naoto24kawa/moonqr — add it with moon add naoto24kawa/moonqr.",
     "install.encodeTitle": "Encode → SVG",
     "install.decodeTitle": "Decode → from ImageData",
     "install.cameraTitle": "Live camera scan",
+    "install.cliTitle": "CLI — QR code in your terminal",
 
     "limitations.heading": "Limitations",
     "limitations.kanji":
@@ -247,10 +248,11 @@ export const translations = {
 
     "install.heading": "インストール",
     "install.note":
-      "両パッケージともnpmで公開中です（ランタイム依存ゼロ）。MoonBitコアは mooncakes.io でも naoto24kawa/moonqr として公開しています — moon add naoto24kawa/moonqr で追加できます。",
+      "3パッケージともnpmで公開中です（このセット以外のランタイム依存はありません）。MoonBitコアは mooncakes.io でも naoto24kawa/moonqr として公開しています — moon add naoto24kawa/moonqr で追加できます。",
     "install.encodeTitle": "エンコード → SVG",
     "install.decodeTitle": "デコード → ImageDataから",
     "install.cameraTitle": "カメラ・ライブスキャン",
+    "install.cliTitle": "CLI — ターミナルにQRコードを表示",
 
     "limitations.heading": "制限事項",
     "limitations.kanji":
