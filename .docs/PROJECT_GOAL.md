@@ -6,27 +6,25 @@ MoonBit で実用ライブラリを書き、既存実装と同等以上の正し
 
 ## SuccessCriteria
 
-達成済みの基準。いずれも `bench/RESULT.md` に方法と結果を記録している。
+基準と、その検証方法。達成状況は [`STATUS.md`](STATUS.md) に置く。いずれも `bench/RESULT.md` に方法と結果を記録している。
 
-| 基準 | 状態 |
-|---|---|
-| デコーダの正しさ: jsQR の e2e コーパスで同等 | ✅ 214/214（jsQR も 214/214、残る 40 件は両者とも読めず偽陽性も出さない） |
-| デコーダの速度: jsQR 以下のフレーム時間 | ✅ 0.77x（QR あり）/ 0.75x（なし） |
-| エンコーダの正しさ: qrcode npm と行列一致 | ✅ 160/160（version 1-40 × EC L/M/Q/H） |
-| エンコーダの圧縮: 混在入力を区間ごとに最適なモードへ | ✅ qrcode npm と 44 ケースで同等以上。`https://ex.com/id/<100桁>` が v7 → v4 |
-| バンドルサイズ: encode だけ使うならデコーダを含めない | ✅ `/encode` は gzip 7.5 KB（デコーダのコードはゼロ） |
-| 実機で読めること | ✅ 実カメラでの読み取り、モニタ越し撮影のマルチスケール再試行を含む |
+- デコーダの正しさ: jsQR の e2e コーパスで同等
+- デコーダの速度: jsQR 以下のフレーム時間
+- エンコーダの正しさ: qrcode npm と行列一致
+- エンコーダの圧縮: 混在入力を区間ごとに最適なモードへ
+- バンドルサイズ: encode だけ使うならデコーダを含めない
+- 実機で読めること
 
 ## DoneCriteria（公開物としての完了条件）
 
-| 条件 | 状態 |
-|---|---|
-| npm へ公開され、リポジトリ外から install して動く | ✅ ESM / CJS 両経路で検証 |
-| CLI パッケージを npm から install してターミナルへ QR コードを出力できる | ✅ `@elchika-inc/moonqr-cli` 0.1.0（2026-09-02 公開。リポジトリ外で `npm install` → `npx moonqr --version` を検証） |
-| MoonBit プロジェクトから使える | ✅ mooncakes.io に `naoto24kawa/moonqr` |
-| 動作を試せるデモがある | ✅ https://elchika-inc.github.io/moonqr/ |
-| 外部から Issue / PR を受けられる | ✅ CONTRIBUTING / SECURITY / PR・Issue テンプレート / ブランチ保護 |
-| リリース手順が再現可能 | ✅ [`RELEASING.md`](../RELEASING.md) |
+達成状況は [`STATUS.md`](STATUS.md) に置く。
+
+- npm へ公開され、リポジトリ外から install して動く
+- CLI パッケージを npm から install してターミナルへ QR コードを出力できる
+- MoonBit プロジェクトから使える
+- 動作を試せるデモがある
+- 外部から Issue / PR を受けられる
+- リリース手順が再現可能
 
 ## スコープ外
 
