@@ -164,3 +164,26 @@
 - **ACCEPTED_RISKS**: なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-biome-1025cd4 -->
+
+<!-- review-cycle:start moonqr-pr-evidence-743812d -->
+## 2026-09-09 PR のブラウザ検証証跡欄とデモ起動手順
+- **Cycle ID**: moonqr-pr-evidence-743812d
+- **対象 HEAD**: 743812d7df25d53f36bf5ef93ac50256f52ab605
+- **対象差分**: PR テンプレートの Browser verification 節、AGENTS.md の dev 行、CONTRIBUTING.md のローカル表示手順。3ファイル67行追加・削除0をレビューし、本ブロックを結果記録として末尾に追記
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全3レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: Domain 0 / Ambiguity Hunter 0 / Fresh Eyes 0
+- **適用順**: Domain → Ambiguity Hunter → Fresh Eyes
+- **Domain**: standards `AI_FIRST.md` §2「証跡」を読み、3 view × テーマ × チェック項目の表、PR への直接添付を正本とする文言、外部画像 URL のみでは証跡としない規定を照合
+- **Ambiguity Hunter**: `site/` 変更時の必須条件、表直下の理由付き N/A と空の表、generate / read / camera の行単位とテーマ・チェック項目の列単位に誤運用を生む二義性がないことを確認
+- **Fresh Eyes**: Tests 直後・Checklist 直前の挿入と既存5節の保全、AGENTS.md の指定4行のみの追加、CONTRIBUTING.md の指定6手順と保存済み実測ログを照合。本文保全・手順順序の検査も独立に再実行して exit 0
+- **対象外レンズ**: Security / Core Logic / Tests / Altitude はコード変更なし・文書とテンプレートの追加のため対象外
+- **レビュアー**: Codex 1名（gpt-5.6-sol / high、`codex exec --sandbox read-only` の独立サブセッション、終了コード0）。3レンズを直列適用し、別 Run は作成していない
+- **検証範囲**: grep と diff、および site のローカル配信の HTTP 応答確認。依存導入・core release build・packages build・site 生成はいずれも exit 0。`/` と `/assets/moonqr/index.js` は各200 / exit 0、Ctrl+C による停止は exit 0、停止後の同じ curl は各000 / exit 7。生成後の git status は空で site/assets/ は現れなかった
+- **検証の補足**: 指定の lint は exit 0 / 64 files / warnings 19 / infos 9。文書変更で既存のコード診断は対象外。`user-attachments` の rg は0件 / 期待どおり exit 1。ブラウザ表示・操作は site/ を変更しないため対象外。製品テスト・型検査はローカル未実行で、PR 作成後に CI の test check を別途確認する
+- **運用上の警告**: レビュアーの read-only 環境で Xcode 一時キャッシュ作成警告が出たが、git の差分取得と本文保全の検査は期待出力・exit 0を確認できた
+- **裁量で変えた点**: CONTRIBUTING.md の Build order matters 節末尾に「デモサイトをローカルで表示する」を追加。指定6手順と必要な注意に、確認後の Ctrl+C 停止方法を併記。テンプレート英文と AGENTS.md の指定文言は変更なし
+- **optional**: 0件
+- **ACCEPTED_RISKS**: なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-pr-evidence-743812d -->
