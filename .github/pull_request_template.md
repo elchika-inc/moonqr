@@ -47,6 +47,27 @@ paste here
 
 </details>
 
+## Browser verification
+
+Required when this PR changes `site/`. Otherwise write `N/A` and the reason on the line below the
+table, and leave the table empty.
+
+Screenshots must be **attached directly to this pull request** — drag the image file into this
+description box. A link to an image hosted elsewhere is not evidence: attachments stay viewable
+after the merge, external URLs expire. One screenshot does not cover the whole page; fill in a row
+per view and a column per theme.
+
+See CONTRIBUTING.md for how to serve `site/` locally.
+
+| view | light | dark | console | a11y tree | keyboard |
+|---|---|---|---|---|---|
+| `/` generate |  |  |  |  |  |
+| `/` read |  |  |  |  |  |
+| `/` camera |  |  |  |  |  |
+
+- [ ] Screenshots are attached to this PR, not linked from elsewhere
+- [ ] N/A — this PR does not change `site/`
+
 ## Checklist
 
 - [ ] I did **not** run `moon fmt` (see CONTRIBUTING.md — on some toolchain versions it starts a repo-wide config migration that touches unrelated files)

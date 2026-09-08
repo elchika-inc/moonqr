@@ -55,6 +55,10 @@ Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.m
 - fixtures: `node scripts/fetch-fixtures.mjs` — required once before the parity test; downloads the
   jsQR corpus at a pinned commit and caches it.
 - site: `node scripts/build-site.mjs` — regenerates `site/assets/` from the built packages.
+- dev (the demo site): `python3 -m http.server 8765 --directory site`, then open
+  <http://localhost:8765/>. Run the `site` command above first — `site/index.html` uses an import
+  map and ES modules, so it needs to be served over HTTP, and it fails to load if `site/assets/`
+  is missing.
 - release: manual, see [RELEASING.md](RELEASING.md).
 
 ## Architecture
