@@ -37,6 +37,11 @@ location, tracked in git.
 - branch_policy: protected — `main` requires a pull request and a passing `test` check, with an
   empty bypass list, so the rule applies to administrators as well. An agent and its operator
   share one GitHub token, so a bypass for administrators would also be a bypass for the agent.
+- merge_policy: human — merges into `main` are approved by a human. This departs from the
+  `auto-on-green` default that the standards set for the `elchika-inc` owner, for one reason:
+  a push to `main` deploys the GitHub Pages demo without further review, and version bumps and
+  npm releases also start from `main`, so the merge is the last point where a human can stop
+  an unwanted deploy or release.
 
 ## Key Commands
 
