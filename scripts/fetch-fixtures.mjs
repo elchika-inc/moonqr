@@ -14,11 +14,11 @@ const REPO_URL = "https://github.com/cozmo/jsQR.git";
 // commit を固定している以上この数は決定的なので、冪等スキップの検証にそのまま使う。
 const EXPECTED_CASE_COUNT = 254;
 
-import { existsSync, mkdtempSync, mkdirSync, readdirSync, rmSync, cpSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..");
@@ -45,7 +45,9 @@ function verify(dir, { quiet = false } = {}) {
   }
   const ok = cases.length === EXPECTED_CASE_COUNT && missing.length === 0;
   if (!quiet) {
-    console.log(`fixtures/jsqr-e2e: ${cases.length} case folders (expected ${EXPECTED_CASE_COUNT})`);
+    console.log(
+      `fixtures/jsqr-e2e: ${cases.length} case folders (expected ${EXPECTED_CASE_COUNT})`,
+    );
     if (missing.length > 0) {
       console.log(`  missing files (${missing.length}):`, missing.slice(0, 10));
     }
@@ -74,10 +76,15 @@ console.log(`cloning jsQR@${COMMIT} into ${cloneDir} (shallow)...`);
 try {
   execFileSync("git", ["init", "-q"], { cwd: cloneDir, stdio: "inherit" });
   execFileSync("git", ["remote", "add", "origin", REPO_URL], { cwd: cloneDir, stdio: "inherit" });
-  execFileSync("git", ["fetch", "--depth", "1", "origin", COMMIT], { cwd: cloneDir, stdio: "inherit" });
+  execFileSync("git", ["fetch", "--depth", "1", "origin", COMMIT], {
+    cwd: cloneDir,
+    stdio: "inherit",
+  });
   execFileSync("git", ["checkout", "-q", "FETCH_HEAD"], { cwd: cloneDir, stdio: "inherit" });
 
-  const actualHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: cloneDir }).toString().trim();
+  const actualHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: cloneDir })
+    .toString()
+    .trim();
   if (actualHead !== COMMIT) {
     throw new Error(`checked out HEAD ${actualHead} does not match pinned commit ${COMMIT}`);
   }
@@ -101,4 +108,6 @@ if (!result.ok) {
   );
   process.exit(1);
 }
-console.log(`OK: fixtures/jsqr-e2e ready (${result.cases.length} cases, all input.png/output.json present).`);
+console.log(
+  `OK: fixtures/jsqr-e2e ready (${result.cases.length} cases, all input.png/output.json present).`,
+);

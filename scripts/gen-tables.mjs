@@ -25,11 +25,10 @@ import { writeFileSync } from "node:fs";
 const src = await (await fetch(SOURCE_URL)).text();
 
 const rsMatch = src.match(/var RS_BLOCK_TABLE\s*=\s*\[([\s\S]*?)\n\s*\];/);
-const posMatch = src.match(
-  /var PATTERN_POSITION_TABLE\s*=\s*\[([\s\S]*?)\n\s*\];/,
-);
+const posMatch = src.match(/var PATTERN_POSITION_TABLE\s*=\s*\[([\s\S]*?)\n\s*\];/);
 if (!rsMatch) throw new Error("RS_BLOCK_TABLE not found — ソース構造が変わった。手動確認せよ");
-if (!posMatch) throw new Error("PATTERN_POSITION_TABLE not found — ソース構造が変わった。手動確認せよ");
+if (!posMatch)
+  throw new Error("PATTERN_POSITION_TABLE not found — ソース構造が変わった。手動確認せよ");
 
 const stripComments = (s) => s.replace(/\/\/[^\n]*/g, "");
 
@@ -37,10 +36,14 @@ const rsRows = JSON.parse("[" + stripComments(rsMatch[1]) + "]");
 const posRows = JSON.parse("[" + stripComments(posMatch[1]) + "]");
 
 if (rsRows.length !== 160) {
-  throw new Error(`RS_BLOCK_TABLE: expected 160 rows (40 versions * 4 levels), got ${rsRows.length}`);
+  throw new Error(
+    `RS_BLOCK_TABLE: expected 160 rows (40 versions * 4 levels), got ${rsRows.length}`,
+  );
 }
 if (posRows.length !== 40) {
-  throw new Error(`PATTERN_POSITION_TABLE: expected 40 rows (versions 1..40), got ${posRows.length}`);
+  throw new Error(
+    `PATTERN_POSITION_TABLE: expected 40 rows (versions 1..40), got ${posRows.length}`,
+  );
 }
 
 let mbt = `///| このファイルは scripts/gen-tables.mjs により生成。手編集禁止。

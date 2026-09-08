@@ -48,9 +48,7 @@ export function buildResultCard(desc, translate) {
   } else if (desc.kind === "fail") {
     content.append(createStatus("status-err", translate("read.fail")));
   } else {
-    content.append(
-      createStatus("status-err", translate("read.error", { message: desc.message })),
-    );
+    content.append(createStatus("status-err", translate("read.error", { message: desc.message })));
   }
   card.append(image, content);
   return card;

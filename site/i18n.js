@@ -76,8 +76,7 @@ export const translations = {
       "<code>navigator.mediaDevices.getUserMedia</code> only works over HTTPS or localhost (secure-context restriction). On an insecure origin, without a camera, or if permission is denied, this shows a clear error instead of failing silently.",
     "camera.start": "Start camera",
     "camera.stop": "Stop",
-    "camera.requesting":
-      "Requesting camera access… (check your browser's permission prompt)",
+    "camera.requesting": "Requesting camera access… (check your browser's permission prompt)",
     "camera.scanning": "Scanning… point the camera at a QR code.",
     "camera.stopped": "Stopped.",
     "camera.insecure":
@@ -104,8 +103,7 @@ export const translations = {
       "Cell-for-cell match against the qrcode npm package across every version × EC-level combination. At EC M, mixed-mode optimization shrinks https://ex.com/id/<100-digit ID> from single-Byte v7 to v4.",
     "numbers.bundleTitle": "Bundle size",
     "numbers.bundleValue": "7.5 KB / ~50 KB",
-    "numbers.bundleDesc":
-      "gzip, encode-only subpath / full decoder. Import just the part you use.",
+    "numbers.bundleDesc": "gzip, encode-only subpath / full decoder. Import just the part you use.",
     "numbers.evidence": "See bench/RESULT.md →",
 
     "moonbit.heading": "Why MoonBit",
@@ -220,16 +218,14 @@ export const translations = {
       "jsQR自身の254枚コーパスで、jsQRとテキスト完全一致。jsQR自身も読めない40枚も正しく棄却。",
     "numbers.speedTitle": "デコーダ速度",
     "numbers.speedValue": "0.77x / 0.75x",
-    "numbers.speedDesc":
-      "640×480でのjsQR比フレーム時間 — QRあり／なし。数値が小さいほど高速。",
+    "numbers.speedDesc": "640×480でのjsQR比フレーム時間 — QRあり／なし。数値が小さいほど高速。",
     "numbers.encodeTitle": "エンコーダ・パリティ",
     "numbers.encodeValue": "160 / 160",
     "numbers.encodeDesc":
       "qrcode npmパッケージと全バージョン×ECレベルの組み合わせでセル単位一致。EC Mでは、混在モード最適化により https://ex.com/id/<100桁ID> を単一Byteモードのv7からv4へ縮小。",
     "numbers.bundleTitle": "バンドルサイズ",
     "numbers.bundleValue": "7.5KB / 約50KB",
-    "numbers.bundleDesc":
-      "gzip、エンコード専用サブパス／フルデコーダ。使う分だけimportできます。",
+    "numbers.bundleDesc": "gzip、エンコード専用サブパス／フルデコーダ。使う分だけimportできます。",
     "numbers.evidence": "bench/RESULT.mdを見る →",
 
     "moonbit.heading": "なぜMoonBitか",

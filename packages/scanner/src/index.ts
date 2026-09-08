@@ -1,12 +1,12 @@
-export { halveRGBA, multiScaleDecode } from "./multiscale.js";
-export type { MultiScaleOutcome, RGBAImage } from "./multiscale.js";
 export type { DecodeResult } from "./decode-core.js";
+export type { MultiScaleOutcome, RGBAImage } from "./multiscale.js";
+export { halveRGBA, multiScaleDecode } from "./multiscale.js";
 
 import { startCamera } from "./camera.js";
 import { FrameCapturer, sourceToRGBA } from "./canvas.js";
-import { decodeMultiScale, type DecodeResult } from "./decode-core.js";
-import { createWorkerHandle, type WorkerHandle } from "./worker-handle.js";
+import { type DecodeResult, decodeMultiScale } from "./decode-core.js";
 import type { WorkerResponse } from "./worker.js";
+import { createWorkerHandle, type WorkerHandle } from "./worker-handle.js";
 
 /**
  * `QrScanner.scanImage()` の戻り値。`DecodeResult`（text/bytes/version/ecLevel/corners）に

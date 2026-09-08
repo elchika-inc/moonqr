@@ -32,12 +32,20 @@ function mulberry32(seed) {
 // Mapping and Image Warping" の square-to-quad 導出）。
 function squareToQuadMatrix(quad) {
   const [p0, p1, p2, p3] = quad;
-  const x0 = p0.x, y0 = p0.y;
-  const x1 = p1.x, y1 = p1.y;
-  const x2 = p2.x, y2 = p2.y;
-  const x3 = p3.x, y3 = p3.y;
-  const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
-  const dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+  const x0 = p0.x,
+    y0 = p0.y;
+  const x1 = p1.x,
+    y1 = p1.y;
+  const x2 = p2.x,
+    y2 = p2.y;
+  const x3 = p3.x,
+    y3 = p3.y;
+  const dx1 = x1 - x2,
+    dx2 = x3 - x2,
+    dx3 = x0 - x1 + x2 - x3;
+  const dy1 = y1 - y2,
+    dy2 = y3 - y2,
+    dy3 = y0 - y1 + y2 - y3;
   let g = 0;
   let h = 0;
   if (Math.abs(dx3) > 1e-9 || Math.abs(dy3) > 1e-9) {
@@ -57,14 +65,16 @@ function squareToQuadMatrix(quad) {
 // 3x3行列の逆行列（アジュゲート/行列式方式）。
 function invert3x3([a, b, c, d, e, f, g, h, i]) {
   const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
-  const A = e * i - f * h, B = c * h - b * i, C = b * f - c * e;
-  const D = f * g - d * i, E = a * i - c * g, F = c * d - a * f;
-  const G = d * h - e * g, H = b * g - a * h, I = a * e - b * d;
-  return [
-    A / det, B / det, C / det,
-    D / det, E / det, F / det,
-    G / det, H / det, I / det,
-  ];
+  const A = e * i - f * h,
+    B = c * h - b * i,
+    C = b * f - c * e;
+  const D = f * g - d * i,
+    E = a * i - c * g,
+    F = c * d - a * f;
+  const G = d * h - e * g,
+    H = b * g - a * h,
+    I = a * e - b * d;
+  return [A / det, B / det, C / det, D / det, E / det, F / det, G / det, H / det, I / det];
 }
 
 /**
@@ -97,18 +107,19 @@ export function rasterize(flat, opts = {}) {
   const getModule = (mx, my) => flat[1 + my * size + mx];
   const w = (size + margin * 2) * scale; // 正準画像の一辺(px)
 
-  const centerX = w / 2, centerY = w / 2;
+  const centerX = w / 2,
+    centerY = w / 2;
   const theta = (rotate * Math.PI) / 180;
-  const cos = Math.cos(theta), sin = Math.sin(theta);
+  const cos = Math.cos(theta),
+    sin = Math.sin(theta);
   const rotatePoint = (x, y) => {
-    const dx = x - centerX, dy = y - centerY;
+    const dx = x - centerX,
+      dy = y - centerY;
     return { x: centerX + dx * cos - dy * sin, y: centerY + dx * sin + dy * cos };
   };
 
   // 正準画像の4隅: TL,TR,BR,BL（単位正方形 (0,0)(1,0)(1,1)(0,1) に対応）
-  let corners = [
-    rotatePoint(0, 0), rotatePoint(w, 0), rotatePoint(w, w), rotatePoint(0, w),
-  ];
+  let corners = [rotatePoint(0, 0), rotatePoint(w, 0), rotatePoint(w, w), rotatePoint(0, w)];
 
   if (perspective) {
     const keys = ["tl", "tr", "br", "bl"];
@@ -120,12 +131,15 @@ export function rasterize(flat, opts = {}) {
 
   const xs = corners.map((p) => p.x);
   const ys = corners.map((p) => p.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const minX = Math.min(...xs),
+    maxX = Math.max(...xs);
+  const minY = Math.min(...ys),
+    maxY = Math.max(...ys);
   const pad = 2; // 端の白背景を確保するための余白px
   const width = Math.ceil(maxX - minX) + pad * 2;
   const height = Math.ceil(maxY - minY) + pad * 2;
-  const tx = -minX + pad, ty = -minY + pad;
+  const tx = -minX + pad,
+    ty = -minY + pad;
   const quad = corners.map((p) => ({ x: p.x + tx, y: p.y + ty }));
 
   const m = squareToQuadMatrix(quad);
@@ -136,12 +150,15 @@ export function rasterize(flat, opts = {}) {
 
   for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
-      const ptX = px + 0.5, ptY = py + 0.5;
+      const ptX = px + 0.5,
+        ptY = py + 0.5;
       const uNum = mInv[0] * ptX + mInv[1] * ptY + mInv[2];
       const vNum = mInv[3] * ptX + mInv[4] * ptY + mInv[5];
       const wNum = mInv[6] * ptX + mInv[7] * ptY + mInv[8];
-      const u = uNum / wNum, v = vNum / wNum;
-      const sx = u * w, sy = v * w;
+      const u = uNum / wNum,
+        v = vNum / wNum;
+      const sx = u * w,
+        sy = v * w;
 
       let val = white;
       if (sx >= 0 && sx < w && sy >= 0 && sy < w) {

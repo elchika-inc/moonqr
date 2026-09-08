@@ -1,5 +1,5 @@
-import { encode } from "@elchika-inc/moonqr/encode";
 import type { EcLevel } from "@elchika-inc/moonqr/encode";
+import { encode } from "@elchika-inc/moonqr/encode";
 import { render } from "./render.js";
 
 // package.json の version と手動で揃える。cli.test.ts が一致を検証する。

@@ -20,8 +20,8 @@
 // リポジトリルートの位置はこのスクリプト自身の場所（import.meta.url）から解決するため、
 // どこから呼んでも正しく動く。
 import { copyFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const targetArg = process.argv[2];

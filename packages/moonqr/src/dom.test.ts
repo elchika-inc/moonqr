@@ -24,7 +24,10 @@ interface MockContext {
   fillRect: (x: number, y: number, w: number, h: number) => void;
 }
 
-function mockCanvas(): { canvas: HTMLCanvasElement; calls: Array<[number, number, number, number]> } {
+function mockCanvas(): {
+  canvas: HTMLCanvasElement;
+  calls: Array<[number, number, number, number]>;
+} {
   const calls: Array<[number, number, number, number]> = [];
   const ctx: MockContext = {
     fillStyle: "",

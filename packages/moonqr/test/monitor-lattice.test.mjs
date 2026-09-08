@@ -17,17 +17,16 @@
 // packages/scanner/src/multiscale.ts を唯一の実装として直接importする。
 // Node 24 はネイティブTS型ストリッピングを持つため、node --test から
 // .ts を直接importでき、ビルド成果物への依存を持ち込まずに済む。
-import { test } from "node:test";
+
 import assert from "node:assert";
+import { test } from "node:test";
 import jsQR from "jsqr";
-import { rasterize } from "./lib/rasterize.mjs";
 import { multiScaleDecode } from "../../scanner/src/multiscale.ts";
+import { rasterize } from "./lib/rasterize.mjs";
 
 // ビルド出力パス規約は roundtrip.test.mjs 等と同じ。
-const encodeMod = await import(
-  "../../../core/_build/js/release/build/encode/encode.js");
-const decodeMod = await import(
-  "../../../core/_build/js/release/build/decode/decode.js");
+const encodeMod = await import("../../../core/_build/js/release/build/encode/encode.js");
+const decodeMod = await import("../../../core/_build/js/release/build/decode/decode.js");
 const { encode_js } = encodeMod;
 const { decode_js } = decodeMod;
 
@@ -49,11 +48,16 @@ const RASTER_SCALE = 28;
 // 格子線上にある「白画素」だけを暗化する。黒画素（QRの黒モジュール）は
 // そのまま維持する——モニター格子は「白いはずの領域に写り込む」現象であり
 // 黒領域には影響しないため。
-function applyMonitorLattice(data, width, height, {
-  period = LATTICE_PERIOD,
-  darkenTo = LATTICE_DARKEN_TO,
-  whiteThreshold = LATTICE_WHITE_THRESHOLD,
-} = {}) {
+function applyMonitorLattice(
+  data,
+  width,
+  height,
+  {
+    period = LATTICE_PERIOD,
+    darkenTo = LATTICE_DARKEN_TO,
+    whiteThreshold = LATTICE_WHITE_THRESHOLD,
+  } = {},
+) {
   const out = new Uint8Array(data); // コピー（rasterize()の出力を破壊しない）
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {

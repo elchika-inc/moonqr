@@ -7,7 +7,10 @@
 // デコーダ（raw 261KB / gzip 62KB、SJIS テーブル）が流れ込む（実測で確認済み。
 // 詳細は .superpowers/sdd/task-3-report.md のツリーシェイキング調査を参照）。
 // core-encode / core-decode を分けることで、共有チャンクに MoonBit 成果物が載らなくなる。
-import { encode_js, to_svg_string_js } from "../../../core/_build/js/release/build/encode/encode.js";
+import {
+  encode_js,
+  to_svg_string_js,
+} from "../../../core/_build/js/release/build/encode/encode.js";
 
 /**
  * QR 行列をエンコードする（MoonBit `encode_js` の薄いラッパ）。

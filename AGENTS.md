@@ -51,7 +51,7 @@ Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.m
   Architecture below.
 - test: `cd core && moon test --target js` (MoonBit), `node --test packages/moonqr/test/*.test.mjs`
   (jsQR parity + encoder sweep), `pnpm -r test:unit` (vitest, all packages).
-- check: `pnpm -r typecheck`.
+- check: `pnpm -r typecheck` (types), `pnpm run lint` (Biome — lint + format check; `pnpm run lint:fix` writes the fixes).
 - fixtures: `node scripts/fetch-fixtures.mjs` — required once before the parity test; downloads the
   jsQR corpus at a pinned commit and caches it.
 - site: `node scripts/build-site.mjs` — regenerates `site/assets/` from the built packages.

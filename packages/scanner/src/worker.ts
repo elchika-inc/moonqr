@@ -7,8 +7,9 @@
 // 含まれず、scripts/build-worker.mjs 内の esbuild（型チェックなし・型を消去するだけ）で
 // のみビルドされる。DOM lib と WebWorker lib は同一tsconfig上で共存できない（両方が
 // postMessage 等のグローバルを非互換に宣言する）ため、self を意図的に緩く型付けしている。
-import { decodeMultiScale, decodeNative } from "./decode-core.js";
+
 import type { DecodeResult } from "./decode-core.js";
+import { decodeMultiScale, decodeNative } from "./decode-core.js";
 
 export interface WorkerRequest {
   id: number;

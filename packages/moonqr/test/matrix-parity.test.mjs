@@ -1,31 +1,35 @@
-import { test } from "node:test";
 import assert from "node:assert";
+import { test } from "node:test";
 import QRCode from "qrcode";
 
 // ビルド出力: core/_build/js/release/build/encode/encode.js
 // (moon build --target js --release の実際の出力パス。brief記載の
 //  core/target/... ではなく core/_build/... が実体)
-const mod = await import(
-  "../../../core/_build/js/release/build/encode/encode.js");
+const mod = await import("../../../core/_build/js/release/build/encode/encode.js");
 
 const CASES = [
-  ["01234567", "M"], ["HELLO WORLD", "Q"], ["hello, world!", "L"],
+  ["01234567", "M"],
+  ["HELLO WORLD", "Q"],
+  ["hello, world!", "L"],
   ["https://example.com/path?q=1&r=2", "M"],
-  ["こんにちは世界", "M"], ["🦑🐙", "H"],
-  ["A".repeat(500), "L"], ["1".repeat(1000), "M"],
+  ["こんにちは世界", "M"],
+  ["🦑🐙", "H"],
+  ["A".repeat(500), "L"],
+  ["1".repeat(1000), "M"],
 ];
 const EC_NUM = { L: 0, M: 1, Q: 2, H: 3 };
 
 // 自前実装の全モジュール比較が最低1回は発火したことを記録する
 // (メソドロジー: 8マスク中、自前の自動選択マスクは必ずどれかと一致する)
-export const fullCompareCount = { value: 0 };
+const fullCompareCount = { value: 0 };
 
 for (const [text, ec] of CASES) {
   for (let mask = 0; mask < 8; mask++) {
     test(`parity: ${JSON.stringify(text.slice(0, 20))} ec=${ec} mask=${mask}`, async () => {
       // qrcode npm に強制マスクで生成させ、バージョンを合わせて自前と比較
       const ref = QRCode.create(text, {
-        errorCorrectionLevel: ec, maskPattern: mask,
+        errorCorrectionLevel: ec,
+        maskPattern: mask,
       });
       const size = ref.modules.size;
       const version = ref.version;
@@ -44,12 +48,14 @@ for (const [text, ec] of CASES) {
         const ourMask = readMask(flat);
         if (ourMask === mask) {
           fullCompareCount.value++;
-          for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-            assert.equal(
-              flat[1 + y * size + x],
-              ref.modules.get(y, x) ? 1 : 0,
-              `mismatch at (${x},${y})`);
-          }
+          for (let y = 0; y < size; y++)
+            for (let x = 0; x < size; x++) {
+              assert.equal(
+                flat[1 + y * size + x],
+                ref.modules.get(y, x) ? 1 : 0,
+                `mismatch at (${x},${y})`,
+              );
+            }
         }
       }
     });
@@ -72,10 +78,25 @@ function readMask(flat) {
   const get = (x, y) => flat[1 + y * size + x];
   let bits = 0;
   const coords = [
-    [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 7], [8, 8],
-    [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+    [8, 0],
+    [8, 1],
+    [8, 2],
+    [8, 3],
+    [8, 4],
+    [8, 5],
+    [8, 7],
+    [8, 8],
+    [7, 8],
+    [5, 8],
+    [4, 8],
+    [3, 8],
+    [2, 8],
+    [1, 8],
+    [0, 8],
   ];
-  coords.forEach(([x, y], i) => { bits |= get(x, y) << i; });
+  coords.forEach(([x, y], i) => {
+    bits |= get(x, y) << i;
+  });
   const unmasked = bits ^ 0x5412;
   return (unmasked >> 10) & 0b111;
 }

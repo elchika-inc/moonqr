@@ -13,10 +13,11 @@
 // end-to-end で確認する。これにより「Blob URL 化されて本番で実際に走る文字列」そのものが
 // 検証対象になる（Node固有API（node:vm）に依存せず、ブラウザ向けパッケージの
 // tsconfig に @types/node を持ち込まずに済む）。
-import { describe, expect, it } from "vitest";
+
 import { encode } from "@elchika-inc/moonqr/encode";
-import { WORKER_SOURCE } from "./worker-inline.generated.js";
+import { describe, expect, it } from "vitest";
 import { applyMonitorLattice, rasterizeMatrix } from "./test-raster.js";
+import { WORKER_SOURCE } from "./worker-inline.generated.js";
 
 interface WorkerLike {
   post(message: {

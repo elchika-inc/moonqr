@@ -18,28 +18,29 @@
 // jsQR は inversionAttempts: "attemptBoth"（主計測）/ "dontInvert"（参考）、
 // 自前は invert=true（主計測、attemptBoth相当）/ invert=false（参考、
 // dontInvert相当）で対応させる。
-import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+
 import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import jsQR from "jsqr";
-import { genFrame } from "./gen-frame.mjs";
 import { rasterize } from "../packages/moonqr/test/lib/rasterize.mjs";
+import { genFrame } from "./gen-frame.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..");
 const resultMdPath = join(repoRoot, "bench", "RESULT.md");
 
-const decodeMod = await import(
-  "../core/_build/js/release/build/decode/decode.js");
-const encodeMod = await import(
-  "../core/_build/js/release/build/encode/encode.js");
+const decodeMod = await import("../core/_build/js/release/build/decode/decode.js");
+const encodeMod = await import("../core/_build/js/release/build/encode/encode.js");
 const { decode_js } = decodeMod;
 const { encode_js } = encodeMod;
 
 const EC_NUM = { L: 0, M: 1, Q: 2, H: 3 };
-const WIDTH = 640, HEIGHT = 480;
-const WARMUP = 30, ITERS = 200;
+const WIDTH = 640,
+  HEIGHT = 480;
+const WARMUP = 30,
+  ITERS = 200;
 
 // --- フレーム生成 ---
 // (a) hit: ノイズ背景 + v2-M QR をオフセンター位置に合成
@@ -50,7 +51,8 @@ function buildHitFrame() {
   if (flat.length === 0) throw new Error("encode_js failed for hit frame text");
   const raster = rasterize(flat, { scale: 5, margin: 4, seed: 7 });
   // オフセンター配置（画面中心 (235,155) 付近ではなく (400,180) — 右下寄り）。
-  const ox = 400, oy = 180;
+  const ox = 400,
+    oy = 180;
   if (ox + raster.width >= WIDTH || oy + raster.height >= HEIGHT) {
     throw new Error("rasterized QR does not fit in 640x480 frame at chosen offset");
   }
@@ -93,23 +95,35 @@ function ourDecode(frame, invert) {
   const jsHit = jsqrDecode(hitFrame, true);
   const ourHit = ourDecode(hitFrame, true);
   if (jsHit !== HIT_TEXT) {
-    throw new Error(`pre-check failed: jsQR did not decode hit frame correctly (got ${JSON.stringify(jsHit)})`);
+    throw new Error(
+      `pre-check failed: jsQR did not decode hit frame correctly (got ${JSON.stringify(jsHit)})`,
+    );
   }
   if (ourHit !== HIT_TEXT) {
-    throw new Error(`pre-check failed: our decode_js did not decode hit frame correctly (got ${JSON.stringify(ourHit)})`);
+    throw new Error(
+      `pre-check failed: our decode_js did not decode hit frame correctly (got ${JSON.stringify(ourHit)})`,
+    );
   }
   if (jsHit !== ourHit) {
-    throw new Error(`pre-check failed: jsQR and ours disagree on hit frame text (${JSON.stringify(jsHit)} vs ${JSON.stringify(ourHit)})`);
+    throw new Error(
+      `pre-check failed: jsQR and ours disagree on hit frame text (${JSON.stringify(jsHit)} vs ${JSON.stringify(ourHit)})`,
+    );
   }
   const jsMiss = jsqrDecode(missFrame, true);
   const ourMiss = ourDecode(missFrame, true);
   if (jsMiss !== null) {
-    throw new Error(`pre-check failed: jsQR unexpectedly decoded miss frame (got ${JSON.stringify(jsMiss)})`);
+    throw new Error(
+      `pre-check failed: jsQR unexpectedly decoded miss frame (got ${JSON.stringify(jsMiss)})`,
+    );
   }
   if (ourMiss !== null) {
-    throw new Error(`pre-check failed: our decode_js unexpectedly decoded miss frame (got ${JSON.stringify(ourMiss)})`);
+    throw new Error(
+      `pre-check failed: our decode_js unexpectedly decoded miss frame (got ${JSON.stringify(ourMiss)})`,
+    );
   }
-  console.log("pre-check OK: hit frame decodes identically on both impls, miss frame is null on both");
+  console.log(
+    "pre-check OK: hit frame decodes identically on both impls, miss frame is null on both",
+  );
 }
 
 // --- 計測 ---
@@ -133,7 +147,7 @@ function median(label, expectedSink, fn) {
   if (sink !== expectedSink) {
     throw new Error(
       `sink mismatch for ${label}: got ${sink}, expected ${expectedSink} — ` +
-      `measurement loop did not consistently exercise the intended path`,
+        `measurement loop did not consistently exercise the intended path`,
     );
   }
   times.sort((a, b) => a - b);
@@ -146,13 +160,20 @@ function median(label, expectedSink, fn) {
 // （優位を過小評価する方向の）バイアスであり、rubric 判定を甘くする方向には
 // 働かない。
 const results = {};
-for (const [frameName, frame] of [["hit", hitFrame], ["miss", missFrame]]) {
+for (const [frameName, frame] of [
+  ["hit", hitFrame],
+  ["miss", missFrame],
+]) {
   console.log(`measuring [${frameName}] frame:`);
   const exp = frameName === "hit" ? ITERS : 0;
   results[frameName] = {
-    jsqrAttemptBoth: median("jsQR attemptBoth", exp, () => jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "attemptBoth" })),
+    jsqrAttemptBoth: median("jsQR attemptBoth", exp, () =>
+      jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "attemptBoth" }),
+    ),
     ourInvertTrue: median("ours invert=true ", exp, () => decode_js(frame, WIDTH, HEIGHT, true)),
-    jsqrDontInvert: median("jsQR dontInvert  ", exp, () => jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "dontInvert" })),
+    jsqrDontInvert: median("jsQR dontInvert  ", exp, () =>
+      jsQR(frame, WIDTH, HEIGHT, { inversionAttempts: "dontInvert" }),
+    ),
     ourInvertFalse: median("ours invert=false", exp, () => decode_js(frame, WIDTH, HEIGHT, false)),
   };
 }
@@ -170,18 +191,22 @@ for (const frameName of ["hit", "miss"]) {
   rows.push({ frameName, ...r, ratioPrimary, ratioSecondary, pass });
   console.log(
     `[${frameName}] jsQR(attemptBoth)=${r.jsqrAttemptBoth.toFixed(3)}ms ` +
-    `ours(invert=true)=${r.ourInvertTrue.toFixed(3)}ms ratio=${ratioPrimary.toFixed(3)} ` +
-    `${pass ? "PASS" : "FAIL"} (threshold ${RATIO_MAX}) | ` +
-    `secondary: jsQR(dontInvert)=${r.jsqrDontInvert.toFixed(3)}ms ` +
-    `ours(invert=false)=${r.ourInvertFalse.toFixed(3)}ms ratio=${ratioSecondary.toFixed(3)}`,
+      `ours(invert=true)=${r.ourInvertTrue.toFixed(3)}ms ratio=${ratioPrimary.toFixed(3)} ` +
+      `${pass ? "PASS" : "FAIL"} (threshold ${RATIO_MAX}) | ` +
+      `secondary: jsQR(dontInvert)=${r.jsqrDontInvert.toFixed(3)}ms ` +
+      `ours(invert=false)=${r.ourInvertFalse.toFixed(3)}ms ratio=${ratioSecondary.toFixed(3)}`,
   );
 }
-console.log(`\njudgment (rubric 2, ours <= jsQR * ${RATIO_MAX} on BOTH frames): ${allPass ? "PASS" : "FAIL"}`);
+console.log(
+  `\njudgment (rubric 2, ours <= jsQR * ${RATIO_MAX} on BOTH frames): ${allPass ? "PASS" : "FAIL"}`,
+);
 
 // --- RESULT.md 追記（冪等: 既存セクションがあれば置換、なければ追記） ---
 function commitHash() {
   try {
-    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: repoRoot }).toString().trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: repoRoot })
+      .toString()
+      .trim();
   } catch {
     return "(unknown, not a git repo checkout at bench time)";
   }
@@ -196,11 +221,14 @@ function moonVersion() {
   }
 }
 
-const tableRows = rows.map((r) =>
-  `| ${r.frameName} | ${r.jsqrAttemptBoth.toFixed(3)} | ${r.ourInvertTrue.toFixed(3)} | ` +
-  `${r.ratioPrimary.toFixed(3)} | ${r.pass ? "PASS" : "FAIL"} | ${r.jsqrDontInvert.toFixed(3)} | ` +
-  `${r.ourInvertFalse.toFixed(3)} | ${r.ratioSecondary.toFixed(3)} |`,
-).join("\n");
+const tableRows = rows
+  .map(
+    (r) =>
+      `| ${r.frameName} | ${r.jsqrAttemptBoth.toFixed(3)} | ${r.ourInvertTrue.toFixed(3)} | ` +
+      `${r.ratioPrimary.toFixed(3)} | ${r.pass ? "PASS" : "FAIL"} | ${r.jsqrDontInvert.toFixed(3)} | ` +
+      `${r.ourInvertFalse.toFixed(3)} | ${r.ratioSecondary.toFixed(3)} |`,
+  )
+  .join("\n");
 
 const summary = `
 

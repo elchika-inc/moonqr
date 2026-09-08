@@ -7,9 +7,10 @@
 // encoder（SJIS テーブル込み）まで巻き上がる（moonqr側 core-decode.ts/decode.ts のコメント参照）。
 // scanner は decode 専用パッケージであり encoder を一切必要としないため、この境界を破ると
 // バンドルサイズが不必要に膨らむ。
-import { decode } from "@elchika-inc/moonqr/decode";
+
 import type { DecodeResult } from "@elchika-inc/moonqr/decode";
-import { multiScaleDecode, type MultiScaleOutcome } from "./multiscale.js";
+import { decode } from "@elchika-inc/moonqr/decode";
+import { type MultiScaleOutcome, multiScaleDecode } from "./multiscale.js";
 
 export type { DecodeResult } from "@elchika-inc/moonqr/decode";
 
