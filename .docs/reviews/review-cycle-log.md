@@ -187,3 +187,29 @@
 - **ACCEPTED_RISKS**: なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-pr-evidence-743812d -->
+
+<!-- review-cycle:start moonqr-readme-sections-949865e -->
+## 2026-09-09 README の導入・開発・貢献セクション整備
+- **Cycle ID**: moonqr-readme-sections-949865e
+- **対象 HEAD**: 949865eed56d1f4251362522bf62b8d17b4517ee
+- **対象差分**: README.md の Getting Started 分離、Development のコマンド表10行と構成概要、Contributing の英語4行追加。30行追加・1行削除をレビューし、本ブロックを結果記録として末尾に追記
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全3レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: Domain 0 / Fresh Eyes 0 / Ambiguity Hunter 0
+- **適用順**: Domain → Fresh Eyes → Ambiguity Hunter
+- **Domain**: standards `DOCS_OPS.md` §1 のセクション構成表・Development コマンドテーブル MUST と `AI_FIRST.md` §3 を確認。指定10見出し、前提条件・導入・クイックスタートの案内、コマンド表と `AGENTS.md` Key Commands の対応を照合
+- **Fresh Eyes**: `origin/main...HEAD` の差分を確認し、既存7節・タイトル・概要・数値の保全、Requires・setup ブロック・Build and test everything ブロック・CI の1文の保持を確認。Contributing の位置・英語4行・参照先との整合も確認
+- **Ambiguity Hunter**: Getting Started の環境準備と Packages 参照、Development のコマンド表・構成概要・一括実行例の役割が明瞭であることを確認。core 先行、fixtures と parity test、site assets と dev server の依存関係に二義性なし。表と一括実行例の重複は委任元の明示的保持要件
+- **司令塔の訂正**: 初期 rubric の9見出しには既存 `Limitations` が欠落していたため、`orca orchestration ask` で報告。司令塔が `Limitations` を含む全10見出し各1件へ訂正し、本文と既存位置の保持を承認
+- **検証範囲**: grep と diff。見出し10件各1件・指定順、CONTRIBUTING.md / SECURITY.md 各1件、コマンド表見出し1件を確認。Key Commands の指定 rg は6行（`dev (the demo site):` が式に合わないため）を抽出し、正本50〜62行と表10行を併記して目視照合
+- **数値の保全**: `git show origin/main:README.md` と変更後から指定パターンを抽出し、各6件（214/214、214/214、0.77x、0.75x、11 inputs、4 EC）が順序・件数・値まで一致。抽出結果の diff は出力なし / exit 0。160/160・7.5 KB・44 ケースは変更前後とも0件
+- **補助検査**: 既存7節の全文・タイトルと概要・setup コードブロック・build/test コードブロックと CI の1文の保全が一致。npm install 例は1箇所。検査スクリプトと `git diff --check` は exit 0
+- **lint**: `pnpm run lint` は exit 0 / 64 files / warnings 19 / infos 9。既存コードの診断は変更対象外。製品テスト・型検査はローカル未実行で、PR の CI `test` check を別途確認する
+- **対象外レンズ**: Security / Core Logic / Tests / Altitude はコード変更なし・README の構成整理のため対象外
+- **レビュアー**: Codex 1名（gpt-5.6-sol / high、`codex exec --sandbox read-only` の独立サブセッション、終了コード0）。3レンズを直列適用し、別 Run は作成していない
+- **運用上の警告**: レビュアー起動時に利用していない Context7 MCP のセッション失効エラーが出た。ローカル正本と git 差分の取得・各レンズの根拠は確認でき、レビュー応答3ブロックが揃った。read-only 環境の Xcode 一時キャッシュ警告も差分取得の結果を確認したうえで記録
+- **裁量で変えた点**: 英文の案内文、表10行の粒度、Development の構成概要から Repository layout への参照、Contributing の英語4行。指定見出し・列名・節順序・既存本文は保持
+- **optional**: 0件
+- **ACCEPTED_RISKS**: なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-readme-sections-949865e -->
