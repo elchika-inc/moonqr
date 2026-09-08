@@ -7,9 +7,9 @@
 // CJS はエントリごとに自己完結でバンドルされるため「そのサブパスだけを import したときの
 // 実際の重さ」を正しく表す（packages/moonqr/README.md のサブパス比較表と同じ測定方法）。
 // scanner は ESM のみ・単一エントリのためチャンク分割の懸念がない。
-import { existsSync, readFileSync, appendFileSync } from "node:fs";
-import { gzipSync } from "node:zlib";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 
 const repoRoot = join(import.meta.dirname, "..");
 

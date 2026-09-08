@@ -8,11 +8,18 @@
 // が落ちるかどうかはダウンストリームのバンドラのツリーシェイキング品質に依存してしまう
 // （`sideEffects: false` は宣言済みだが、それでも保証はできない）。サブパスなら物理的に
 // 別ファイルなので確実に含まれない。
-export { encode, toSvgString } from "./encode.js";
-export type { EcLevel, EncodeOptions, QrMatrix, SvgOptions } from "./types.js";
 
 export { decode } from "./decode.js";
-export type { DecodeOptions, DecodeResult, Point } from "./types.js";
+export { encode, toSvgString } from "./encode.js";
+export type {
+  DecodeOptions,
+  DecodeResult,
+  EcLevel,
+  EncodeOptions,
+  Point,
+  QrMatrix,
+  SvgOptions,
+} from "./types.js";
 
 // `./dom.js`（toCanvas）はルートからは re-export しない。DOM 依存（HTMLCanvasElement）を
 // 持つためNode専用消費者の型解決を汚さないよう、`@elchika-inc/moonqr/dom` サブパス経由での

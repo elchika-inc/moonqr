@@ -19,6 +19,7 @@ const src = await (await fetch(SOURCE_URL)).text();
 const re = /0x([0-9A-Fa-f]+):\s*0x([0-9A-Fa-f]+),/g;
 const pairs = [];
 let m;
+// biome-ignore lint/suspicious/noAssignInExpressions: RegExp.exec の反復は代入式が定型句
 while ((m = re.exec(src))) {
   pairs.push([parseInt(m[1], 16), parseInt(m[2], 16)]);
 }
@@ -54,7 +55,7 @@ if (pairs.length !== EXPECTED_ROWS) {
   );
 }
 
-let mbt = `///| このファイルは scripts/gen-sjis.mjs により生成。手編集禁止。
+const mbt = `///| このファイルは scripts/gen-sjis.mjs により生成。手編集禁止。
 ///| 出典: jsQR (Apache-2.0) https://github.com/cozmo/jsQR
 ///| 取得元: ${SOURCE_URL}
 ///| 元テーブルはカテゴリ単位の並び（SJISコード昇順ではない）だが、

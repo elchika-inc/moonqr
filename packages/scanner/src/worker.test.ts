@@ -58,10 +58,7 @@ it("returns result:null when the inline fallback decoder throws", async () => {
   handle.onmessage = onmessage;
   handle.onerror = onerror;
 
-  handle.postMessage(
-    { id: 23, buffer: new ArrayBuffer(4), width: 1, height: 1 },
-    [],
-  );
+  handle.postMessage({ id: 23, buffer: new ArrayBuffer(4), width: 1, height: 1 }, []);
   await Promise.resolve();
 
   expect(onmessage).toHaveBeenCalledWith({ data: { id: 23, result: null } });
@@ -80,10 +77,7 @@ it("does not reinterpret an inline fallback consumer error as a decode failure",
   handle.onmessage = onmessage;
 
   expect(() =>
-    handle.postMessage(
-      { id: 29, buffer: new ArrayBuffer(4), width: 1, height: 1 },
-      [],
-    ),
+    handle.postMessage({ id: 29, buffer: new ArrayBuffer(4), width: 1, height: 1 }, []),
   ).toThrow("consumer failure");
   expect(onmessage).toHaveBeenCalledTimes(1);
 });

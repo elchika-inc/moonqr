@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { decode } from "./decode.js";
-import { encodeJs } from "./core-encode.js";
+import { describe, expect, it } from "vitest";
 import { rasterize } from "../test/lib/rasterize.mjs";
+import { encodeJs } from "./core-encode.js";
+import { decode } from "./decode.js";
 
 const EC = { L: 0, M: 1, Q: 2, H: 3 } as const;
 
@@ -120,16 +120,13 @@ describe("decode", () => {
     ["negative", -1, -1],
     ["zero", 0, 0],
   ];
-  it.each(INVALID_DIMENSIONS)(
-    "returns null (never throws) for %s width/height",
-    (_label, width, height) => {
-      const data = new Uint8Array(100);
-      expect(() =>
-        decode(data, width as number, height as number),
-      ).not.toThrow();
-      expect(decode(data, width as number, height as number)).toBeNull();
-    },
-  );
+  it.each(
+    INVALID_DIMENSIONS,
+  )("returns null (never throws) for %s width/height", (_label, width, height) => {
+    const data = new Uint8Array(100);
+    expect(() => decode(data, width as number, height as number)).not.toThrow();
+    expect(decode(data, width as number, height as number)).toBeNull();
+  });
 
   it.each([
     ["null", null],

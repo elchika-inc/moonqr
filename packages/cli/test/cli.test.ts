@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { describe, it, expect } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 import { run } from "../src/cli.js";
 
 const noEnv = {} as NodeJS.ProcessEnv;

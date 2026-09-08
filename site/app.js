@@ -3,7 +3,7 @@
 // i18n（英語デフォルト・日本語切替）は ./i18n.js を参照。
 import { encode, toSvgString } from "@elchika-inc/moonqr/encode";
 import { QrScanner } from "@elchika-inc/moonqr-scanner";
-import { t, getLang, setLang, onLangChange, initI18n } from "./i18n.js";
+import { getLang, initI18n, onLangChange, setLang, t } from "./i18n.js";
 import { buildCameraResult, buildResultCard } from "./result-card.js";
 
 initI18n();

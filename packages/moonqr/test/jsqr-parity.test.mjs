@@ -13,12 +13,13 @@
 // negativeケース）。ground truth が存在しないため、これらは「テキスト一致」
 // 指標の分母から除外し、raw success/failure（何か結果を返したか）のみを
 // 参考記録する（brief の指示通り）。
-import { test } from "node:test";
+
 import assert from "node:assert";
-import { readFileSync, readdirSync, existsSync, appendFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import jsQR from "jsqr";
 import { PNG } from "pngjs";
 
@@ -29,8 +30,7 @@ const fetchScript = join(repoRoot, "scripts", "fetch-fixtures.mjs");
 const resultMdPath = join(repoRoot, "bench", "RESULT.md");
 
 // ビルド出力パス規約は roundtrip.test.mjs 等と同じ。
-const decodeMod = await import(
-  "../../../core/_build/js/release/build/decode/decode.js");
+const decodeMod = await import("../../../core/_build/js/release/build/decode/decode.js");
 const { decode_js } = decodeMod;
 
 test("jsQR e2e corpus parity: our success count >= jsQR success count (spec rubric 1)", () => {

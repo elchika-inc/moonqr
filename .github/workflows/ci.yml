@@ -78,6 +78,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint and format check (Biome)
+        run: pnpm run lint
+
       - name: Build packages (tsup)
         run: pnpm -r build
 

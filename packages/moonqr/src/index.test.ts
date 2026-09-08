@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { decode, encode, toSvgString } from "./index.js";
+import { describe, expect, it } from "vitest";
+import { decode as decodeSubpath } from "./decode.js";
 // サブパス分割後もルートと encode/decode サブパスが同一の実装を指していることを固定する
 // （ルートは encode.ts/decode.ts の re-export であるという契約の回帰テスト）。
 import { encode as encodeSubpath, toSvgString as toSvgStringSubpath } from "./encode.js";
-import { decode as decodeSubpath } from "./decode.js";
+import { decode, encode, toSvgString } from "./index.js";
 
 describe("subpath split", () => {
   it("root entry re-exports the same encode/toSvgString as the encode subpath", () => {
@@ -40,12 +40,15 @@ describe("encode", () => {
   // `constructor`/`toString` は関数を返し、`=== undefined` ガードをすり抜けて
   // 誤った EC レベルの QR が黙って生成される（Map/hasOwn による prototype-safe な
   // ルックアップで防ぐ）。
-  it.each(["__proto__", "constructor", "toString", "valueOf", "hasOwnProperty"])(
-    "returns null on prototype-chain ecLevel key %s",
-    (key) => {
-      expect(encode("HI", { ecLevel: key as any })).toBeNull();
-    },
-  );
+  it.each([
+    "__proto__",
+    "constructor",
+    "toString",
+    "valueOf",
+    "hasOwnProperty",
+  ])("returns null on prototype-chain ecLevel key %s", (key) => {
+    expect(encode("HI", { ecLevel: key as any })).toBeNull();
+  });
   it("get() is bounds-safe", () => {
     const m = encode("HI")!;
     expect(m.get(-1, 0)).toBe(false);

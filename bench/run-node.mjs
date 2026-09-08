@@ -1,6 +1,7 @@
 import { genFrame } from "./gen-frame.mjs";
 
-const WARMUP = 30, ITERS = 200;
+const WARMUP = 30,
+  ITERS = 200;
 const frame = genFrame();
 
 function measure(label, fn) {
@@ -25,7 +26,8 @@ const jsTime = measure("js     ", () => jsMod.bench_kernel(frame, 640, 480));
 // --- wasm-gc backend（core/_build/wasm-gc/release/build/bench/bench.wasm、import不要）---
 const { readFile } = await import("node:fs/promises");
 const wasmBytes = await readFile(
-  new URL("../core/_build/wasm-gc/release/build/bench/bench.wasm", import.meta.url));
+  new URL("../core/_build/wasm-gc/release/build/bench/bench.wasm", import.meta.url),
+);
 const { instance } = await WebAssembly.instantiate(wasmBytes, {});
 const w = instance.exports;
 const wasmTime = measure("wasm-gc", () => {

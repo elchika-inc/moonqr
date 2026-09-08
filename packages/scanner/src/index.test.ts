@@ -8,10 +8,11 @@
 // デコード経路は最低1箇所で実デコーダを通す（brief要件）: escalation テストと
 // scanImage テストは test-raster.ts で生成した実際のQRラスタ画像を実際に
 // decodeNative/decodeMultiScale に流し込む。
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { encode } from "@elchika-inc/moonqr/encode";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QrScanner } from "./index.js";
-import { applyMonitorLattice, rasterizeMatrix, type RasterImage } from "./test-raster.js";
+import { applyMonitorLattice, type RasterImage, rasterizeMatrix } from "./test-raster.js";
 
 // ---- 共有フィクスチャ ----------------------------------------------------
 
@@ -55,7 +56,10 @@ function padToWhiteCanvas(image: RasterImage, size: number): RasterImage {
 // 小スケールから順に**複数レベルを試行して**いることを attemptedScales で観測するための
 // フィクスチャ（latticeImage は最小レベルで即成功するため試行が1回で終わり、順序の検証に
 // 使えない）。
-const smallQrInLargeImage = padToWhiteCanvas(rasterizeMatrix(cleanMatrix, { scale: 4, margin: 4 }), 640);
+const smallQrInLargeImage = padToWhiteCanvas(
+  rasterizeMatrix(cleanMatrix, { scale: 4, margin: 4 }),
+  640,
+);
 
 // ---- canvas モック ---------------------------------------------------------
 // jsdomは<canvas>の2Dコンテキストで実ピクセル操作を行わない（getContextはnullを返す）ため、
@@ -69,7 +73,9 @@ function mockCanvasWith(image: { data: Uint8Array; width: number; height: number
       height: image.height,
     })),
   };
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+    ctx as unknown as CanvasRenderingContext2D,
+  );
   return ctx;
 }
 
@@ -199,7 +205,9 @@ describe("QrScanner#start", () => {
   });
 
   it("rejects on permission denial and never calls onResult", async () => {
-    mockGetUserMedia(() => Promise.reject(new DOMException("Permission denied", "NotAllowedError")));
+    mockGetUserMedia(() =>
+      Promise.reject(new DOMException("Permission denied", "NotAllowedError")),
+    );
     const onResult = vi.fn();
     const scanner = new QrScanner(video, onResult);
 
@@ -230,7 +238,9 @@ describe("QrScanner#stop", () => {
 
 describe("QrScanner throttling", () => {
   it("honors maxScansPerSecond (fewer scan attempts than the unthrottled frame rate)", async () => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"],
+    });
     installFakeWorker();
     const { stream } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));
@@ -257,7 +267,9 @@ describe("QrScanner live-frame decoding", () => {
   it("uses the native-scale fast path and calls onResult for a clean QR (Worker-unavailable fallback)", async () => {
     // globalThis.Worker を用意しない = jsdom既定のまま(Workerは undefined)。
     // worker-handle.ts の InlineWorkerHandle が使われ、実デコーダが同スレッドで走る。
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"],
+    });
     const { stream } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));
     mockCanvasWith(cleanImage);
@@ -276,7 +288,9 @@ describe("QrScanner live-frame decoding", () => {
   });
 
   it("escalates to multiscale after N consecutive failures and recovers a monitor-lattice QR", async () => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"],
+    });
     const { stream } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));
     mockCanvasWith(latticeImage);
@@ -307,10 +321,18 @@ describe("QrScanner stale-response safety (regression)", () => {
   // stop()後に古い応答が配送されても onResult / onError を発火させてはならない
   // （消費者が「成功→stop()→成功画面へ遷移」した直後に二重通知が来る事故を防ぐ）。
   it("does NOT call onResult when a worker response arrives after stop()", async () => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"],
+    });
     installFakeWorker();
     FakeWorker.defer = true; // 応答を保留し、stop()後に手動配送する
-    FakeWorker.deferredResult = { text: "STALE", bytes: new Uint8Array(), version: 1, ecLevel: "M", corners: [] };
+    FakeWorker.deferredResult = {
+      text: "STALE",
+      bytes: new Uint8Array(),
+      version: 1,
+      ecLevel: "M",
+      corners: [],
+    };
     const { stream } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));
     mockCanvasWith(cleanImage);
@@ -375,7 +397,9 @@ describe("QrScanner worker crash", () => {
   });
 
   it("stops scanning after three consecutive worker crashes", async () => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"],
+    });
     installFakeWorker();
     const { stream, tracks } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));
@@ -405,7 +429,9 @@ describe("QrScanner worker crash", () => {
   });
 
   it("resets the consecutive crash count after a normal worker response", async () => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"] });
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance", "Date"],
+    });
     installFakeWorker();
     const { stream } = makeFakeStream();
     mockGetUserMedia(() => Promise.resolve(stream));

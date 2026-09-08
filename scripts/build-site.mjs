@@ -12,9 +12,9 @@
 // ブラウザにはNode解決がないため、site/index.html の <script type="importmap"> でこの
 // ベア指定子を ./assets/ 配下の相対パスへ解決する。従って本スクリプトの出力先ディレクトリ名
 // （assets/moonqr/, assets/moonqr-scanner/）は index.html の importmap と一致させること。
-import { existsSync, mkdirSync, readdirSync, rmSync, copyFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const moonqrDist = path.join(repoRoot, "packages/moonqr/dist");

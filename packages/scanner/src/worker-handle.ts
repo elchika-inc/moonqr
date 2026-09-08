@@ -5,8 +5,8 @@
 // （フォールバックは透過的——エラーとしてonErrorへ出さない。仕様上「Worker/OffscreenCanvas
 // が使えない環境」は想定内の正常系であり、握りつぶすべきエラーとは性質が異なるため）。
 import { decodeMultiScale, decodeNative } from "./decode-core.js";
-import { WORKER_SOURCE } from "./worker-inline.generated.js";
 import type { WorkerRequest, WorkerResponse } from "./worker.js";
+import { WORKER_SOURCE } from "./worker-inline.generated.js";
 
 export interface WorkerHandle {
   postMessage(message: WorkerRequest, transfer: Transferable[]): void;

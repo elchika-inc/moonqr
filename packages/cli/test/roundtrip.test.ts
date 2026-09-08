@@ -6,9 +6,10 @@
  * 復元した行列を画素へ展開してデコーダに通せば、「見た目は QR に見えるが 1
  * モジュールずれている」類の不具合を CI で検出できる。
  */
-import { describe, it, expect } from "vitest";
-import { encode } from "@elchika-inc/moonqr/encode";
+
 import { decode } from "@elchika-inc/moonqr/decode";
+import { encode } from "@elchika-inc/moonqr/encode";
+import { describe, expect, it } from "vitest";
 import { render } from "../src/render.js";
 
 /** render の出力（色なし）から論理行列を復元する */

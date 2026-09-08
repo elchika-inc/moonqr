@@ -20,20 +20,14 @@ const translate = (key, vars) => (vars ? `${key}:${JSON.stringify(vars)}` : key)
 test("site result card keeps a quote-bearing file name inside the alt attribute", () => {
   withDocument(() => {
     const fileName = 'x" onerror="alert(1)  .png';
-    const card = buildResultCard(
-      { kind: "fail", fileName, thumbUrl: "blob:demo" },
-      translate,
-    );
+    const card = buildResultCard({ kind: "fail", fileName, thumbUrl: "blob:demo" }, translate);
     const image = card.querySelector("img");
 
     assert.ok(image);
     assert.equal(image.alt, fileName);
     assert.equal(image.getAttribute("onerror"), null);
     assert.doesNotMatch(image.outerHTML, /\sonerror="/);
-    assert.match(
-      image.outerHTML,
-      /alt="x&quot; onerror=&quot;alert\(1\)  \.png"/,
-    );
+    assert.match(image.outerHTML, /alt="x&quot; onerror=&quot;alert\(1\) {2}\.png"/);
   });
 });
 

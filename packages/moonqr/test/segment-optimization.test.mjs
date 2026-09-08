@@ -1,9 +1,9 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import QRCode from "qrcode";
-import jsQR from "jsqr";
 import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";
+import { test } from "node:test";
+import jsQR from "jsqr";
+import QRCode from "qrcode";
 
 const require = createRequire(import.meta.url);
 const enc = require("../../../core/_build/js/release/build/encode/encode.js");
@@ -22,8 +22,7 @@ function minVersion(text, ec) {
 
 // 効果が出る形（byte に落ちる文字 + 長い数字列）を中心に、
 // 効果が出ない形（単一モード・短い数字列）も混ぜる
-const digits = (n) =>
-  Array.from({ length: n }, (_, i) => String((i * 7) % 10)).join("");
+const digits = (n) => Array.from({ length: n }, (_, i) => String((i * 7) % 10)).join("");
 
 const CASES = [
   "https://ex.com/id/12345",
@@ -103,7 +102,11 @@ test("auto version selection matches forced search within 5 seconds", () => {
   const autoElapsed = performance.now() - autoStarted;
   const forcedVersion = minVersion(text, EC.M);
   assert.notEqual(flat.length, 0, "alternating 1,000-char input must fit a QR code");
-  assert.equal((flat[0] - 17) / 4, forcedVersion, "auto and forced search must choose the same version");
+  assert.equal(
+    (flat[0] - 17) / 4,
+    forcedVersion,
+    "auto and forced search must choose the same version",
+  );
   assert.ok(autoElapsed < 5_000, `encoding took ${autoElapsed.toFixed(0)}ms (limit: 5000ms)`);
 });
 
@@ -162,10 +165,21 @@ test("alternating-run planning stays below three times a single-run baseline", (
 test("obviously over-capacity input is rejected before segment planning", () => {
   const text = "a1".repeat(10_000);
   const started = performance.now();
-  assert.deepEqual(enc.encode_js(text, EC.L, 0), [], "auto version must reject over-capacity input");
-  assert.deepEqual(enc.encode_js(text, EC.L, 40), [], "explicit version must reject over-capacity input");
+  assert.deepEqual(
+    enc.encode_js(text, EC.L, 0),
+    [],
+    "auto version must reject over-capacity input",
+  );
+  assert.deepEqual(
+    enc.encode_js(text, EC.L, 40),
+    [],
+    "explicit version must reject over-capacity input",
+  );
   const elapsed = performance.now() - started;
-  assert.ok(elapsed < 1_000, `over-capacity rejection took ${elapsed.toFixed(0)}ms (limit: 1000ms)`);
+  assert.ok(
+    elapsed < 1_000,
+    `over-capacity rejection took ${elapsed.toFixed(0)}ms (limit: 1000ms)`,
+  );
 });
 
 test("Model 2 absolute capacity boundary is inclusive", () => {

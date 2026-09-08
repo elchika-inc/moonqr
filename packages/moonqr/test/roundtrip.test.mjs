@@ -2,16 +2,15 @@
 // encode_js → rasterize → decode_js のラウンドトリップ結合テスト。
 // 「カメラ撮影っぽい歪み」（回転・透視・ノイズ・色反転）を通した状態で
 // decode がJS境界から実際に動くかを検証する、デコーダ初のE2E試験。
-import { test } from "node:test";
+
 import assert from "node:assert";
+import { test } from "node:test";
 import { rasterize } from "./lib/rasterize.mjs";
 
 // ビルド出力パス規約は matrix-parity.test.mjs / version-sweep.test.mjs と同じ
 // (core/_build/js/release/build/... が実体。brief記載の core/target/... ではない)
-const encodeMod = await import(
-  "../../../core/_build/js/release/build/encode/encode.js");
-const decodeMod = await import(
-  "../../../core/_build/js/release/build/decode/decode.js");
+const encodeMod = await import("../../../core/_build/js/release/build/encode/encode.js");
+const decodeMod = await import("../../../core/_build/js/release/build/decode/decode.js");
 const { encode_js } = encodeMod;
 const { decode_js } = decodeMod;
 
@@ -150,11 +149,16 @@ test("roundtrip geometry pin: perspective shear (affine arithmetic)", () => {
   assert.equal(flat[0], 25);
   const k = 0.12;
   const result = decodeRasterized(flat, {
-    scale: 4, margin: 4, perspective: { tl: { x: k }, tr: { x: k } },
+    scale: 4,
+    margin: 4,
+    perspective: { tl: { x: k }, tr: { x: k } },
   });
   assert.notEqual(result, null);
   assert.equal(result.text, PERSPECTIVE_TEXT);
-  const W = 132, pad = 2, m = 16, s = 100;
+  const W = 132,
+    pad = 2,
+    m = 16,
+    s = 100;
   const expX = (px) => k * W + px - (px / W) * k * W + pad;
   const tol = 4;
   const tl = result.corners[0];
@@ -178,7 +182,8 @@ test("roundtrip geometry pin: perspective trapezoid (projective, DLT-derived)", 
   const flat = encode_js(PERSPECTIVE_TEXT, EC_NUM.M, 2);
   assert.equal(flat[0], 25);
   const result = decodeRasterized(flat, {
-    scale: 4, margin: 4,
+    scale: 4,
+    margin: 4,
     perspective: { tl: { x: 0.08, y: 0 }, tr: { x: -0.08, y: 0 } },
   });
   assert.notEqual(result, null);
@@ -208,7 +213,10 @@ test("roundtrip inverted: v2-M black/white swapped", () => {
   const flat = encode_js("INVERT ME", EC_NUM.M, 2);
   assert.notEqual(flat.length, 0);
   const { data, width, height } = rasterize(flat, {
-    scale: 4, margin: 4, black: 220, white: 30,
+    scale: 4,
+    margin: 4,
+    black: 220,
+    white: 30,
   });
   assert.equal(decode_js(data, width, height, false), "", "must NOT decode without invert");
   const out = decode_js(data, width, height, true);
