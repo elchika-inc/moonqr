@@ -90,3 +90,25 @@
 - **確定した偽陽性**:
   - なし
 <!-- review-cycle:end moonqr-cli-published-07a312e -->
+
+<!-- review-cycle:start moonqr-merge-policy-e1bba09 -->
+## 2026-09-08 merge_policy の人間承認と例外理由の記録
+- **Cycle ID**: moonqr-merge-policy-e1bba09
+- **対象 HEAD**: e1bba09df1ce10540ab6d597a60d29d5668f1682
+- **対象差分**: `AGENTS.md` の `branch_policy` 直後への指定5行の追加
+- **総ラウンド数**: 1（上限2）
+- **終了理由**: 初回ラウンドで全3レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: Domain 0 / Ambiguity Hunter 0 / Fresh Eyes 0
+- **適用順**: Domain → Ambiguity Hunter → Fresh Eyes
+- **Domain**: standards `DOCS_OPS.md` §5 と照合し、`human`・人間承認・owner の既定 `auto-on-green` との差・例外理由が同じ記録にあることを確認
+- **Ambiguity Hunter**: 挿入文に誤運用を生む二義性や競合定義がないことを確認
+- **Fresh Eyes**: 指定文言・行40への挿入・5行追加・周辺行と `standards_version` の保持を確認
+- **対象外レンズ**: Security / Core Logic / Tests / Altitude はコード変更なし・5行の文書追加のため対象外
+- **レビュアー**: Codex 1名（codex exec --sandbox read-only の独立サブセッションが3レンズを直列適用）
+- **実行経路**: Orca の `task-create` が `run_required` で拒否されたため、司令塔の明示指示で上記サブセッションを使用。別 Run は作成していない
+- **検証範囲**: 存在／不在の grep と diff。今回の文書追加に動作検証はない
+- **optional**: 0件
+- **ACCEPTED_RISKS**: なし
+- **確定した偽陽性**:
+  - なし
+<!-- review-cycle:end moonqr-merge-policy-e1bba09 -->
