@@ -112,3 +112,31 @@
 - **確定した偽陽性**:
   - なし
 <!-- review-cycle:end moonqr-merge-policy-e1bba09 -->
+
+<!-- review-cycle:start moonqr-risk-anchor-df47a26 -->
+## 2026-09-08 受容リスクの ID・状態・anchor 整備
+- **Cycle ID**: moonqr-risk-anchor-df47a26
+- **対象 HEAD**: df47a26a2684c6df7d692bace8039280f09dd554
+- **初回対象 HEAD**: 44f767410721a6ab49adb6471fa344d0ac97210b
+- **対象差分**: `.docs/risk-registry.md` の記法節追加、10件の番号付け・日付順整列、Status / Date / anchor / Resolved 追加。既存本文41段落を保持
+- **総ラウンド数**: 2（上限3）
+- **終了理由**: round 1 の3件を司令塔の裁定で修正し、round 2 で全3レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: round 1 は Domain 3 / Fresh Eyes 0 / Ambiguity Hunter 2、round 2 は Domain 0 / Fresh Eyes 0 / Ambiguity Hunter 0
+- **指摘の重複**: round 1 の Ambiguity Hunter 2件は Domain と同一欠陥。ユニークな指摘は3件
+- **適用順**: Domain → Fresh Eyes → Ambiguity Hunter
+- **Domain**: standards `DOCS_OPS.md` §3 の anchor 定義・禁止事項を読み、accepted 9件それぞれの外部観測と参照先の実体を照合。RISK-003 の resolved と解消先も確認
+- **Fresh Eyes**: RISK-001〜010 の一意な順序、日付の非降順、accepted 9件・resolved 1件、旧見出し0件、指定記法節と既存本文41段落の保全を確認
+- **Ambiguity Hunter**: 記法節と anchor の二義性、round 1 指摘と修正の対応を確認
+- **修正した指摘**:
+  - DOMAIN-001 / AMBIGUITY-001（RISK-002）: 5,000ms 検査は auto 経路のみと明記。明示 version 経路は160ケースの実行、CI所要時間、実装の PR diff、利用者の GitHub Issue を観測先とした
+  - DOMAIN-002（RISK-005）: 帯 DP の再利用箇所を `encode.mbt` 16〜38行へ訂正し、`segment.mbt` の `optimal_segments` 本体と区別した
+  - DOMAIN-003 / AMBIGUITY-002（RISK-008）: ESM の encode 実行、CJS export の型確認、CLI version 確認、scanner は install 成否までという観測範囲を明記した
+- **裁定と修正コミット**: anchor 文言の修正権を持つ司令塔が3件を起草ミスとして認め、指定全文の差し替えを指示。RISK-008 は CJS 実行という修正案を実手順と再照合し、export 型確認への追加裁定を受けた。3件を `df47a26a2684c6df7d692bace8039280f09dd554` で修正し、他6件の anchor と既存本文は保持
+- **対象外レンズ**: Security / Core Logic / Tests / Altitude はコード変更なし・文書の書式変更のため対象外
+- **レビュアー**: 各ラウンド Codex 1名（`codex exec --sandbox read-only` の独立サブセッションが3レンズを直列適用、実行終了コードはいずれも0）
+- **検証範囲**: 存在／不在の grep・diff・検査スクリプトの実行。`anchor_checked=9 anchor_missing=0` は exit 0、anchor 欠落 fixture は exit 1。本文抽出・sort 後の diff は差分0。製品テスト・型検査はローカル未実行で、PR の CI `test` check で別途確認する
+- **optional**: 0件
+- **ACCEPTED_RISKS**: なし（指摘は修正で対応）
+- **確定した偽陽性**:
+  - なし
+<!-- review-cycle:end moonqr-risk-anchor-df47a26 -->
