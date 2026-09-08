@@ -46,6 +46,48 @@ pnpm -r typecheck
 `.github/workflows/ci.yml` follows this exact order; if you change it there, mirror the change
 here.
 
+### デモサイトをローカルで表示する
+
+リポジトリのルートから、次の順序で実行します。
+
+1. 依存をインストールします。
+
+   ```sh
+   pnpm install --frozen-lockfile
+   ```
+
+2. MoonBit toolchain を PATH に追加し、core をビルドします。
+
+   ```sh
+   export PATH="$HOME/.moon/bin:$PATH"
+   cd core && moon build --target js --release && cd ..
+   ```
+
+3. TypeScript packages をビルドします。
+
+   ```sh
+   pnpm -r build
+   ```
+
+4. `site/assets/` を生成します。
+
+   ```sh
+   pnpm run build:site
+   ```
+
+5. HTTP サーバーを起動します。
+
+   ```sh
+   python3 -m http.server 8765 --directory site
+   ```
+
+6. ブラウザで <http://localhost:8765/> を開きます。
+
+`site/index.html` は import map と ES modules を使うため、`file://` では動きません。
+HTTP 配信が必須です。`site/assets/` は gitignore 対象ですが、存在しないとページの読み込みに
+失敗するため、必ず手順4まで実行してからサーバーを起動してください。
+確認が終わったら、サーバーを起動したターミナルで `Ctrl+C` を押して停止します。
+
 ## The test layers
 
 Each layer proves something different — run every layer before opening a PR. Do not use a fixed
