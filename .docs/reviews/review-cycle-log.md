@@ -140,3 +140,27 @@
 - **確定した偽陽性**:
   - なし
 <!-- review-cycle:end moonqr-risk-anchor-df47a26 -->
+
+<!-- review-cycle:start moonqr-biome-1025cd4 -->
+## 2026-09-08 Biome 導入・既存違反修正・CI 検査の配線
+- **Cycle ID**: moonqr-biome-1025cd4
+- **対象 HEAD**: 1025cd451a5331d7501bd8636d9767510eccb5ca
+- **対象差分**: Biome 2.3.10 の設定・完全固定依存・scripts・lockfile、38ファイルの安全な自動修正と指定2件の手動修正、CI の lint step、AGENTS.md の check 行
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全4レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: Core Logic 0 / Tests 0 / Domain 0 / Fresh Eyes 0
+- **適用順**: Core Logic → Tests → Domain → Fresh Eyes
+- **Core Logic**: 全38コードファイルの差分、import・export 整列の副作用、ループの入れ子、matrix 全比較 count の実行順と参照を確認。指定された export 削除・抑制コメント以外は安全な自動修正で、挙動を変える差分なし
+- **Tests**: 保存された実ログを確認。MoonBit 127 pass、Node 284 pass / fail 0 / skipped 0、Vitest は12 files / 108 tests（moonqr 53・CLI 25・scanner 30）全件 pass。CLI の条件付き bin テストも実行されていることを照合
+- **Domain**: indentWidth 2 / lineWidth 100 / double quote と schema・依存・lockfile の 2.3.10 一致を確認。required `test` job の Install dependencies 直後・Build packages 直前の lint 配線、AGENTS.md の指定1行置換、変更範囲を照合
+- **Fresh Eyes**: 全43ファイルと保存済み lint・build・typecheck・fixture・全テスト・self-test ログを総合照合。correctness・セキュリティ・明示要件に影響する指摘なし
+- **検証範囲**: lint の実行・全テストスイートの実行・grep と diff。最終 lint は exit 0 / 64 files / warnings 19 / infos 9。core release build を先行し、packages build・typecheck・fixture 取得も exit 0。`core/` と指定されたスコープ外ファイルは差分0
+- **self-test**: 元の `/tmp` ファイルは includes 外で0 filesとなったため、司令塔の裁定で検査対象内の一時ファイルへ訂正。1 file / 1 format error / exit 1、削除後64 files / exit 0、git status の前後一致を確認
+- **司令塔の訂正**: 初回 errors 55 は package.json 除外前68 filesの値であり、配布設定では64 files / errors 52。設定自身の整形診断も確認されたため、人間が整形済み設定を再配置。worker は設定へ書き込まず、自動修正前後の SHA-256 一致を確認
+- **対象外レンズ**: Security / Altitude / Ambiguity は設定導入と機械整形で、新規の実装判断・仕様文言を含まないため対象外
+- **レビュアー**: Codex 1名（gpt-5.6-sol / high、`codex exec --sandbox read-only` の独立サブセッション、終了コード0）。全レンズを直列適用し、別 Run は作成していない
+- **収束の対**: Key Commands の test / check の全検査コマンドを実行して exit 0。UI の挙動変更はなく、ブラウザ・実カメラ検証は対象外
+- **INSPECTION_STATUS**: flag 0 / optional 0件
+- **ACCEPTED_RISKS**: なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-biome-1025cd4 -->
