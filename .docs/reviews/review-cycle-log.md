@@ -213,3 +213,33 @@
 - **ACCEPTED_RISKS**: なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-readme-sections-949865e -->
+<!-- review-cycle:start moonqr-status-sheet-f25dc5b -->
+## 2026-09-09 ステータスシートと standards 監査 checkpoint の整備
+- **Cycle ID**: moonqr-status-sheet-f25dc5b
+- **対象 HEAD**: f25dc5b6db553f4928309f87db75688603a7d47d（この HEAD に対する作業差分をレビュー）
+- **対象差分**: `.docs/STATUS.md` と `.docs/reviews/standards-audit.md` の新設、`.docs/PROJECT_GOAL.md` の状態列を除いた基準の箇条書き化。レビュー後に本ブロックを末尾へ追記
+- **総ラウンド数**: 3（上限3）
+- **終了理由**: round 1 の2件、round 2 の1件を司令塔が原稿の欠陥として認めて修正し、round 3 で全3レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: round 1 は Domain 0 / Fresh Eyes 1 / Ambiguity Hunter 1、round 2 は Domain 0 / Fresh Eyes 1 / Ambiguity Hunter 0、round 3 は Domain 0 / Fresh Eyes 0 / Ambiguity Hunter 0
+- **適用順**: Domain → Fresh Eyes → Ambiguity Hunter
+- **Domain**: standards `DOCS_OPS.md` §3 と `AUDIT.md` の checkpoint 契約、STATUS 雛形を読み、4節・frontmatter・6エントリの分類と入口・相対リンク・40桁 SHA の実在と祖先性を照合
+- **Fresh Eyes**: `git show origin/main:.docs/PROJECT_GOAL.md` の旧状態列12行を STATUS の状況欄12行と1行ずつ突き合わせ、最終ラウンドで移行漏れ0件。基準・条件各6行の文言、指定導入文、4見出し、冒頭と後半2節の完全保持を確認
+- **Ambiguity Hunter**: 状況欄12行は「達成」で二値判定が確定し、補足と判定が分離されていることを確認。checkpoint の走査開始点の除外も確認
+- **レビュー開始前の補完**: worker が圧縮の具体例、デコーダコード不含有、CLI のリポジトリ外検証手順の3点の欠落を検出。司令塔が原稿を補完し、worker は更新原稿を完全一致でコピー
+- **修正した指摘**:
+  - FE-001（round 1、99%）: CLI の QR 出力基準に対して version 確認だけでは証拠不足。司令塔がリポジトリ外で公開パッケージを install し、`npx moonqr --no-color https://example.com` が17行の QR を出力して exit 0、`npx moonqr --version` が `0.1.0` を返すことを実測。原稿へ追記し確認日を2026-09-09へ更新、round 2・3で解消確認
+  - AMB-001（round 1、95%）: checkpoint の始点を含むかが曖昧。司令塔が `last_verified_commit` を除外し、その次のコミットから `HEAD` まで完全走査すると原稿へ明記、round 2・3で解消確認
+  - FE-002（round 2、99%）: 確認日更新時に CLI の公開日が欠落。司令塔が2026-09-02公開という補足を原稿へ追加し、追加実測と確認日2026-09-09を保持、round 3で解消確認
+- **原稿の扱い**: 3件の flag は司令塔へ `orca orchestration ask` で返し、修正版をコピーした。worker による原稿への直接編集や flag の格下げはない
+- **対象外レンズ**: Security / Core Logic / Tests / Altitude はコード変更なしのため対象外
+- **レビュアー**: 各ラウンド Codex 1名（gpt-5.6-sol / high、`codex exec --sandbox read-only` の独立サブセッション、各実行 exit 0）。round 3 は round 2 のサブセッションを再開し、3レンズを再適用。別 Run は作成していない
+- **応答形式の訂正**: round 1 で先頭行の形式が逸脱したため、同じサブセッションへ再評価なしの形式訂正を1回依頼し、exit 0。所見を変更せずレンズ別に保存した。追加ラウンドには数えない
+- **検証範囲**: grep と diff、リンクの実在確認。原稿2件との diff は差分0、updated と last_verified_commit は各1件、入口の未掲載は0件、相対リンク10件は全件実在。PROJECT_GOAL の達成マークは0件で期待どおり rg exit 1、4見出しを保持
+- **検証の補足**: lint は exit 0 / 64 files / warnings 19 / infos 9で既存レビュー記録の件数と一致。製品テスト・型検査はローカル未実行で、PR の CI `test` check と分けて記録する。ブラウザ検証は `site/` 変更なしのため対象外
+- **副作用の確認**: 各ラウンド前後で対象3ファイルの SHA-256 が一致し、レビュアーによる変更なし。read-only 環境で Xcode 一時キャッシュ作成警告が出たが、本文・Git 差分・祖先性の検査は結果と exit code を確認
+- **optional**: round 1 に1件（CLI 基準名の短縮）。司令塔が正本の基準名へ一致させ、round 2・3は0件
+- **裁量で変えた点**: レビュー記録と PR 本文の構成のみ。原稿本文の変更はすべて司令塔の裁定と原稿差し替えによるもの
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: なし（全指摘を修正で対応）
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-status-sheet-f25dc5b -->
