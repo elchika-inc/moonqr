@@ -84,7 +84,7 @@ moon add naoto24kawa/moonqr
 let matrix = @encode.encode("HELLO", @encode.EcLevel::M, None)
 ```
 
-## Development
+## Getting Started
 
 Requires the MoonBit toolchain (for `core/`) and Node.js 18.18+ / pnpm 10.
 
@@ -96,6 +96,28 @@ export PATH="$HOME/.moon/bin:$PATH"
 # JS/TS workspace
 pnpm install --frozen-lockfile
 ```
+
+For a quick start with the published npm packages, use the install example and package guides in
+[Packages](#packages).
+
+## Development
+
+After setup, run these commands from the repository root. The MoonBit core in `core/` supplies
+the JavaScript bundled into `packages/`; `site/` contains the demo. See
+[Repository layout](#repository-layout) for the full structure.
+
+| Command | What it does |
+|---|---|
+| `cd core && moon build --target js --release && cd .. && pnpm -r build` | Build the MoonBit core first, then the TypeScript packages so tsup inlines the current core output. |
+| `cd core && moon test --target js` | Run the MoonBit tests; return to the repository root afterward. |
+| `node --test packages/moonqr/test/*.test.mjs` | Run jsQR parity and encoder sweep tests after building and fetching fixtures. |
+| `pnpm -r test:unit` | Run Vitest suites in all packages after building. |
+| `pnpm -r typecheck` | Check package types after building. |
+| `pnpm run lint` | Check lint and formatting with Biome. |
+| `node scripts/fetch-fixtures.mjs` | Download and cache the jsQR corpus at a pinned commit; required once before the parity tests. |
+| `node scripts/build-site.mjs` | Regenerate `site/assets/` from the built packages. |
+| `python3 -m http.server 8765 --directory site` | Serve the demo at <http://localhost:8765/> after generating the site assets; the import map and ES modules need HTTP and those assets. |
+| Manual: [RELEASING.md](RELEASING.md) | Follow the release procedure. |
 
 Build and test everything:
 
@@ -142,6 +164,13 @@ scripts/               repo-level dev scripts (fixtures, site build, table gener
 - **Structured Append and Micro QR are not supported.** The decoder rejects Structured Append
   symbols instead of returning partial or empty output. Only standard (Model 2) QR codes are
   handled.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution guide.
+Report vulnerabilities through the private channel in [SECURITY.md](SECURITY.md), not public issues.
+Pull requests must disclose provenance, including ports and AI-generated contributions;
+the PR template asks for these details.
 
 ## License and attribution
 
