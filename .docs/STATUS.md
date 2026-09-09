@@ -8,7 +8,7 @@ updated: 2026-09-09
 
 - フェーズ: 公開済み。npm の 3 パッケージ、mooncakes.io の MoonBit モジュール、GitHub Pages のデモがいずれも稼働している
 - 公開中の版: `@elchika-inc/moonqr` 0.2.0 / `@elchika-inc/moonqr-scanner` 0.2.0 / `@elchika-inc/moonqr-cli` 0.1.0
-- 直近の完了: standards 監査（2026-09-08 実施、rev.89 を参照）で検出した MUST 違反 4 件の解消（[#34](https://github.com/elchika-inc/moonqr/pull/34) / [#36](https://github.com/elchika-inc/moonqr/pull/36) / [#37](https://github.com/elchika-inc/moonqr/pull/37) / [#38](https://github.com/elchika-inc/moonqr/pull/38)）
+- 直近の完了: standards 監査（2026-09-08 実施、rev.89 を参照）で検出した MUST 違反 4 件の解消（[#34](https://github.com/elchika-inc/moonqr/pull/34) / [#36](https://github.com/elchika-inc/moonqr/pull/36) / [#37](https://github.com/elchika-inc/moonqr/pull/37) / [#38](https://github.com/elchika-inc/moonqr/pull/38)）、README のセクション整備（[#39](https://github.com/elchika-inc/moonqr/pull/39)）、ステータスシートと監査 checkpoint の整備（[#40](https://github.com/elchika-inc/moonqr/pull/40)）、`standards_version` の rev.89 への更新
 - 生成物の鮮度: `site/assets/` はビルドのたびに生成する（gitignore 対象。手順は [`../CONTRIBUTING.md`](../CONTRIBUTING.md)）。`core/src/encode/tables.mbt` と `core/src/decode/sjis.mbt` は固定した上流コミットから生成済み
 - open Issue は `gh issue list --state open` を正とし、ここに件数を写さない
 

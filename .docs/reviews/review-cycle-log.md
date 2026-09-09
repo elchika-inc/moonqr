@@ -243,3 +243,30 @@
 - **ACCEPTED_RISKS**: なし（全指摘を修正で対応）
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-status-sheet-f25dc5b -->
+
+<!-- review-cycle:start moonqr-rev89-7a4a37d -->
+## 2026-09-09 standards_version の rev.89 更新と og:image 未対応の受容記録
+- **Cycle ID**: moonqr-rev89-7a4a37d
+- **対象 HEAD**: 7a4a37d6495a92d4499749580a9b00cce1ca706c（この HEAD に対する作業差分をレビュー）
+- **対象差分**: AGENTS.md の standards_version 1行置換、risk-registry.md 末尾への起草済み RISK-011 の無変更追記、STATUS.md の直近の完了1行更新。レビュー後に本ブロックを末尾へ追記
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全3レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: Domain 0 / Fresh Eyes 0 / Ambiguity Hunter 0
+- **適用順**: Domain → Fresh Eyes → Ambiguity Hunter
+- **Domain**: standards CHANGELOG.md 16行目の `## 2026-09-07 (rev.89)` を固定文字列一致で確認。DOCS_OPS.md §3 と AI_FIRST.md §3 を読み、RISK-011 の anchor が Issue #41 の open / closed 状態と site/index.html の PR diff という受容者以外の観測を指すことを照合
+- **Fresh Eyes**: AGENTS.md 36行目以外の保持、旧 rev.71 の0件、既存 RISK-001〜010 の全文保全、RISK-011 と原稿の完全一致、空行・区切り・空行の書式、STATUS の updated 保持と直近の完了1行を照合。スコープ外ファイルの差分なし
+- **Ambiguity Hunter**: 画像デザインの判断を Issue #41 の独立変更へ委ねる受容理由と、デザイン方針決定・共有需要・SHOULD の MUST 化という3つの再検討条件を確認。実務上の誤運用につながる二義性なし
+- **検証範囲**: grep と diff、検査スクリプトの実行。版宣言は36行目1件 / exit 0、旧版は0件 / exit 1、CHANGELOG の固定文字列照合は16行目1件 / exit 0、RISK は11件、RISK-011 は176行目1件。原稿との diff は出力なし / exit 0、updated は2行目1件 / exit 0
+- **anchor 検査**: AUDIT.md の関数を指定の awk で抽出して実行し、`anchor_checked=10 anchor_missing=0` / exit 0。独立レビュアーの再実行も同じ結果
+- **self-test**: リポジトリ外の一時ファイルに RISK-999 / Status accepted / Rationale y の3行だけを置き、`anchor 欠落: RISK-999` / exit 1を実測。確認後に一時ファイルを削除。レビュアーは削除済みパスの再実行が exit 2、read-only で代替入力を作成できなかったため、実装担当の保存済み出力と exit code を照合
+- **lint**: 実装担当・レビュアーとも `pnpm run lint` は exit 0 / 64 files / warnings 19 / infos 9。診断8件は表示上限により省略。既存コードの診断は変更対象外
+- **検証の補足**: 製品テスト・型検査はローカル未実行で、PR 作成後に CI の test check と各ステップの結果を別途確認する。ブラウザ検証は site/ 変更なしのため対象外
+- **対象外レンズ**: Security / Core Logic / Tests / Altitude はコード変更なしのため対象外
+- **レビュアー**: Codex 1名（gpt-5.6-sol / high、`codex exec --sandbox read-only` の独立サブセッション、終了コード0）。3レンズを直列適用し、別 Run は作成していない
+- **副作用の確認**: レビュー前後で対象4ファイルと起草済み原稿の SHA-256 が一致し、レビュアーによる変更なし
+- **運用上の警告**: 利用していない Context7 MCP のセッション失効エラーと、read-only 環境の Xcode 一時キャッシュ作成警告が出たが、ローカル正本・差分の検査は期待結果と exit code を確認。Issue #41 の live 確認はネットワーク遮断で gh exit 1となり、司令塔の実測済み前提を使用
+- **裁量で変えた点**: STATUS の1行は MUST 違反4件の解消を保持し、README セクション整備（#39）、ステータスシートと監査 checkpoint 整備（#40）、standards_version の rev.89 更新を追加。レビュー記録と PR 本文の構成も実装担当が記述
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: レビュー指摘の受容なし。今回記録する SHOULD 逸脱は RISK-011
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-rev89-7a4a37d -->
