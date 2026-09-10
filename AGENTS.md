@@ -8,6 +8,11 @@ repository, so the `standards_version` below is recorded as a plain value rather
 the corresponding README badge is omitted: a badge linking into a private repository reads as a
 broken link to everyone outside it.
 
+The README also omits the Deploy badge. The standards require one for a `deploy.yml` workflow;
+this repository has no `deploy.yml` and deploys the demo from `pages.yml` instead, so the
+exemption holds by filename even though a deploy does exist. The reasoning is recorded as
+RISK-013 in [`.docs/risk-registry.md`](.docs/risk-registry.md).
+
 ## Project Overview
 
 QR code encoder and decoder written in MoonBit, compiled to plain JavaScript and shipped as
@@ -33,7 +38,7 @@ location, tracked in git.
 - pnpm workspace. Node.js 18.18+.
 - Not the standard Cloudflare web-service stack — this is a published library, so there is no app,
   no database, and no deploy target beyond npm / mooncakes.io / GitHub Pages.
-- standards_version: 2026-09-07 (rev.89).
+- standards_version: 2026-09-10 (rev.91).
 - branch_policy: protected — `main` requires a pull request and a passing `test` check, with an
   empty bypass list, so the rule applies to administrators as well. An agent and its operator
   share one GitHub token, so a bypass for administrators would also be a bypass for the agent.
