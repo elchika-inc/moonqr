@@ -203,3 +203,20 @@
 - **anchor**: 公開デモ <https://elchika-inc.github.io/moonqr/> の表示。`main` への push ごとに `.github/workflows/pages.yml` が再デプロイするため、表示の破壊は訪問者に見え、GitHub Issue として届く（レビューループの外側の観測）。加えて i18n バインディングは再実行可能な突合で観測できる — `site/i18n.js` を Node から実体 import し（`localStorage` と `document` のスタブが要る）、`site/index.html` の `data-i18n` / `data-i18n-attr` が要求するキーと突合すると、未解決キーが 0 件でなくなった時点で破れが出る。`site/` 配下の以降の変更は PR diff に現れ、Browser verification 欄が未記入なら人間のレビューで見える。
 - **Follow-up**: 次に `site/` を変更する PR で Browser verification 欄が実際に埋まることを確認する。2026-09-10 時点でこの欄が埋まった実績はゼロで、受け皿が機能することは未実証である。
 - **Reconciled**: 2026-09-10 794a6f19b1f0071281b774db00dad97c3426b717
+
+---
+
+## RISK-013: README に Deploy バッジを置かない（MUST からの逸脱）
+
+- **Status**: accepted
+- **Date**: 2026-09-10
+- **Confidence**: high
+- **Discovered**: 2026-09-10 の standards 監査（rev.90 参照）。`DOCS_OPS.md` §1「バッジ」表との突合
+- **Location**: `README.md` 3〜4 行目のバッジ行、`.github/workflows/pages.yml`
+- **Description**: `DOCS_OPS.md` §1 は Deploy バッジを MUST とし、`ci.yml` / `deploy.yml` が存在しないプロジェクトは省略してよいと定める。このリポジトリに `deploy.yml` は無く、デプロイは `pages.yml` が担っている。したがって免除条件は文字どおりには成立するが、デプロイの実体（`main` への push ごとの GitHub Pages 配信）は存在する。免除がワークフローのファイル名の一致だけで成立している状態である。
+- **Why accepted**: バッジを足す場合、規約が想定する `deploy.yml` ではなく `pages.yml` を指すことになり、規約の文面と実装の対応が崩れる。`pages.yml` を `deploy.yml` へ改名する案は、GitHub Pages のデプロイであることが名前から失われ、`.github/workflows/` を読む人間にとって分かりにくくなるため採らない。デプロイ状態の可視化という便益は、リポジトリの Environments `github-pages` に残るデプロイ履歴と `pages.yml` の Actions 実行結果から既に得られており、バッジを足して増える情報は小さい。
+- **Mitigation**: `AGENTS.md` 冒頭に Deploy バッジ省略の宣言を置く（standards バッジの省略宣言と同じ箇所）。`AUDIT.md` が MUST 要素の欠落に求める「宣言」と「受容記録」の両方を満たす。
+- **リスクが顕在化する条件**: Pages のデプロイが失敗し続けているのに、README を見ただけでは気づけない状態が続いた場合。ただしデプロイ失敗はデモページが古いまま残る形で現れる。
+- **anchor**: リポジトリの Environments `github-pages` に記録されるデプロイ履歴と、`pages.yml` の Actions 実行結果。デプロイの成否はここに残り、README のバッジの有無に依存しない。デモページが古いまま残る形の実害は、公開デモ <https://elchika-inc.github.io/moonqr/> の利用者から GitHub Issue として届く。
+- **Follow-up**: standards が Deploy バッジの規定を `deploy.yml` 以外のファイル名にも適用する形へ改訂した場合、または `deploy.yml` という名前のワークフローをこのリポジトリへ追加した場合は、受容を再検討する。
+- **Reconciled**: 2026-09-10 45b21fb9a7df361fb7776a14168f6490d0b04580
