@@ -60,6 +60,9 @@ Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.m
   map and ES modules, so it needs to be served over HTTP, and it fails to load if `site/assets/`
   is missing.
 - release: manual, see [RELEASING.md](RELEASING.md).
+- deploy: N/A — the GitHub Pages demo deploys automatically on every push to `main`
+  ([`.github/workflows/pages.yml`](.github/workflows/pages.yml)); there is no manual deploy
+  command to run. Publishing to npm / mooncakes.io is the `release` entry above.
 
 ## Architecture
 
@@ -101,5 +104,8 @@ Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.m
 
 - dev-data-safety: local — there is no shared environment, database, or deploy target. All
   verification runs locally or in CI.
+- routes / main pages: the demo is a single page (`/`) with three views — `generate`, `read`,
+  and `camera`. Browser verification covers all three; the Browser verification table in
+  `.github/pull_request_template.md` has one row per view.
 - Publishing is the only irreversible outward action, it is manual by design, and it requires a
   human at the npm 2FA prompt. Do not attempt to automate it.
