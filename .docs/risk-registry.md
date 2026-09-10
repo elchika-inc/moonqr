@@ -186,3 +186,20 @@
 **受容理由**: タグの追加自体は小さいが、`og:image` が参照する画像のデザインを決める必要があり、その判断がまだ済んでいない。候補（既存 favicon の QR 図案を 1200×630 に起こす案と、moonqr 自身でデモ URL をエンコードした QR を使う案）と確認方法は Issue #41 に整理した。デザイン判断を伴う作業を `standards_version` の更新に巻き込まず、独立した変更として扱う。
 
 **再検討の条件**: 画像のデザイン方針が決まった場合、デモページの共有が実際に必要になった場合、または OGP を要求する SHOULD が MUST へ格上げされた場合。
+
+---
+
+## RISK-012: PR #37 の UI 変更にブラウザ検証証跡が無い
+
+- **Status**: accepted
+- **Date**: 2026-09-10
+- **Confidence**: high
+- **Discovered**: 2026-09-10 の standards 監査（rev.90）。走査範囲 `38f29a6..338d3dc` の「検証証跡の実在」検査
+- **Location**: PR #37（merge commit `cbdfc81`）が変更した `site/app.js` / `site/i18n.js` / `site/result-card.js`
+- **Description**: standards `AI_FIRST.md` §2 は UI を持つ変更にマージ前のブラウザ検証と証跡（PR への直接添付画像）を MUST とするが、PR #37 の本文・コメントに `user-attachments/assets/` の添付が 0 件だった。§2 は整形のみの変更を除外していないため、実体が Biome の整形であっても違反にあたる。
+- **Why accepted**: ①差分は Biome の整形のみ（`site/i18n.js` は文字列リテラルの折り返し、`site/app.js` は import の並べ替え、`site/result-card.js` は呼び出しの 1 行化。合計 6 挿入 / 12 削除）で、3 ファイルの diff を実測して確認した範囲でロジック・DOM 操作・表示文言のいずれも変えていない。②i18n バインディングが壊れていないことを実測で確認した（下記 anchor の突合。要求キー 60 件が en / ja とも全件解決、言語間の非対称キー 0 件）。これは静的な突合であり、ブラウザでの描画確認ではない。③#37 のマージ時点では証跡を書く欄そのものが存在しなかった（欄を追加した #38 のマージは約 10 時間後）。④遡って証跡を作るには #37 の head を checkout して 3 ビュー × 2 テーマを再検証する必要があり、表示文言とロジックが不変で i18n バインディングに破壊が無いと実測済みの差分に対して費用が便益を上回る。**この受容は「整形のみ・i18n バインディングの整合を実測で確認できた過去の 1 件」に限る。整形なら証跡が要らないという前例にしない。**
+- **Mitigation**: PR #38 が `.github/pull_request_template.md` に `## Browser verification` 表（`/` generate / `/` read / `/` camera）と N/A チェックボックスを追加済み。以降 `site/` を変更する PR はこの欄で証跡を要求される。
+- **リスクが顕在化する条件**: #37 の整形変更が実際にはデモの表示を壊していた場合。i18n バインディングについては下記 anchor の突合で破壊が無いことを確認済みだが、`site/app.js` と `site/result-card.js` の描画は静的突合の対象外であり、実害があれば公開デモ上に現れる。
+- **anchor**: 公開デモ <https://elchika-inc.github.io/moonqr/> の表示。`main` への push ごとに `.github/workflows/pages.yml` が再デプロイするため、表示の破壊は訪問者に見え、GitHub Issue として届く（レビューループの外側の観測）。加えて i18n バインディングは再実行可能な突合で観測できる — `site/i18n.js` を Node から実体 import し（`localStorage` と `document` のスタブが要る）、`site/index.html` の `data-i18n` / `data-i18n-attr` が要求するキーと突合すると、未解決キーが 0 件でなくなった時点で破れが出る。`site/` 配下の以降の変更は PR diff に現れ、Browser verification 欄が未記入なら人間のレビューで見える。
+- **Follow-up**: 次に `site/` を変更する PR で Browser verification 欄が実際に埋まることを確認する。2026-09-10 時点でこの欄が埋まった実績はゼロで、受け皿が機能することは未実証である。
+- **Reconciled**: 2026-09-10 794a6f19b1f0071281b774db00dad97c3426b717
