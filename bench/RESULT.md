@@ -205,13 +205,15 @@ jsQR は `inversionAttempts` オプションで対応: 主計測は `"attemptBot
 | hit | 77.663 | 56.883 | 0.732 | PASS | 76.297 | 57.688 | 0.756 |
 | miss | 175.281 | 130.647 | 0.745 | PASS | 88.004 | 69.190 | 0.786 |
 
-### 判定（スペック rubric 2）
+### 判定（PROJECT_GOAL の SuccessCriteria）
 
-**基準: 自前 median ≤ jsQR median × 1.2 が hit・miss 両フレームで成立すること。**
+**基準: 自前 median ≤ jsQR median × 1.0 が hit・miss 両フレームで成立すること（PROJECT_GOAL「デコーダの速度: jsQR 以下」）。**
 
 **判定: PASS**
 
-### 再測記録（2026-09-18）
+## デコーダ速度の再測記録
+
+### 2026-09-18
 
 `node bench/decode-bench.mjs` を3回実行し、各回の stdout に出力された
 主計測（自前 `invert=true` / jsQR `attemptBoth`）の ratio を確認した。
@@ -225,7 +227,7 @@ jsQR は `inversionAttempts` オプションで対応: 主計測は `"attemptBot
 
 - 測定環境: node `v24.21.0` / moon `0.1.20260713 (75c7e1f 2026-07-13)` /
   jsqr `1.4.0` / arch `arm64` / OS `Darwin`。
-- 判定は PROJECT_GOAL の `<= 1.0` で行った。スクリプトの `RATIO_MAX` は 1.2 で基準が異なる。
+- 2026-07-14 の実装計画（`.docs/plans/2026-07-14-decoder-plan.md`）は rubric 2 として 1.2 を置いていた。PROJECT_GOAL の定義と食い違うため、2026-09-18 に `RATIO_MAX` を 1.0 へ揃えた。
 - 3回すべてで hit・miss の ratio が `<= 1.0` のため達成。
   同一 frame の最大 ratio / 最小 ratio は hit `1.026` / miss `1.030` で、いずれも `<= 1.10`。
 

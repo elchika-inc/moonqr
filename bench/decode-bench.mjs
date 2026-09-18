@@ -2,8 +2,8 @@
 // 時間比較ベンチ。方法論は Phase 1 bench/run-node.mjs と同一
 // （WARMUP=30 / ITERS=200 / median）。
 //
-// 合格基準（スペック rubric 2）: 自前 median ≤ jsQR median × 1.2 が
-// hit フレーム・miss フレームの両方で成立すること。
+// 合格基準（ratio 上限 1.0）: 自前 median ≤ jsQR median が hit・miss 両フレームで成立すること。
+// 正本: PROJECT_GOAL の SuccessCriteria「デコーダの速度: jsQR 以下のフレーム時間」。
 //
 // フレームは2種:
 //   (a) hit  : bench/gen-frame.mjs 由来のノイズ背景に、encode_js で生成した
@@ -179,7 +179,7 @@ for (const [frameName, frame] of [
 }
 
 // --- 判定 ---
-const RATIO_MAX = 1.2;
+const RATIO_MAX = 1.0;
 let allPass = true;
 const rows = [];
 for (const frameName of ["hit", "miss"]) {
@@ -192,13 +192,13 @@ for (const frameName of ["hit", "miss"]) {
   console.log(
     `[${frameName}] jsQR(attemptBoth)=${r.jsqrAttemptBoth.toFixed(3)}ms ` +
       `ours(invert=true)=${r.ourInvertTrue.toFixed(3)}ms ratio=${ratioPrimary.toFixed(3)} ` +
-      `${pass ? "PASS" : "FAIL"} (threshold ${RATIO_MAX}) | ` +
+      `${pass ? "PASS" : "FAIL"} (threshold ${RATIO_MAX.toFixed(1)}) | ` +
       `secondary: jsQR(dontInvert)=${r.jsqrDontInvert.toFixed(3)}ms ` +
       `ours(invert=false)=${r.ourInvertFalse.toFixed(3)}ms ratio=${ratioSecondary.toFixed(3)}`,
   );
 }
 console.log(
-  `\njudgment (rubric 2, ours <= jsQR * ${RATIO_MAX} on BOTH frames): ${allPass ? "PASS" : "FAIL"}`,
+  `\njudgment (PROJECT_GOAL, ours <= jsQR * ${RATIO_MAX.toFixed(1)} on BOTH frames): ${allPass ? "PASS" : "FAIL"}`,
 );
 
 // --- RESULT.md 追記（冪等: 既存セクションがあれば置換、なければ追記） ---
@@ -271,9 +271,9 @@ jsQR は \`inversionAttempts\` オプションで対応: 主計測は \`"attempt
 |---|---|---|---|---|---|---|---|
 ${tableRows}
 
-### 判定（スペック rubric 2）
+### 判定（PROJECT_GOAL の SuccessCriteria）
 
-**基準: 自前 median ≤ jsQR median × ${RATIO_MAX} が hit・miss 両フレームで成立すること。**
+**基準: 自前 median ≤ jsQR median × ${RATIO_MAX.toFixed(1)} が hit・miss 両フレームで成立すること（PROJECT_GOAL「デコーダの速度: jsQR 以下」）。**
 
 **判定: ${allPass ? "PASS" : "FAIL"}**
 `;
