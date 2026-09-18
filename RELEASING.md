@@ -67,6 +67,18 @@ All layers must be green before anything is published.
 
 ## 4. Verify the tarballs before publishing
 
+Rebuild everything first. `prepack` copies the legal files but does not build (see RISK-008 in
+[`.docs/risk-registry.md`](.docs/risk-registry.md)), so `pnpm pack` will happily archive a stale
+`dist/`. One command covers the required order — the MoonBit core first, then the packages that
+bundle it:
+
+```sh
+pnpm run release:build
+```
+
+Step 3 already ran the same build, so this is a no-op when you come straight from it. Run it anyway
+if any time has passed or you switched branches in between.
+
 `pnpm pack` works even when a package is marked private, so you can inspect exactly what would be
 uploaded without risking a publish.
 
@@ -151,6 +163,13 @@ gh release create cli-vX.Y.Z --title "cli-vX.Y.Z" --notes-file <notes>
 ```
 
 ## 9. Update the docs that quote the release
+
+[`CHANGELOG.md`](CHANGELOG.md) carries the release under `## [Unreleased]` while it is still
+unpublished. Now that the tags exist, move that section to `## [X.Y.Z] — YYYY-MM-DD`, give it a
+`→ [Release notes](...)` line pointing at the tag, retarget the `[Unreleased]` link definition to
+`compare/vX.Y.Z...HEAD`, and add a `[X.Y.Z]:` definition. Forgetting this is the failure mode:
+nothing breaks, the entries simply stay under `[Unreleased]` forever and the file stops matching
+what is actually published.
 
 `README.md` and `site/` mention published versions and links. Update them in a pull request, then
 confirm the Pages deploy succeeded **and** that the live page actually renders. A green workflow

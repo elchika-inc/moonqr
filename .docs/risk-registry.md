@@ -129,7 +129,7 @@
 
 - **Status**: accepted
 - **Date**: 2026-08-29
-- **anchor**: `RELEASING.md` §6「Verify from outside the repository」で、publish 後に npm から install した実体に対して core の `encode("HELLO")` を ESM 経路で実行し、CJS 経路では `encode` export が `function` であること、および `npx moonqr --version` が公開版を返すことを確認する。core と CLI の stale な bundle はここで露見しうるが、scanner は install の成否までしか観測されない。`packages/*/package.json` の `prepack` 行の変更は PR diff に現れる。stale な bundle による実害は利用者からの GitHub Issue として届く
+- **anchor**: `RELEASING.md` §6「Verify from outside the repository」で、publish 後に npm から install した実体に対して core の `encode("HELLO")` を ESM 経路で実行し、CJS 経路では `encode` export が `function` であること、および `npx moonqr --version` が公開版を返すことを確認する。core と CLI の stale な bundle はここで露見しうるが、scanner は install の成否までしか観測されない。`packages/*/package.json` の `prepack` 行の変更は PR diff に現れる。stale な bundle による実害は利用者からの GitHub Issue として届く。`package.json` の `release:build` スクリプトと、`RELEASING.md` §4 冒頭の「Rebuild everything first」の段落が、pack 前に必要なビルド順を明示している。どちらかが消えると diff に現れる
 
 **内容**: `@elchika-inc/moonqr`、`@elchika-inc/moonqr-scanner`、`@elchika-inc/moonqr-cli` の `prepack` は legal files の複製だけを行い、`build` を実行しない現行のリリース契約を維持する。
 

@@ -270,3 +270,30 @@
 - **ACCEPTED_RISKS**: レビュー指摘の受容なし。今回記録する SHOULD 逸脱は RISK-011
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-rev89-7a4a37d -->
+
+<!-- review-cycle:start moonqr-release-0-2-1-1e0e614 -->
+## 2026-09-18 0.2.1 リリース準備（版バンプ・CHANGELOG 新設・release:build）
+- **Cycle ID**: moonqr-release-0-2-1-1e0e614
+- **対象 HEAD**: 1e0e614c803d7e87173624225727eb5c9f783b28（親 `ea1d8b3`。R1 は `6074975` を対象とし、R1 の修正を amend した HEAD が R2 の対象）
+- **対象差分**: 8 ファイル。`packages/moonqr/package.json` / `packages/scanner/package.json` / `core/moon.mod.json` の 0.2.0 → 0.2.1、ルート `package.json` への `release:build` 追加、`RELEASING.md` §4 冒頭と §9 冒頭への段落追加、`AGENTS.md:55` の build 行をスクリプト参照へ置換、`.docs/risk-registry.md` の RISK-008 anchor への 1 文追記、`CHANGELOG.md` の新規作成。レビュー後に本ブロックを末尾へ追記
+- **総ラウンド数**: 2（上限3）
+- **終了理由**: R2 で全7レンズ LGTM。確信度80%以上の残 flag 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0 / Ambiguity Hunter 1 / Altitude Checker 0、R2 = 全レンズ 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain → Ambiguity Hunter → Altitude Checker（両ラウンドとも同順）
+- **Ambiguity Hunter（R1 の flag・確信度85%）**: 新設した `CHANGELOG.md` が `## [Unreleased]` に 0.2.1 の変更を持つ一方、`RELEASING.md` の §1〜§9 のどこにも `CHANGELOG.md` への言及が無く、手順を literal に実行しても `[Unreleased]` が日付節へ移らない（収束条件の欠落）。§9「Update the docs that quote the release」は `README.md` と `site/` しか挙げていない
+- **R1 flag の修正**: `RELEASING.md` §9 の冒頭に段落を追加し、publish 後に `[Unreleased]` を `## [X.Y.Z] — YYYY-MM-DD` へ移し、`→ [Release notes](...)` を付け、`[Unreleased]` のリンク定義を `compare/vX.Y.Z...HEAD` へ retarget し、`[X.Y.Z]:` 定義を足すことを明記。修正は commit `1e0e614` に含む
+- **検証範囲**: `RELEASING.md` §3 の全テスト層を個別実行（`&&` で束ねず exit code を各々記録）。`cd core && moon test --target js` = 0（127 passed）、`moon build --target js --release` = 0、`pnpm -r build` = 0、`pnpm -r typecheck` = 0、`node scripts/fetch-fixtures.mjs` = 0（254 cases）、`node --test packages/moonqr/test/*.test.mjs` = 0（284 pass）、`pnpm -r test:unit` = 0（moonqr 53 / cli 25 / scanner 30）、`pnpm run lint` = 0、`pnpm run release:build` = 0。版の同一性は `RELEASING.md` §2 の検査コマンドで `0.2.1` / `ok`、CLI は `packages/cli/package.json:3` と `packages/cli/src/cli.ts:8` がともに `0.1.0` で据え置き
+- **収束の対（AI_FIRST §3）**: `AGENTS.md` Key Commands の test 3 コマンド（`cd core && moon test --target js` / `node --test packages/moonqr/test/*.test.mjs` / `pnpm -r test:unit`）と check 2 コマンド（`pnpm -r typecheck` / `pnpm run lint`）を**コマンド単位で**実行し、5 コマンドとも exit 0。UI を持つ変更ではないため §2 の検証マトリクスは N/A（`site/` の差分なし）
+- **tarball 検証**: `pnpm run release:build` の直後に `pnpm pack`。`/tmp` に旧版 tarball が無いことを事前確認（glob が 0.2.0 を拾う偽陽性の防止）。3 tarball とも `dist/` + `README.md` + `LICENSE` + `NOTICE` + `THIRD_PARTY_LICENSES` + `package.json` のみで、CLI は `bin/` を追加。scanner と cli の tarball 内 `dependencies` は `"@elchika-inc/moonqr": "^0.2.1"`
+- **self-test**: 負の検査が空走していないことの確認を 2 件。①tarball 内の `workspace:` 残存は 0 件だが、同じ `grep -c 'workspace:'` を作業ツリーの `packages/scanner/package.json` に当てると 1 件ヒットする。②`grep -n 'moon build --target js --release' AGENTS.md` は変更後 0 件だが、変更前は `AGENTS.md:55` に 1 件ヒットすることを実測済み。③`grep -n -i 'changelog' RELEASING.md` は R1 時点で 0 件だが、同じ grep が `CHANGELOG.md` では 2 件ヒットする
+- **ビルド順の正本寄せ**: `release:build` の追加により `AGENTS.md:55` と完全同一のコマンド文字列が 2 箇所になったため、`AGENTS.md` 側を `pnpm run release:build` の参照へ置換して正本を `package.json` の 1 箇所に寄せた。`CONTRIBUTING.md` と `RELEASING.md` §3 は、`release:build` と同一文字列ではない（`moon test` を含む等の別コマンド）ため触っていない。`grep -n 'release:build' AGENTS.md package.json RELEASING.md` は 3 ファイルとも 1 件以上
+- **lint**: `pnpm run lint` は exit 0 / 66 files / warnings 19 / infos 9。診断 8 件は表示上限により省略。既存コードの診断で、本変更に起因するものは無い
+- **検証の補足**: ブラウザ検証は `site/` 変更なしのため対象外。`npm publish` と `moon publish` は実行していない（人間が `RELEASING.md` §5 / §7 を実行する）。`npm view` は read-only の確認のみに使用
+- **レビュアー**: Claude Sonnet 1名（`Explore` サブエージェント・読み取り専用ツールのみ）。7レンズを直列適用し、並列起動はしていない。ラウンドごとに新しいサブエージェントを起動し、R2 のプロンプトには R1 の修正済み事項を Fresh Eyes の後に参照する形で渡した
+- **裁量で変えた点**: `release:build` を `scripts` の `build:site` の直後に置いた（位置は仕様上の裁量）。コミットメッセージ・ブランチ名・PR 本文の言い回し。`RELEASING.md` §9 への追記はレビュー指摘への対応で、仕様の literal 指定外
+- **仕様の上書き**: 元の委任仕様は変更ファイルを 7 つに限っていたが、①本ログへの追記が repo の確立した慣習であること、②`release:build` の追加によって `AGENTS.md:55` との重複定義が生じたこと、の 2 点を司令塔へ確認し、9 ファイル（本ログと `AGENTS.md` を追加）へ上書きする裁定を得た。`AGENTS.md` で変更したのは 55 行目の build の行のみ
+- **INSPECTION_STATUS**: flag 0 / optional 4
+- **optional**: R1 に4件（①`packages/*` から呼ぶ場合は `pnpm run -w release:build` が要る — ルート直下から使う限り無害、②§3 の `export PATH` が新しいシェルでは失効している前提が未記載 — 失敗時は `moon: command not found` で即座に露見、③CI は `release:build` のスクリプト文字列自体を実行しないため将来の破損を検出しない、④RISK-008 anchor 中の `package.json` がルートを指すことが文脈依存）。いずれも修正せず記録のみ。R2 は0件
+- **ACCEPTED_RISKS**: レビュー指摘の受容なし（唯一の flag は修正で対応）。RISK-008 の受容は本 PR でも維持し、anchor に検知点を追加した
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-release-0-2-1-1e0e614 -->

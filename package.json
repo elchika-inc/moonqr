@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build:site": "node scripts/build-site.mjs",
+    "release:build": "cd core && moon build --target js --release && cd .. && pnpm -r build",
     "sync-legal:core": "node scripts/copy-legal-files.mjs core",
     "lint": "biome check .",
     "lint:fix": "biome check --write ."

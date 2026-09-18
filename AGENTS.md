@@ -52,8 +52,8 @@ location, tracked in git.
 
 Every command assumes the MoonBit toolchain is on `PATH`: `export PATH="$HOME/.moon/bin:$PATH"`.
 
-- build: `cd core && moon build --target js --release && cd .. && pnpm -r build` — **order matters**, see
-  Architecture below.
+- build: `pnpm run release:build` — the MoonBit core is built first, then the packages that bundle
+  it. **Order matters**, see Architecture below.
 - test: `cd core && moon test --target js` (MoonBit), `node --test packages/moonqr/test/*.test.mjs`
   (jsQR parity + encoder sweep), `pnpm -r test:unit` (vitest, all packages).
 - check: `pnpm -r typecheck` (types), `pnpm run lint` (Biome — lint + format check; `pnpm run lint:fix` writes the fixes).
