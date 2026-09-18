@@ -188,7 +188,7 @@
 
 **再検討の条件**: 画像のデザイン方針が決まった場合、デモページの共有が実際に必要になった場合、または OGP を要求する SHOULD が MUST へ格上げされた場合。
 
-**解消時の訂正**: 本エントリは standards の規定を SHOULD として記録していたが、これは誤りだった。`PRODUCT_PLAYBOOK.md`「シェア・OGP」節は初版（2026-06-12, `a1cbbba`）から「公開ページ（LP / docs / status-page）は OGP 画像 + Twitter Card を必須とする（MUST）」としており、受容していた期間はこれが MUST 違反にあたる。MUST の欠落は AUDIT が宣言と受容記録の両方を求めるが、`AGENTS.md` への宣言は置いていなかった。実装によって逸脱そのものが解消したため、追加の受容記録は作らない。
+**解消時の訂正**: 本エントリは standards の規定を SHOULD として記録していたが、これは誤りだった。`PRODUCT_PLAYBOOK.md`「シェア・OGP」節は初版（2026-06-12, `a1cbbba`）から「公開ページ（LP / docs / status-page）は OGP 画像 + Twitter Card を必須とする（MUST）」としており、受容していた期間はこれが MUST 違反にあたる。MUST の欠落は AUDIT が宣言と受容記録の両方を求めるが、`AGENTS.md` への宣言は置いていなかった。実装によって逸脱そのものが解消したため、追加の受容記録は作らない。あわせて節番号も訂正する。上記「内容」は SHOULD の出所を `PRODUCT_PLAYBOOK.md` §2 としているが、§2（LP）は OGP 画像を LP の必須要素に挙げているだけで MUST / SHOULD を明示していない。OGP を規定しているのは §9「SNS 連携」配下の「シェア・OGP」節である。
 
 ---
 
