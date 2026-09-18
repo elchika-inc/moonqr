@@ -169,11 +169,11 @@ node --test packages/moonqr/test/jsqr-parity.test.mjs
 
 ### 環境
 
-- node: `v24.18.0`
-- moon: `moon 0.1.20260703 (6fbf8c3 2026-07-03)`
+- node: `v24.21.0`
+- moon: `moon 0.1.20260713 (75c7e1f 2026-07-13)`
 - arch: `arm64` / platform: `darwin`
 - jsqr (npm): `1.4.0`
-- commit: `14f6903`
+- commit: `86f4717`
 
 ### 方法
 
@@ -202,14 +202,32 @@ jsQR は `inversionAttempts` オプションで対応: 主計測は `"attemptBot
 
 | frame | jsQR attemptBoth (ms) | ours invert=true (ms) | ratio (ours/jsQR) | 判定 | jsQR dontInvert (ms, 参考) | ours invert=false (ms, 参考) | ratio (参考) |
 |---|---|---|---|---|---|---|---|
-| hit | 78.620 | 60.122 | 0.765 | PASS | 82.788 | 63.106 | 0.762 |
-| miss | 180.165 | 134.224 | 0.745 | PASS | 90.535 | 72.805 | 0.804 |
+| hit | 77.663 | 56.883 | 0.732 | PASS | 76.297 | 57.688 | 0.756 |
+| miss | 175.281 | 130.647 | 0.745 | PASS | 88.004 | 69.190 | 0.786 |
 
 ### 判定（スペック rubric 2）
 
 **基準: 自前 median ≤ jsQR median × 1.2 が hit・miss 両フレームで成立すること。**
 
 **判定: PASS**
+
+### 再測記録（2026-09-18）
+
+`node bench/decode-bench.mjs` を3回実行し、各回の stdout に出力された
+主計測（自前 `invert=true` / jsQR `attemptBoth`）の ratio を確認した。
+上の結果表は3回目の実測値である。
+
+| 実行回 | hit ratio (ours/jsQR) | miss ratio (ours/jsQR) |
+|---|---|---|
+| 1 | 0.749 | 0.760 |
+| 2 | 0.751 | 0.738 |
+| 3 | 0.732 | 0.745 |
+
+- 測定環境: node `v24.21.0` / moon `0.1.20260713 (75c7e1f 2026-07-13)` /
+  jsqr `1.4.0` / arch `arm64` / OS `Darwin`。
+- 判定は PROJECT_GOAL の `<= 1.0` で行った。スクリプトの `RATIO_MAX` は 1.2 で基準が異なる。
+- 3回すべてで hit・miss の ratio が `<= 1.0` のため達成。
+  同一 frame の最大 ratio / 最小 ratio は hit `1.026` / miss `1.030` で、いずれも `<= 1.10`。
 
 ## モニター格子写真対応 — マルチスケールデコード（Task 12・2026-07-14）
 
