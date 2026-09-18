@@ -173,10 +173,11 @@
 
 ---
 
-## RISK-011: デモページに `og:image` を置かない（SHOULD からの逸脱）
+## RISK-011: デモページに `og:image` を置かない（SHOULD からの逸脱）（2026-09-18 解消済み）
 
-- **Status**: accepted
+- **Status**: resolved
 - **Date**: 2026-09-09
+- **Resolved**: 2026-09-18 `site/index.html` に OGP / Twitter Card を追加し、`site/og-image.png`（1200×630）を用意した
 - **anchor**: [Issue #41](https://github.com/elchika-inc/moonqr/issues/41) の open / closed 状態。受容が破れた（対応した）ときは Issue が閉じられ、`site/index.html` に `og:image` を足す PR の diff として現れる。逸脱が続いている限り Issue は open のまま残り、標準への未対応が外から見える
 
 **内容**: standards `PRODUCT_PLAYBOOK.md` §2 は landing / docs の head に `og:image` を置くことを SHOULD としているが、デモページ `site/index.html` には OGP 系のタグが 1 つも無い。2026-09-08 の standards 監査（rev.89 参照）で検出した。
@@ -186,6 +187,8 @@
 **受容理由**: タグの追加自体は小さいが、`og:image` が参照する画像のデザインを決める必要があり、その判断がまだ済んでいない。候補（既存 favicon の QR 図案を 1200×630 に起こす案と、moonqr 自身でデモ URL をエンコードした QR を使う案）と確認方法は Issue #41 に整理した。デザイン判断を伴う作業を `standards_version` の更新に巻き込まず、独立した変更として扱う。
 
 **再検討の条件**: 画像のデザイン方針が決まった場合、デモページの共有が実際に必要になった場合、または OGP を要求する SHOULD が MUST へ格上げされた場合。
+
+**解消時の訂正**: 本エントリは standards の規定を SHOULD として記録していたが、これは誤りだった。`PRODUCT_PLAYBOOK.md`「シェア・OGP」節は初版（2026-06-12, `a1cbbba`）から「公開ページ（LP / docs / status-page）は OGP 画像 + Twitter Card を必須とする（MUST）」としており、受容していた期間はこれが MUST 違反にあたる。MUST の欠落は AUDIT が宣言と受容記録の両方を求めるが、`AGENTS.md` への宣言は置いていなかった。実装によって逸脱そのものが解消したため、追加の受容記録は作らない。
 
 ---
 
