@@ -6,8 +6,9 @@
     <!--
       このファイルは scripts/gen-og-image.mjs が生成する。直接編集しない。
       site/og-image.png はこのページを 1200x630 のビューポートで撮ったもの。
-      配色は site/style.css のトークンと同じ値を直書きしている（OGP 用に独立させ、
-      style.css の変更が意図せず画像へ波及しないようにするため）。
+      配色のうち背景 #08090b とアクセント #f2c744 は site/style.css と同じ値で、
+      文字色の #f4f5f7 / #b9bdc7 / #6d727e は OGP のコントラスト用にここで決めている。
+      style.css を参照せず直書きするのは、デモの配色変更が画像へ意図せず波及しないようにするため。
     -->
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
