@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-18
+updated: 2026-09-23
 ---
 
 # STATUS — moonqr（ステータスシート）
@@ -7,8 +7,8 @@ updated: 2026-09-18
 ## 現在地
 
 - フェーズ: 公開済み。npm の 3 パッケージ、mooncakes.io の MoonBit モジュール、GitHub Pages のデモがいずれも稼働している
-- 公開中の版: `@elchika-inc/moonqr` 0.2.0 / `@elchika-inc/moonqr-scanner` 0.2.0 / `@elchika-inc/moonqr-cli` 0.1.0
-- 直近の完了: standards 監査（2026-09-08 実施、rev.89 を参照）で検出した MUST 違反 4 件の解消（[#34](https://github.com/elchika-inc/moonqr/pull/34) / [#36](https://github.com/elchika-inc/moonqr/pull/36) / [#37](https://github.com/elchika-inc/moonqr/pull/37) / [#38](https://github.com/elchika-inc/moonqr/pull/38)）、README のセクション整備（[#39](https://github.com/elchika-inc/moonqr/pull/39)）、ステータスシートと監査 checkpoint の整備（[#40](https://github.com/elchika-inc/moonqr/pull/40)）、`standards_version` の rev.89 への更新
+- 公開中の版: `@elchika-inc/moonqr` 0.2.1 / `@elchika-inc/moonqr-scanner` 0.2.1 / `@elchika-inc/moonqr-cli` 0.1.0
+- 直近の完了: standards 監査（2026-09-08 実施、rev.89 を参照）で検出した MUST 違反 4 件の解消（[#34](https://github.com/elchika-inc/moonqr/pull/34) / [#36](https://github.com/elchika-inc/moonqr/pull/36) / [#37](https://github.com/elchika-inc/moonqr/pull/37) / [#38](https://github.com/elchika-inc/moonqr/pull/38)）、README のセクション整備（[#39](https://github.com/elchika-inc/moonqr/pull/39)）、ステータスシートと監査 checkpoint の整備（[#40](https://github.com/elchika-inc/moonqr/pull/40)）、`standards_version` の rev.89 への更新、0.2.1 のリリース（[#50](https://github.com/elchika-inc/moonqr/pull/50)。2026-08-29〜08-31 に main へ入っていた decode の panic 修正等を npm / mooncakes へ反映）
 - 生成物の鮮度: `site/assets/` はビルドのたびに生成する（gitignore 対象。手順は [`../CONTRIBUTING.md`](../CONTRIBUTING.md)）。`core/src/encode/tables.mbt` と `core/src/decode/sjis.mbt` は固定した上流コミットから生成済み
 - open Issue は `gh issue list --state open` を正とし、ここに件数を写さない
 
@@ -25,7 +25,7 @@ CI で毎 PR 検証される基準の確認日は、最新の成功した CI 実
 | エンコーダの圧縮: 混在入力を区間ごとに最適なモードへ | 達成。qrcode npm と 44 ケースで同等以上（`https://ex.com/id/<100 桁>` が v7 から v4 へ縮む） | 2026-08-28 |
 | バンドルサイズ: encode だけ使うならデコーダを含めない | 達成。`/encode` は gzip 7.5 KB で、デコーダのコードを 1 バイトも含まない | 2026-09-09 |
 | 実機で読めること | 達成。実カメラ・モニタ越し撮影のマルチスケール再試行を含む。手動確認のため CI では追跡していない | 2026-07-14 |
-| npm へ公開され、リポジトリ外から install して動く | 達成。ESM / CJS 両経路で検証 | 2026-09-02 |
+| npm へ公開され、リポジトリ外から install して動く | 達成。ESM / CJS 両経路で検証。0.2.1 をリポジトリ外へ install した実体で再検証（ESM の `encode("HELLO", {ecLevel:"M"}).size` = 21、CJS の `typeof encode` = `function`、3×3 / 8×8 / 16×16 の小画像で `decode` が例外を投げず `null` を返す） | 2026-09-20 |
 | CLI パッケージを npm から install してターミナルへ QR コードを出力できる | 達成。`@elchika-inc/moonqr-cli` 0.1.0 を 2026-09-02 に公開。リポジトリ外で `npm install` した実体に対し、`npx moonqr --no-color https://example.com` が 17 行の QR を出力（exit 0）し、`npx moonqr --version` が `0.1.0` を返すことを確認 | 2026-09-09 |
 | MoonBit プロジェクトから使える | 達成。mooncakes.io に `naoto24kawa/moonqr` | 2026-07-14 |
 | 動作を試せるデモがある | 達成。<https://elchika-inc.github.io/moonqr/> | 2026-09-09 |

@@ -297,3 +297,25 @@
 - **ACCEPTED_RISKS**: レビュー指摘の受容なし（唯一の flag は修正で対応）。RISK-008 の受容は本 PR でも維持し、anchor に検知点を追加した
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-release-0-2-1-1e0e614 -->
+
+<!-- review-cycle:start moonqr-postrelease-0-2-1-80bffa0 -->
+## 2026-09-23 0.2.1 公開後のドキュメント反映（RELEASING.md §9）
+- **Cycle ID**: moonqr-postrelease-0-2-1-80bffa0
+- **対象 HEAD**: 80bffa0（`v0.2.1` タグと同一。この HEAD に対する作業ツリー差分をレビューし、レビュー後に本ブロックを末尾へ追記してコミット）
+- **対象差分**: 2 ファイル。`CHANGELOG.md` の `[Unreleased]` を空にして `## [0.2.1] — 2026-09-20` 節へ移動・Release notes 行の追加・`[Unreleased]` リンク定義の `compare/v0.2.1...HEAD` への retarget・`[0.2.1]:` 定義の追加（司令塔が固定した原稿と diff 0 件）。`.docs/STATUS.md` の frontmatter `updated`、「公開中の版」行、「直近の完了」行末尾への追記、達成状況表の npm 行（状況・確認日）の 4 箇所
+- **総ラウンド数**: 1（上限 2。ドキュメント 2 ファイルのため委任仕様で短縮）
+- **終了理由**: 初回ラウンドで全 7 レンズ LGTM。確信度 80% 以上の残 flag 0
+- **レンズ別 flag 件数**: Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0 / Ambiguity Hunter 0 / Altitude Checker 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain → Ambiguity Hunter → Altitude Checker
+- **Core Logic**: 版番号を `packages/moonqr/package.json` / `packages/scanner/package.json` / `core/moon.mod.json`（0.2.1）と `packages/cli/package.json`（0.1.0）で照合。日付は annotated タグ `v0.2.1` の作成日時（2026-09-20 13:11 JST）と `gh release view v0.2.1` の `publishedAt`（2026-09-20T04:11:38Z）で照合。`#50` の存在と MERGED を `gh pr view` で確認。「2026-08-29〜08-31 に main へ入っていた」は `#22` / `#23` / `#26` のマージ日時（JST）と整合
+- **Domain**: `RELEASING.md` §9 の 4 項目（節の移動・Release notes 行・`[Unreleased]` の retarget・`[X.Y.Z]:` 定義）と 1 対 1 で照合し全て実施済み。STATUS の確認日は手動検証行の運用（手動確認日）に従う
+- **Altitude Checker**: STATUS 表の npm 行へ足した生の検証値は、隣接する CLI 行が既に同水準の具体性で書かれているため既存の高度と揃っていると判定
+- **検証範囲**: worktree 内の grep / diff / sed のみ。原稿との `diff` は出力なし / exit 0。`grep -n '公開中の版'` は 10 行目 1 件。旧版の負の検査（`moonqr` 直後の ` 0.2.0` を grep）は変更前 1 件（10 行目）→ 変更後 0 件 / exit 1。`git status --porcelain` は対象ファイルのみ。npm・mooncakes・タグ・Release への操作は行っていない
+- **検証の補足**: コード変更なしのため製品テスト・型検査は未実行（CI に委ねる）。ブラウザ検証は `site/` 変更なしのため対象外。`README.md` / `site/` に公開版番号の直書きが無いことは司令塔の実測（grep 0 件）を前提とし、worker 側でも `grep -n "0\.2\.0\|0\.1\.0" README.md site/index.html` が 0 件であることを再確認
+- **レビュアー**: Claude Sonnet 1 名（`Explore` サブエージェント・読み取り専用ツールのみ）。7 レンズを直列適用し、並列起動はしていない。altitude-checker のブロックだけ応答の切り詰めで届かなかったため、同一サブエージェントに当該ブロックのみ再送させた（内容の再生成ではなく再送）
+- **レビュー記録の置き場**: `lens-review-cycle` スキルの現行版は `.docs/reviews/cycles/<cycle-id>.md` を指定するが、本リポジトリは本ファイルへの追記が確立した慣習であり委任仕様もそれを許容しているため、本ファイルへ追記した
+- **裁量で変えた点**: STATUS「直近の完了」行の追記の言い回し、npm 行の状況欄の言い回し（司令塔の実測値をそのまま列挙）、コミットメッセージ、PR 本文の構成。CHANGELOG の中身と版番号は変更していない
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end moonqr-postrelease-0-2-1-80bffa0 -->

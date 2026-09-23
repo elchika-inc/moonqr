@@ -14,6 +14,8 @@ truth for the details, and this file is the index.
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-09-20
+
 ### Fixed
 
 - **decode**: small images no longer panic. Neighbour indices in the adaptive binarizer are now
@@ -32,6 +34,8 @@ truth for the details, and this file is the index.
 - **encode**: `optimal_segments` runs in O(n) instead of O(n²). Long alternating inputs that
   previously took seconds now complete in well under a second; the chosen segmentation is
   unchanged ([#22]).
+
+→ [Release notes](https://github.com/elchika-inc/moonqr/releases/tag/v0.2.1)
 
 ## [@elchika-inc/moonqr-cli 0.1.0] — 2026-09-02
 
@@ -65,7 +69,8 @@ camera scanning in a Web Worker), and the MoonBit module `naoto24kawa/moonqr`.
 [#22]: https://github.com/elchika-inc/moonqr/pull/22
 [#23]: https://github.com/elchika-inc/moonqr/pull/23
 [#26]: https://github.com/elchika-inc/moonqr/pull/26
-[Unreleased]: https://github.com/elchika-inc/moonqr/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/elchika-inc/moonqr/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/elchika-inc/moonqr/compare/v0.2.0...v0.2.1
 [@elchika-inc/moonqr-cli 0.1.0]: https://github.com/elchika-inc/moonqr/releases/tag/cli-v0.1.0
 [0.2.0]: https://github.com/elchika-inc/moonqr/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/elchika-inc/moonqr/releases/tag/v0.1.0
