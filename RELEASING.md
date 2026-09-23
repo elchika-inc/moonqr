@@ -143,6 +143,20 @@ cd /tmp && moon new consumer --user verify && cd consumer
 moon add naoto24kawa/moonqr    # expect "Downloading naoto24kawa/moonqr@<version>"
 ```
 
+`moon add` updates the registry index before it resolves anything. On a machine that has never
+fetched that index, the update can take a very long time — during the 0.2.1 release it had not
+finished after 20 minutes and was killed. Fetching the package itself is not the slow part. If the
+verification stalls with no output, skip the index update:
+
+```sh
+moon add naoto24kawa/moonqr --no-update    # expect "Downloading naoto24kawa/moonqr@<version>"; under 10 seconds
+```
+
+Once the index has been fetched, a plain `moon add` finishes in about 20 seconds. Whether it prints
+`Downloading naoto24kawa/moonqr@<version>` or `Using cached naoto24kawa/moonqr@<version>` depends on
+whether that version is already in the local package cache, not on the state of the index. Measured
+with `moon 0.1.20260713`.
+
 ## 8. Tag and release
 
 ```sh
