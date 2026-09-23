@@ -319,3 +319,27 @@
 - **ACCEPTED_RISKS**: なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end moonqr-postrelease-0-2-1-80bffa0 -->
+
+<!-- review-cycle:start moonqr-releasing-moon-add-no-update-11b2f17 -->
+## 2026-09-23 RELEASING.md §7 に moon add の所要時間と --no-update の注記を追加
+- **Cycle ID**: moonqr-releasing-moon-add-no-update-11b2f17
+- **対象 HEAD**: 11b2f17（この HEAD に対する作業ツリー差分をレビューし、司令塔の裁定を反映した後にコミット。本ブロックはその後に末尾へ追記してコミット）
+- **対象差分**: 1 ファイル。`RELEASING.md` §7 の外部検証コードブロック直後に、段落 1 つ・`--no-update` 付きコマンドのコードブロック 1 つ・段落 1 つを挿入（14 行追加・削除 0）。§7 以外の節と既存の 143 行目（`moon add naoto24kawa/moonqr # expect ...`）は変更していない
+- **総ラウンド数**: 1（上限 1。ドキュメント 1 段落の追記のため委任仕様で短縮）
+- **終了理由**: R1 で flag 3 件。うち F1・F2 は司令塔が文面を確定して修正、F3 は受容。上限 1 ラウンドのため R2 は回さず、変更の実体を grep / sed で確認した
+- **レンズ別 flag 件数**: Fresh Eyes 0 / Security 0 / Core Logic 1 / Tests 1 / Domain 0 / Ambiguity Hunter 1 / Altitude Checker 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain → Ambiguity Hunter → Altitude Checker
+- **F1（Core Logic・確信度 85%）**: 挿入した末尾の段落が「index 取得後の素の `moon add` は `Using cached ...` を返す」と書いていたが、実測で `Using cached` が出たのは直前の `--no-update` 実行で本体がローカルキャッシュに入っていたためで、index の状態が理由ではない（因果の取り違え）。レビュアーの前提のうち「`Downloading` の場合が本文のどこにも無い」は誤り（143 行目が既に書いている）だが、残る因果の誤りは司令塔が自らの文面の誤りと認め、末尾の段落を「`Downloading` と `Using cached` のどちらが出るかはローカルのパッケージキャッシュにその版があるかで決まり、index の状態には依らない」旨へ書き直した
+- **F2（Tests・確信度 82%）**: `--no-update` のコード行のコメントが所要時間だけで、このファイルの他の検証コマンドが持つ `# expect "..."` の観測点が無かった。`--no-update` の出力 `Downloading naoto24kawa/moonqr@0.2.1` は司令塔の実測済みのため、コメントを `# expect "Downloading naoto24kawa/moonqr@<version>"; under 10 seconds` へ差し替えた。`--no-update` が古いローカル index に対して旧版を解決しうるかは未検証で、未検証だからこそ期待文言にバージョンを含める価値があると司令塔が判定
+- **F3（Ambiguity Hunter・確信度 82%・受容）**: 「If the verification stalls with no output」の stalls に切り替えの閾値が無い。遅い経路は一度も完走していないため「何分待ったら切り替えるか」の閾値は未実測であり、観測点は「無出力のまま進まないこと」で本文に明示済み、`--no-update` への切り替えは安価で、20 分という実測値が上限の目安として読める。未実測の数値を手順へ焼き込まない判断として受容（司令塔の裁定）
+- **検証範囲**: worktree 内の git / grep / sed のみ。`grep -n 'expect "Downloading naoto24kawa/moonqr' RELEASING.md` は 143・152 行の 2 件、`grep -n 'not on the state of the index' RELEASING.md` は 157 行の 1 件、`grep -n 'no-update' RELEASING.md` は 152 行の 1 件、§7〜§8 の `sed` 出力でコードフェンスが 6 本（3 ブロック）で閉じていることを目視確認。`moon add` の再実行は行っていない（司令塔が 2026-09-23 に `moon 0.1.20260713` で実測済み）。npm・mooncakes・タグ・Release への操作は行っていない
+- **検証の補足**: コード変更なしのため製品テスト・型検査は未実行（CI に委ねる）。ブラウザ検証は `site/` 変更なしのため対象外
+- **レビュアー**: Claude Sonnet 1 名（`Explore` サブエージェント・読み取り専用ツールのみ）。7 レンズを直列適用し、並列起動はしていない
+- **レビュー記録の置き場**: `lens-review-cycle` スキルの現行版は `.docs/reviews/cycles/<cycle-id>.md` を指定するが、本リポジトリは本ファイルへの追記が確立した慣習であり委任仕様もそれを許容しているため、本ファイルへ追記した
+- **仕様の上書き**: 委任仕様は追記文面を変更不可としていたが、F1・F2 の修正には文面変更が必要なため `ask` で司令塔へ裁定を求め、(C)「F1・F2 を司令塔が確定した文面で修正、F3 は受容、R2 は回さない」の裁定を得た。それ以外（挿入位置・スコープ外の項目・143 行目の据え置き）は元仕様のまま
+- **裁量で変えた点**: コミットメッセージ、ブランチ名（worktree 作成時の `naoto24kawa/releasing-note` をそのまま使用）、挿入時の改行位置（閉じフェンスの直後に空行を挟んで段落を置いた）
+- **INSPECTION_STATUS**: flag 0（R1 の 3 件は修正 2・受容 1 で解消）/ optional 1
+- **optional**: Domain 1 件（`Signals that lie` 節から §7 の注記への相互参照を足すと一貫性が高まる）。`Signals that lie` 節はスコープ外のため修正せず記録のみ
+- **ACCEPTED_RISKS**: F3（stalls の閾値を書かない）。理由は上記 F3 の項
+- **確定した偽陽性**: なし（F1 のレビュアーの前提の一部誤りは、残る指摘が真であったため偽陽性として登録していない）
+<!-- review-cycle:end moonqr-releasing-moon-add-no-update-11b2f17 -->
