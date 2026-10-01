@@ -142,6 +142,20 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   if n == 0 {
     return None
   }
+  let byte_prefix = segment_utf8_byte_prefix(text)
+  let charpos : Array[Int] = []
+  let bytepos : Array[Int] = []
+  for r in runs {
+    charpos.push(r.start)
+    bytepos.push(byte_prefix[r.start])
+  }
+  let text_len = runs[n - 1].start + runs[n - 1].len
+  charpos.push(text_len)
+  bytepos.push(byte_prefix[text_len])
+  Some(plan_run_segments(runs, charpos, bytepos, version))
+}
+
+fn segment_utf8_byte_prefix(text : String) -> Array[Int] {
   let byte_prefix : Array[Int] = [0]
   for c in text {
     let cp = c.to_int()
@@ -156,15 +170,16 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
     }
     byte_prefix.push(byte_prefix[byte_prefix.length() - 1] + byte_len)
   }
-  let charpos : Array[Int] = []
-  let bytepos : Array[Int] = []
-  for r in runs {
-    charpos.push(r.start)
-    bytepos.push(byte_prefix[r.start])
-  }
-  let text_len = runs[n - 1].start + runs[n - 1].len
-  charpos.push(text_len)
-  bytepos.push(byte_prefix[text_len])
+  byte_prefix
+}
+
+fn plan_run_segments(
+  runs : Array[Run],
+  charpos : Array[Int],
+  bytepos : Array[Int],
+  version : Int,
+) -> Array[Segment] {
+  let n = runs.length()
   // dp6[j] = 先頭から j 個のランを符号化する最小ビット数の6倍（dp6[0] = 0）
   let inf = 0x7FFFFFFF
   let dp6 = Array::make(n + 1, inf)
@@ -256,9 +271,16 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
       }
     }
   }
-  // 復元
+  restore_segment_path(from_run, from_mode, charpos)
+}
+
+fn restore_segment_path(
+  from_run : Array[Int],
+  from_mode : Array[Mode],
+  charpos : Array[Int],
+) -> Array[Segment] {
   let rev : Array[Segment] = []
-  let mut j = n
+  let mut j = from_run.length() - 1
   while j > 0 {
     let i = from_run[j]
     rev.push(
@@ -270,7 +292,7 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
     out.push(rev[idx])
   }
-  Some(out)
+  out
 }
 
 ///| 最適分割に基づいて複数セグメントを書く。
