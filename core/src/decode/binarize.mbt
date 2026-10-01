@@ -2,8 +2,9 @@
 ///| https://github.com/cozmo/jsQR/blob/8e6a036beafa7053dd44b1b76ac578d22b1b3311/src/binarizer/index.ts
 ///| BLOCK_SIZE=8 / MIN_DYNAMIC_RANGE=24、低分散ブロックの
 ///| 「左・上・左上ブロックしきい値の平均を継承する」規則、5x5近傍ブロック
-///| 平均によるしきい値化を忠実に移植した（詳細な行対応は task-2-report.md）。
-///| NOTICE ファイルへの正式なクレジット記載は Phase 2 Task 3 で行う。
+///| 平均によるしきい値化を移植した。処理と結果は下記の端・小格子の
+///| 意図的な適応を除き jsQR と同じだが、構造を整理して関数の分け方は変えている。
+///| 正式なクレジットは NOTICE ファイルに記載済み。
 
 let block_size : Int = 8
 
@@ -70,8 +71,7 @@ fn calculate_black_points(
   // jsQR は width/height が block_size の倍数でない場合、最終ブロックの
   // 読み出しが次行へオーバーランする未定義動作になる（Uint8ClampedArray
   // の範囲外読み出しは undefined → NaN 伝播）。ここではクラッシュや
-  // 未定義値を避けるため端の座標をクランプする（意図的な適応。
-  // 詳細は task-2-report.md の「アダプテーション」参照）。
+  // 未定義値を避けるため端の座標をクランプする（意図的な適応）。
   let sample = fn(x : Int, y : Int) -> Int {
     let cx = if x >= width { width - 1 } else { x }
     let cy = if y >= height { height - 1 } else { y }
