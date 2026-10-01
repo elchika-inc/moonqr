@@ -157,12 +157,13 @@ fn binarize_with_black_points(
         for xr = 0; xr < block_size; xr = xr + 1 {
           let x = hr * block_size + xr
           let y = vr * block_size + yr
-          if x < width && y < height {
-            let lum = gray[y * width + x].to_double()
-            let black = lum <= threshold
-            binarized.set(x, y, black)
-            inverted.set(x, y, !black)
+          if x >= width || y >= height {
+            continue
           }
+          let lum = gray[y * width + x].to_double()
+          let black = lum <= threshold
+          binarized.set(x, y, black)
+          inverted.set(x, y, !black)
         }
       }
     }
