@@ -449,3 +449,15 @@ test "write_segments produces fewer bits than a single segment when split helps"
   write_segments(split, text, 1)
   assert_true(split.bit_length() < single.bit_length())
 }
+
+test "version 10でByteに挟まれた8桁の数字は1bit小さい3区間へ分割される" {
+  // 現在の出力を固定する。全体をByteにすると100bit、3区間では28+43+28=99bit。
+  assert_eq(
+    optimal_segments("a12345678a", 10),
+    Some([
+      Segment::{ mode: Mode::Byte, start: 0, len: 1 },
+      Segment::{ mode: Mode::Numeric, start: 1, len: 8 },
+      Segment::{ mode: Mode::Byte, start: 9, len: 1 },
+    ]),
+  )
+}
