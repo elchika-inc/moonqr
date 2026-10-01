@@ -50,15 +50,15 @@ fn penalty_runs(m : Matrix) -> Int {
         } else {
           m.get(line, position - 1)
         }
-        if current_color == previous_color {
-          run = run + 1
-          if run == 5 {
-            score = score + 3
-          } else if run > 5 {
-            score = score + 1
-          }
-        } else {
+        if current_color != previous_color {
           run = 1
+          continue
+        }
+        run = run + 1
+        if run == 5 {
+          score = score + 3
+        } else if run > 5 {
+          score = score + 1
         }
       }
     }
