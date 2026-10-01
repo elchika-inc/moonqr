@@ -104,22 +104,22 @@ fn correct_errors(
   positions : Array[Int],
 ) -> Array[Int]? {
   let omega = compute_error_evaluator(synd, err_loc)
-  let deriv = differentiate_error_locator(err_loc)
-  let out = msg.copy()
+  let locator_derivative = differentiate_error_locator(err_loc)
+  let corrected = msg.copy()
   for k = 0; k < positions.length(); k = k + 1 {
     let pos = positions[k]
-    let x_inv_log = msg.length() - 1 - pos // α^{i}, i = 末尾からの冪
-    let x = exp(x_inv_log)
+    let position_exponent = msg.length() - 1 - pos // α^{i}, i = 末尾からの冪
+    let x = exp(position_exponent)
     let x_inv = div(1, x)
-    let om = evaluate_polynomial(omega, x_inv)
-    let dv = evaluate_polynomial(deriv, x_inv)
-    if dv == 0 {
+    let evaluator_value = evaluate_polynomial(omega, x_inv)
+    let derivative_value = evaluate_polynomial(locator_derivative, x_inv)
+    if derivative_value == 0 {
       return None
     }
-    let magnitude = mul(x, div(om, dv))
-    out[pos] = add(out[pos], magnitude)
+    let magnitude = mul(x, div(evaluator_value, derivative_value))
+    corrected[pos] = add(corrected[pos], magnitude)
   }
-  Some(out)
+  Some(corrected)
 }
 
 fn compute_error_evaluator(
@@ -144,17 +144,17 @@ fn compute_error_evaluator(
 
 fn differentiate_error_locator(err_loc : Array[Int]) -> Array[Int] {
   // σ'(x): 形式微分（GF(2^8)では偶数次の項が消える）
-  let deriv : Array[Int] = []
-  let deg = err_loc.length() - 1
+  let derivative : Array[Int] = []
+  let degree = err_loc.length() - 1
   for i = 0; i < err_loc.length() - 1; i = i + 1 {
-    let power = deg - i // この係数の次数
+    let power = degree - i // この係数の次数
     if power % 2 == 1 {
-      deriv.push(err_loc[i])
+      derivative.push(err_loc[i])
     } else {
-      deriv.push(0)
+      derivative.push(0)
     }
   }
-  deriv
+  derivative
 }
 
 ///| 係数は先頭が最高次。Horner 法で評価する。
