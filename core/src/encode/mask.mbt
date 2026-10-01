@@ -29,77 +29,116 @@ pub fn apply_mask(m : Matrix, mask : Int) -> Unit {
 
 ///| ISO 18004 の4ペナルティ規則
 pub fn penalty(m : Matrix) -> Int {
+  penalty_runs(m) + penalty_blocks(m) + penalty_finder_patterns(m) +
+  penalty_dark_balance(m)
+}
+
+fn penalty_runs(m : Matrix) -> Int {
   let mut score = 0
   // N1: 同色5連続以上（行・列）: 3 + 超過分
   for axis = 0; axis < 2; axis = axis + 1 {
-    for a = 0; a < m.size; a = a + 1 {
+    for line = 0; line < m.size; line = line + 1 {
       let mut run = 1
-      for b = 1; b < m.size; b = b + 1 {
-        let cur = if axis == 0 { m.get(b, a) } else { m.get(a, b) }
-        let prev = if axis == 0 { m.get(b - 1, a) } else { m.get(a, b - 1) }
-        if cur == prev {
-          run = run + 1
-          if run == 5 {
-            score = score + 3
-          } else if run > 5 {
-            score = score + 1
-          }
+      for position = 1; position < m.size; position = position + 1 {
+        let current_color = if axis == 0 {
+          m.get(position, line)
         } else {
+          m.get(line, position)
+        }
+        let previous_color = if axis == 0 {
+          m.get(position - 1, line)
+        } else {
+          m.get(line, position - 1)
+        }
+        if current_color != previous_color {
           run = 1
+          continue
+        }
+        run = run + 1
+        if run == 5 {
+          score = score + 3
+        } else if run > 5 {
+          score = score + 1
         }
       }
     }
   }
+  score
+}
+
+fn penalty_blocks(m : Matrix) -> Int {
+  let mut score = 0
   // N2: 2x2 同色ブロック: 3点/個
   for y = 0; y < m.size - 1; y = y + 1 {
     for x = 0; x < m.size - 1; x = x + 1 {
-      let v = m.get(x, y)
-      if m.get(x + 1, y) == v && m.get(x, y + 1) == v &&
-        m.get(x + 1, y + 1) == v {
+      let color = m.get(x, y)
+      if m.get(x + 1, y) == color && m.get(x, y + 1) == color &&
+        m.get(x + 1, y + 1) == color {
         score = score + 3
       }
     }
   }
+  score
+}
+
+fn penalty_finder_patterns(m : Matrix) -> Int {
+  let mut score = 0
   // N3: 1011101 の前後に 0000（ファインダ様）: 40点/個
-  let pat1 = [true, false, true, true, true, false, true, false, false, false, false]
-  let pat2 = [false, false, false, false, true, false, true, true, true, false, true]
+  let trailing_light_pattern = [
+    true, false, true, true, true, false, true, false, false, false, false,
+  ]
+  let leading_light_pattern = [
+    false, false, false, false, true, false, true, true, true, false, true,
+  ]
   for axis = 0; axis < 2; axis = axis + 1 {
-    for a = 0; a < m.size; a = a + 1 {
-      for b = 0; b + 10 < m.size; b = b + 1 {
-        let mut m1 = true
-        let mut m2 = true
-        for k = 0; k < 11; k = k + 1 {
-          let v = if axis == 0 { m.get(b + k, a) } else { m.get(a, b + k) }
-          if v != pat1[k] {
-            m1 = false
+    for line = 0; line < m.size; line = line + 1 {
+      for start = 0; start + 10 < m.size; start = start + 1 {
+        let mut is_trailing_match = true
+        let mut is_leading_match = true
+        for offset = 0; offset < 11; offset = offset + 1 {
+          let color = if axis == 0 {
+            m.get(start + offset, line)
+          } else {
+            m.get(line, start + offset)
           }
-          if v != pat2[k] {
-            m2 = false
+          if color != trailing_light_pattern[offset] {
+            is_trailing_match = false
+          }
+          if color != leading_light_pattern[offset] {
+            is_leading_match = false
           }
         }
-        if m1 {
+        if is_trailing_match {
           score = score + 40
         }
-        if m2 {
+        if is_leading_match {
           score = score + 40
         }
       }
     }
   }
+  score
+}
+
+fn penalty_dark_balance(m : Matrix) -> Int {
   // N4: 黒率の50%からの乖離 5%毎に10点
-  let mut dark = 0
+  let mut dark_modules = 0
   for y = 0; y < m.size; y = y + 1 {
     for x = 0; x < m.size; x = x + 1 {
       if m.get(x, y) {
-        dark = dark + 1
+        dark_modules = dark_modules + 1
       }
     }
   }
-  let total = m.size * m.size
-  let percent = dark * 100 / total
-  let dev = if percent >= 50 { percent - 50 } else { 50 - percent }
-  score = score + dev / 5 * 10
-  score
+  let total_modules = m.size * m.size
+  // 互換性のため、黒率を整数に切り捨ててから50%との差を取る。
+  let dark_percent = dark_modules * 100 / total_modules
+  let deviation_percent = if dark_percent >= 50 {
+    dark_percent - 50
+  } else {
+    50 - dark_percent
+  }
+  deviation_percent / 5 * 10
 }
 
 ///| 8マスク試行して最小ペナルティのマスク番号を返す（フォーマット情報込みで評価）。
