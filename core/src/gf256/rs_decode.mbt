@@ -166,30 +166,24 @@ pub fn rs_decode(msg : Array[Int], n_ec : Int) -> Array[Int]? {
   if clean {
     return Some(msg)
   }
-  match find_error_locator(synd) {
-    None => None
-    Some(err_loc) =>
-      match find_error_positions(err_loc, msg.length()) {
-        None => None
-        Some(positions) =>
-          match correct_errors(msg, synd, err_loc, positions) {
-            None => None
-            Some(fixed) => {
-              // 検証ゲート: 訂正後のシンドロームが全0でなければ失敗扱い
-              let synd2 = calc_syndromes(fixed, n_ec)
-              let mut ok = true
-              for i = 0; i < synd2.length(); i = i + 1 {
-                if synd2[i] != 0 {
-                  ok = false
-                }
-              }
-              if ok {
-                Some(fixed)
-              } else {
-                None
-              }
-            }
-          }
-      }
+  guard find_error_locator(synd) is Some(err_loc) else { return None }
+  guard find_error_positions(err_loc, msg.length()) is Some(positions) else {
+    return None
+  }
+  guard correct_errors(msg, synd, err_loc, positions) is Some(fixed) else {
+    return None
+  }
+  // 検証ゲート: 訂正後のシンドロームが全0でなければ失敗扱い
+  let synd2 = calc_syndromes(fixed, n_ec)
+  let mut ok = true
+  for i = 0; i < synd2.length(); i = i + 1 {
+    if synd2[i] != 0 {
+      ok = false
+    }
+  }
+  if ok {
+    Some(fixed)
+  } else {
+    None
   }
 }
