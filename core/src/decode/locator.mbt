@@ -423,55 +423,14 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
           let end_x = x - s3 - s4
           let start_x = end_x - s2
           let line : Line = { start_x, end_x, y }
-          let mut matched = false
-          for i = 0; i < active_finder_pattern_quads.length(); i = i + 1 {
-            if !matched {
-              let q = active_finder_pattern_quads[i]
-              let ratio = s2.to_double() / (q.bottom.end_x - q.bottom.start_x).to_double()
-              let is_match = (start_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (end_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (
-                  start_x <= q.bottom.start_x &&
-                  end_x >= q.bottom.end_x &&
-                  ratio < max_quad_ratio &&
-                  ratio > min_quad_ratio
-                )
-              if is_match {
-                active_finder_pattern_quads[i] = { top: q.top, bottom: line }
-                matched = true
-              }
-            }
-          }
-          if !matched {
-            active_finder_pattern_quads.push({ top: line, bottom: line })
-          }
+          append_line_to_quads(active_finder_pattern_quads, line, s2)
         }
         if valid_alignment {
           let end_x = x - s4
           let start_x = end_x - s3
           let line : Line = { start_x, end_x, y }
-          let mut matched = false
-          for i = 0; i < active_alignment_pattern_quads.length(); i = i + 1 {
-            if !matched {
-              let q = active_alignment_pattern_quads[i]
-              let ratio = s2.to_double() / (q.bottom.end_x - q.bottom.start_x).to_double()
-              let is_match = (start_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (end_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (
-                  start_x <= q.bottom.start_x &&
-                  end_x >= q.bottom.end_x &&
-                  ratio < max_quad_ratio &&
-                  ratio > min_quad_ratio
-                )
-              if is_match {
-                active_alignment_pattern_quads[i] = { top: q.top, bottom: line }
-                matched = true
-              }
-            }
-          }
-          if !matched {
-            active_alignment_pattern_quads.push({ top: line, bottom: line })
-          }
+          // 線の長さは s3 でも、比率の分子は jsQR と同じ s2 を保つ。
+          append_line_to_quads(active_alignment_pattern_quads, line, s2)
         }
       }
     }
@@ -607,4 +566,26 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
       })
   }
   result
+}
+
+fn append_line_to_quads(quads : Array[Quad], line : Line, ratio_numerator : Int) -> Unit {
+  let start_x = line.start_x
+  let end_x = line.end_x
+  for i = 0; i < quads.length(); i = i + 1 {
+    let q = quads[i]
+    let ratio = ratio_numerator.to_double() / (q.bottom.end_x - q.bottom.start_x).to_double()
+    let is_match = (start_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
+      (end_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
+      (
+        start_x <= q.bottom.start_x &&
+        end_x >= q.bottom.end_x &&
+        ratio < max_quad_ratio &&
+        ratio > min_quad_ratio
+      )
+    if is_match {
+      quads[i] = { top: q.top, bottom: line }
+      return
+    }
+  }
+  quads.push({ top: line, bottom: line })
 }
