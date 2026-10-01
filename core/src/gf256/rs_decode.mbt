@@ -157,39 +157,21 @@ fn correct_errors(
 ///| 訂正不要時は入力配列そのものを返し、訂正時は入力を変更せず新しい配列を返す。
 pub fn rs_decode(msg : Array[Int], n_ec : Int) -> Array[Int]? {
   let synd = calc_syndromes(msg, n_ec)
-  let mut clean = true
-  for i = 0; i < synd.length(); i = i + 1 {
-    if synd[i] != 0 {
-      clean = false
-    }
-  }
-  if clean {
+  if synd.all(x => x == 0) {
     return Some(msg)
   }
-  match find_error_locator(synd) {
-    None => None
-    Some(err_loc) =>
-      match find_error_positions(err_loc, msg.length()) {
-        None => None
-        Some(positions) =>
-          match correct_errors(msg, synd, err_loc, positions) {
-            None => None
-            Some(fixed) => {
-              // 検証ゲート: 訂正後のシンドロームが全0でなければ失敗扱い
-              let synd2 = calc_syndromes(fixed, n_ec)
-              let mut ok = true
-              for i = 0; i < synd2.length(); i = i + 1 {
-                if synd2[i] != 0 {
-                  ok = false
-                }
-              }
-              if ok {
-                Some(fixed)
-              } else {
-                None
-              }
-            }
-          }
-      }
+  guard find_error_locator(synd) is Some(err_loc) else { return None }
+  guard find_error_positions(err_loc, msg.length()) is Some(positions) else {
+    return None
+  }
+  guard correct_errors(msg, synd, err_loc, positions) is Some(fixed) else {
+    return None
+  }
+  // 検証ゲート: 訂正後のシンドロームが全0でなければ失敗扱い
+  let synd2 = calc_syndromes(fixed, n_ec)
+  if synd2.all(x => x == 0) {
+    Some(fixed)
+  } else {
+    None
   }
 }

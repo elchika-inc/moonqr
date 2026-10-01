@@ -374,3 +374,30 @@
 - **ACCEPTED_RISKS**: なし。N4の既存の非対称は振る舞い維持のため未修正の差としてPRへ記録
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-01-moonqr-refactor-mask-penalty-41ff404 -->
+
+<!-- review-cycle:start 2026-10-01-moonqr-rs-decode-9d570a4 -->
+## 2026-10-01 rs_decode の standards-refactor
+- **Cycle ID**: 2026-10-01-moonqr-rs-decode-9d570a4
+- **対象 HEAD**: 9d570a4dbefd723ffa251ee34caad0dcacc193c2（レビュー後に本ブロックを末尾へ追記）
+- **対象差分**: `core/src/gf256/rs_decode.mbt` の `rs_decode` 本体、`core/src/gf256/rs_decode_test.mbt` のブラックボックステスト7件追加。公開doc・シグネチャ・対象外6関数・既存3テストは維持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズ LGTM。確信度80%以上の flag 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **レビュアー**: Codex 1名（gpt-6-astra / high、codex-cli 0.155.0、fresh context、ephemeral、sandbox read-only）。添付差分・2ファイル全文・PR本文案・CODING.mdを静的レビュー。ツール使用・書き込み・委任を禁止し、レンズ別の応答5ブロックを実装担当が原文のまま一時ファイルへ分割保存して検証した
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -s read-only --ephemeral -m gpt-6-astra -c 'model_reasoning_effort="high"' - < 指示文ファイル > 出力ファイル 2> stderrファイル`。終了コード0、全5ブロックの本文あり。`rmcp::transport::streamable_http_client: fail to delete session ... HTTP 404` が末尾に出たが、レビュー本文と終了コードを確認して無害と判定
+- **副作用の確認**: 対象2ソース・本ログ・risk-registryのSHA-256はレビュー前後で一致。作業ツリーも変更なし。レビューに使ったファイル名は絶対パスで指定し、本ログは全文でなく差分のみ添付（レビュー時は差分なし）
+- **適用ポリシー**: CODING.mdはstandardsをfetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）から取得。振る舞いを変えないリファクタリングなので§5.2のMUST対象外、その他の原則はoptionalとする旨をレビュアーへ明示。明示要件・correctness・セキュリティに影響する確信度80%以上の指摘だけをflagとして数えた
+- **検証範囲**: 段0 bootstrap（install / release:build / fetch-fixtures）とKey Commands 5本はすべてexit 0。段0はMoonBit127、Node284、unit moonqr53/cli25/scanner30が全件成功。段4はcore→packagesの順で再ビルド後、Key Commands 5本を個別に実行しすべてexit 0（MoonBit134、Node284、unit同件数）。Nodeは両時点ともskip0、jsQR ground truth214件で両実装214件一致・negative40件は両実装検出0。環境はNode v24.21.0 / moon 0.1.20260713
+- **lint**: 段0・段4ともexit 0 / 66 files / warnings19 / infos9 / 表示省略8診断。既存診断は変更対象外。`moon fmt` / `lint:fix` は未実行
+- **テスト固定**: 段2コミット ba2431570bffdffd1c1ecd5f19254d03b652d6b3 は `rs_decode_test.mbt` の76行追加のみ。追加7件の破壊検証は各1件実行・アサーション失敗・exit 2（abort失敗0）。毎回、未stage差分が実装1ファイルのみと確認して復元し、実装diff空/exit 0とMoonBit134件成功/exit 0を確認
+- **未到達条件**: seed777・LCG・16データ+10EC・相異なる6〜10位置への非0 XORを10,000試行し、(a)42 / (b)9958 / (c)0 / (d)0 / 誤訂正0。探索用whiteboxテストは1件成功後に削除してコミットから除外。6誤りの固定入力は(a)に到達し、能力を1個超過する境界テストと兼用。(d)のゲート無効化は134件成功で未検出だったが、到達不能の証明にはならないためゲートを維持
+- **検証の補足**: probeと追加テストの初回実行はcwd誤りで各exit 255。coreで再実行しprobe1件・追加後134件の成功を確認した。レビューは静的であり、レビュアー自身によるテスト再実行ではない。ブラウザ検証はsite変更なしのためN/A、性能測定・マージ・公開は未実施
+- **段3**: 1bbc226（早期return）・9d570a4（全0判定）ともコミット前のMoonBit134件がexit 0。段2以後のテスト差分は `*.test.*` / `*.spec.*` / `tests/` / `__tests__/` に `*_test.mbt` / `*_wbtest.mbt` を足して検査し、出力空・exit 0
+- **公開面と実測**: `grep -n '^pub'` は `158:pub fn rs_decode(msg : Array[Int], n_ec : Int) -> Array[Int]? {` の1行。rs_decodeは38行・ネスト6から20行・ネスト1へ（関数宣言〜閉じ括弧の両端込み、文字列と//コメント内の括弧を除外、関数本体の最大深さ−1）。切り出し関数0個。公開docと対象外6関数、既存3テストの内容は起点とbyte一致を別途確認
+- **裁量で変えた点**: guardによる早期return、標準Array::allの使用、テスト名とmake_codewordヘルパー、探索用検査の構成、テスト固定→早期return→全0判定→レビュー記録のコミット粒度とメッセージ。割り当て済みブランチnaoto24kawa/refactor-rs-decodeを使用
+- **レビュー記録の置き場**: 委任仕様に従い、本リポジトリの既存ブロックと同じ形式で本ログの末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-01-moonqr-rs-decode-9d570a4 -->
