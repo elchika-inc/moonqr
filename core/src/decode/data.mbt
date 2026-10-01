@@ -174,53 +174,41 @@ fn decode_numeric(
   bytes : Array[Int],
 ) -> Unit? {
   let width = @encode.cci_bits(@encode.Mode::Numeric, version)
-  let mut length = match r.read_bits(width) {
-    Some(v) => v
-    None => return None
+  guard r.read_bits(width) is Some(length) else { return None }
+  let mut remaining_digits = length
+  while remaining_digits > 0 {
+    let digit_count = if remaining_digits >= 3 { 3 } else { remaining_digits }
+    guard decode_numeric_group(r, digit_count, chars, bytes) is Some(_) else {
+      return None
+    }
+    remaining_digits = remaining_digits - digit_count
   }
-  while length >= 3 {
-    let num = match r.read_bits(10) {
-      Some(v) => v
-      None => return None
-    }
-    if num >= 1000 {
-      return None
-    }
-    let a = num / 100
-    let b = num / 10 % 10
-    let c = num % 10
-    bytes.push(48 + a)
-    bytes.push(48 + b)
-    bytes.push(48 + c)
-    chars.push(Int::unsafe_to_char(48 + a))
-    chars.push(Int::unsafe_to_char(48 + b))
-    chars.push(Int::unsafe_to_char(48 + c))
-    length = length - 3
+  Some(())
+}
+
+fn decode_numeric_group(
+  r : BitReader,
+  digit_count : Int,
+  chars : Array[Char],
+  bytes : Array[Int],
+) -> Unit? {
+  let (bit_width, limit, first_divisor) = match digit_count {
+    3 => (10, 1000, 100)
+    2 => (7, 100, 10)
+    _ => (4, 10, 1)
   }
-  if length == 2 {
-    let num = match r.read_bits(7) {
-      Some(v) => v
-      None => return None
-    }
-    if num >= 100 {
-      return None
-    }
-    let a = num / 10
-    let b = num % 10
-    bytes.push(48 + a)
-    bytes.push(48 + b)
-    chars.push(Int::unsafe_to_char(48 + a))
-    chars.push(Int::unsafe_to_char(48 + b))
-  } else if length == 1 {
-    let num = match r.read_bits(4) {
-      Some(v) => v
-      None => return None
-    }
-    if num >= 10 {
-      return None
-    }
-    bytes.push(48 + num)
-    chars.push(Int::unsafe_to_char(48 + num))
+  guard r.read_bits(bit_width) is Some(num) else { return None }
+  if num >= limit {
+    return None
+  }
+  let group_begin = bytes.length()
+  let mut divisor = first_divisor
+  while divisor > 0 {
+    bytes.push(48 + num / divisor % 10)
+    divisor = divisor / 10
+  }
+  for i = group_begin; i < bytes.length(); i = i + 1 {
+    chars.push(Int::unsafe_to_char(bytes[i]))
   }
   Some(())
 }
