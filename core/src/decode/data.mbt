@@ -96,60 +96,49 @@ fn alnum_char(idx : Int) -> Char {
 ///| （jsQR の decodeURIComponent 失敗＝try/catchでtext破棄に相当する判定を、
 ///| 標準的なUTF-8構造検証として明示的に実装）。
 fn utf8_decode(bytes : Array[Int]) -> Array[Int]? {
-  let cps : Array[Int] = []
-  let mut i = 0
-  let n = bytes.length()
-  fn is_cont(b : Int) -> Bool {
-    (b & 0xC0) == 0x80
-  }
-
-  while i < n {
-    let b0 = bytes[i]
-    if b0 < 0x80 {
-      cps.push(b0)
-      i = i + 1
-    } else if (b0 & 0xE0) == 0xC0 {
-      if i + 1 >= n || !is_cont(bytes[i + 1]) {
-        return None
-      }
-      let cp = ((b0 & 0x1F) << 6) | (bytes[i + 1] & 0x3F)
-      if cp < 0x80 {
-        return None // overlong
-      }
-      cps.push(cp)
-      i = i + 2
-    } else if (b0 & 0xF0) == 0xE0 {
-      if i + 2 >= n || !is_cont(bytes[i + 1]) || !is_cont(bytes[i + 2]) {
-        return None
-      }
-      let b2 = bytes[i + 2]
-      let cp = ((b0 & 0x0F) << 12) | ((bytes[i + 1] & 0x3F) << 6) | (b2 & 0x3F)
-      if cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF) {
-        return None // overlong または UTF-16 サロゲート範囲
-      }
-      cps.push(cp)
-      i = i + 3
-    } else if (b0 & 0xF8) == 0xF0 {
-      if i + 3 >= n ||
-        !is_cont(bytes[i + 1]) ||
-        !is_cont(bytes[i + 2]) ||
-        !is_cont(bytes[i + 3]) {
-        return None
-      }
-      let cp = ((b0 & 0x07) << 18) |
-        ((bytes[i + 1] & 0x3F) << 12) |
-        ((bytes[i + 2] & 0x3F) << 6) |
-        (bytes[i + 3] & 0x3F)
-      if cp < 0x10000 || cp > 0x10FFFF {
-        return None
-      }
-      cps.push(cp)
-      i = i + 4
-    } else {
+  let codepoints : Array[Int] = []
+  let mut offset = 0
+  while offset < bytes.length() {
+    guard decode_utf8_codepoint(bytes, offset) is Some((codepoint, byte_count)) else {
       return None
     }
+    codepoints.push(codepoint)
+    offset = offset + byte_count
   }
-  Some(cps)
+  Some(codepoints)
+}
+
+fn decode_utf8_codepoint(bytes : Array[Int], offset : Int) -> (Int, Int)? {
+  let lead = bytes[offset]
+  if lead < 0x80 {
+    return Some((lead, 1))
+  }
+  let (byte_count, lead_mask, min_codepoint) = if (lead & 0xE0) == 0xC0 {
+    (2, 0x1F, 0x80)
+  } else if (lead & 0xF0) == 0xE0 {
+    (3, 0x0F, 0x800)
+  } else if (lead & 0xF8) == 0xF0 {
+    (4, 0x07, 0x10000)
+  } else {
+    return None
+  }
+  if offset + byte_count > bytes.length() {
+    return None
+  }
+  let mut codepoint = lead & lead_mask
+  for i = 1; i < byte_count; i = i + 1 {
+    let continuation = bytes[offset + i]
+    if (continuation & 0xC0) != 0x80 {
+      return None
+    }
+    codepoint = (codepoint << 6) | (continuation & 0x3F)
+  }
+  if codepoint < min_codepoint ||
+    (codepoint >= 0xD800 && codepoint <= 0xDFFF) ||
+    codepoint > 0x10FFFF {
+    return None
+  }
+  Some((codepoint, byte_count))
 }
 
 ///| Kanjiモードの文字数指示子ビット幅（ISO 18004 Table 3。jsQR decodeKanji の
