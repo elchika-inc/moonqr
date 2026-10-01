@@ -473,6 +473,41 @@
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-place-function-patterns-e2836df -->
 
+<!-- review-cycle:start 2026-10-02-moonqr-binarize-969c4f1 -->
+## 2026-10-02 binarize の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-binarize-969c4f1
+- **対象 HEAD**: 969c4f1（main 38ee3d3からの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/decode/binarize.mbt` の `binarize` と抽出した非公開5関数、指定されたヘッダ/関数内コメントの訂正、`core/src/decode/binarize_test.mbt` の3テスト・38行追記。出典2行・対象外2定数/2関数・入口doc・既存テスト全文は保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM、確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 公開シグネチャ・追加5関数の非公開性・工程間の受け渡し・許可されたコメント変更を確認
+- **Security**: 外部I/O・依存・共有可変状態の追加なし。画素書き込みの範囲条件が等価であり、新たな範囲外アクセスを生まないことを確認
+- **Core Logic**: 輝度・ブロック平均・min/2・重み付き近傍平均・sum/25の式と括り、clamp_u8の適用位置、行優先の伝播順序、通常/反転の否定関係を確認
+- **Tests**: 追加3件は公開画素出力から輝度差24・しきい値等号・赤青係数を区別する。破壊検証・復元・テスト凍結は実装担当の実行記録として評価し、レビュアー自身はテストや履歴確認を実行していない
+- **Domain**: 端の反復サンプリング・小格子の近傍クランプ・25項の集計順序・丸め済みブロック値の伝播を保持。sample生成は画像につき1回で画素ループの新規割り当てなし。出典と帰属の保持、性能未測定の明示も確認
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、binarize.mbt全文、段2テスト追記diff、レビュー記録diff（R1時点は空）、PR下書き、実行記録、CODING.mdを提示。既存テスト全文とレビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0、5ロールの境界付き非空LGTMブロック各1個を検査し、原文のままロール別に保存して読戻し一致を確認。終了時のDELETE 404をstderrに記録したが、有効な本文とexit 0を確認して無害と判定
+- **副作用の確認**: 対象ソース2つ・本ログ・risk-registryのSHA-256はレビュー前後で一致し、git statusも空。任意のcode-review-graph工程は省略し、対象全文と差分を直接提示
+- **適用ポリシー**: standardsをfetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞いを変えない本PRは§5.2 MUST対象外、他原則と類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとして数えた
+- **段0**: install / release:build / fetch-fixturesの3本は各exit 0（fixture254/254）。Key Commands5本も各exit 0。MoonBit153/153、Node284/284/skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos/表示省略8。Node v24.21.0 / moon 0.1.20260713。対象109行・ネスト5は指定値と一致
+- **テスト固定**: 段2コミットdc9cfde435e29391809fbf2ddcc82c1d66074926はbinarize_test.mbtへの38行追記のみ。輝度差24の8x8市松、1x1の黒、8x8の赤青交互の現在の出力を固定した
+- **破壊検証**: 左重み2→1は既存黒芯1件がアサーション失敗、近傍条件&&→||は既存7件がIndex out of bounds（abort）。低分散<=→<は既存153件と再build後のjsQR parityの両方で未検出だったが、追加の市松テストでアサーション失敗。しきい値<=→<は154件で未検出後、追加の1x1テストでアサーション失敗。R/B係数入替は155件で未検出後、追加の赤青テストでアサーション失敗。sampleのxクランプ除去は9件abort、小格子のxyクランプ除去は4件abort。検出時はいずれもexit 2
+- **復元確認**: 全10回でgit diff --statがbinarize.mbtだけと確認してからgit checkoutで復元。実装diff空/exit 0と全MoonBit成功/exit 0を毎回確認。追加テストはstageして復元対象と分離。-fは使用せず全テスト件数を確認
+- **段3**: d2bad0f（工程抽出）・8e227c2（範囲外をcontinue）・969c4f1（許可コメント訂正）の各コミット直前に全MoonBit156/156・exit 0。段3のテスト失敗0回、テスト変更0
+- **段4**: core→packagesの順で再buildしてexit 0後、Key Commands5本は各exit 0。MoonBit156/156、Node284/284/skip0、unit53+25+30、typecheck3 packages、lintは段0と同じ。段0・段4ともground truth214件はjsQR/moonqr両方214一致、negative40件は両方検出0。Nodeテスト再試行なし
+- **公開面と実測**: pub行は `39:pub fn binarize(data : Bytes, width : Int, height : Int) -> (BitMatrix, BitMatrix) {` の1行。binarizeは109行/ネスト5→9/0。抽出関数はrgba_to_grayscale14/2、calculate_black_points27/2、calculate_block_black_point47/3、binarize_with_black_points33/5、average_neighbor_black_points24/2。宣言〜終端の両端・空行・コメント込み、文字列と//コメントの括弧を除き最大深さ−1。関数行数合計109→154、全体最大ネスト5は維持
+- **差分確認**: 未コミット変更なしで段2以後のテスト差分を指定4パターンに `*_test.mbt` / `*_wbtest.mbt` を加えて検査し、出力空/exit 0。出典2行、対象外2定数/2関数と入口docのbyte一致、既存テスト全文のprefix一致、指定浮動小数点式の保持を別途assertで確認
+- **検証の補足**: 全RGB値・全寸法・全しきい値の網羅、メモリ枯渇、性能ベンチマーク、実機検証は未実施。ブラウザはsite変更なしでN/A。moon fmt / lint:fix / マージ / 公開は実行していない
+- **裁量で変えた点**: 抽出5関数の分け方と名前、追加3テストの入力・名前、テスト固定→工程分割→制御フロー→コメント→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-binarizeブランチを使用
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの既存ログ追記の慣習と委任仕様に従い、本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-binarize-969c4f1 -->
+
 <!-- review-cycle:start 2026-10-02-moonqr-read-data-d97a076 -->
 ## 2026-10-02 read_data の standards-refactor
 - **Cycle ID**: 2026-10-02-moonqr-read-data-d97a076

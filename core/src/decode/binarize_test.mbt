@@ -105,3 +105,41 @@ test "inverted matrix is logical negation of binarized at same coords" {
     assert_eq(inv.get(x, y), !bin.get(x, y))
   }
 }
+
+test "輝度差24の8x8市松画像 → 暗い画素も白になる" {
+  let buf = FixedArray::make(8 * 8 * 4, b'\xFF')
+  for y = 0; y < 8; y = y + 1 {
+    for x = 0; x < 8; x = x + 1 {
+      let v = if (x + y) % 2 == 0 { 100 } else { 124 }
+      let i = (y * 8 + x) * 4
+      buf[i] = v.to_byte()
+      buf[i + 1] = v.to_byte()
+      buf[i + 2] = v.to_byte()
+    }
+  }
+  let (bin, _) = @decode.binarize(Bytes::from_array(buf[:]), 8, 8)
+  assert_false(bin.get(0, 0))
+}
+
+test "1x1の黒画素がしきい値と等しい → 黒になる" {
+  let (bin, _) = @decode.binarize(b"\x00\x00\x00\xFF", 1, 1)
+  assert_true(bin.get(0, 0))
+}
+
+test "赤と青が交互の8x8画像 → 赤は白で青は黒になる" {
+  let buf = FixedArray::make(8 * 8 * 4, b'\x00')
+  for y = 0; y < 8; y = y + 1 {
+    for x = 0; x < 8; x = x + 1 {
+      let i = (y * 8 + x) * 4
+      if x % 2 == 0 {
+        buf[i] = b'\xFF'
+      } else {
+        buf[i + 2] = b'\xFF'
+      }
+      buf[i + 3] = b'\xFF'
+    }
+  }
+  let (bin, _) = @decode.binarize(Bytes::from_array(buf[:]), 8, 8)
+  assert_false(bin.get(0, 0))
+  assert_true(bin.get(1, 0))
+}
