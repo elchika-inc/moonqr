@@ -378,60 +378,27 @@ pub fn decode_data(codewords : Array[Int], version : Int) -> DecodedData? {
       Some(v) => v
       None => abort("unreachable: available() >= 4 guarantees 4 bits")
     }
-    if mode == 0x0 {
-      // Terminator
-      return Some({ text: chars_to_string(chars), bytes })
-    } else if mode == 0x3 || mode == 0x9 {
-      // Structured Append / FNC1 second position は追加ヘッダを持つが未対応。
+    let segment = match mode {
+      0x0 => return Some({ text: chars_to_string(chars), bytes })
+      // Structured Append / FNC1 second は追加ヘッダを持つが未対応。
       // ペイロードを誤って別モードとして読まず失敗へ倒す。
-      return None
-    } else if mode == 0x5 {
-      // FNC1 first position は追加ヘッダを持たない。指示子だけを消費し、
-      // 直後の通常データセグメントを次のループで読む。
-      ()
-    } else if mode == 0x7 {
-      // ECI
-      match decode_eci(r) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x1 {
-      // Numeric
-      match decode_numeric(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x2 {
-      // Alphanumeric
-      match decode_alphanumeric(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x4 {
-      // Byte
-      match decode_byte(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x8 {
-      // Kanji
-      match decode_kanji(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
+      0x3 | 0x9 => return None
+      // FNC1 first は追加ヘッダを持たず、指示子だけ消費して継続する。
+      0x5 => Some(())
+      0x7 => decode_eci(r)
+      0x1 => decode_numeric(r, version, chars, bytes)
+      0x2 => decode_alphanumeric(r, version, chars, bytes)
+      0x4 => decode_byte(r, version, chars, bytes)
+      0x8 => decode_kanji(r, version, chars, bytes)
+      // 未割り当て値（0x6, 0xA-0xF）はjsQR同様、4bitだけ消費して継続する。
+      _ => Some(())
     }
-    // それ以外の未割り当て値（0x6, 0xA-0xF）は、jsQR と同じく
-    // モード4bitの消費のみでペイロードを読まず継続する。
+    guard segment is Some(_) else { return None }
   }
-  // ループを available() < 4 で抜けた（終端子に到達しないまま消費し切った）場合。
-  // 残りが0bit、または残り全ビットが0なら暗黙の終端子とみなして成功（jsQRの
-  // `stream.available() === 0 || stream.readBits(stream.available()) === 0` と同じ）。
-  if r.available() == 0 {
+  // 終端子なしで残り4bit未満になったときは、0bitまたは全0なら成功する。
+  if r.available() == 0 || r.read_bits(r.available()) == Some(0) {
     Some({ text: chars_to_string(chars), bytes })
   } else {
-    match r.read_bits(r.available()) {
-      Some(0) => Some({ text: chars_to_string(chars), bytes })
-      _ => None
-    }
+    None
   }
 }
