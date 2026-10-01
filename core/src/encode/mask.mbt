@@ -29,6 +29,11 @@ pub fn apply_mask(m : Matrix, mask : Int) -> Unit {
 
 ///| ISO 18004 の4ペナルティ規則
 pub fn penalty(m : Matrix) -> Int {
+  penalty_runs(m) + penalty_blocks(m) + penalty_finder_patterns(m) +
+  penalty_dark_balance(m)
+}
+
+fn penalty_runs(m : Matrix) -> Int {
   let mut score = 0
   // N1: 同色5連続以上（行・列）: 3 + 超過分
   for axis = 0; axis < 2; axis = axis + 1 {
@@ -50,6 +55,11 @@ pub fn penalty(m : Matrix) -> Int {
       }
     }
   }
+  score
+}
+
+fn penalty_blocks(m : Matrix) -> Int {
+  let mut score = 0
   // N2: 2x2 同色ブロック: 3点/個
   for y = 0; y < m.size - 1; y = y + 1 {
     for x = 0; x < m.size - 1; x = x + 1 {
@@ -60,6 +70,11 @@ pub fn penalty(m : Matrix) -> Int {
       }
     }
   }
+  score
+}
+
+fn penalty_finder_patterns(m : Matrix) -> Int {
+  let mut score = 0
   // N3: 1011101 の前後に 0000（ファインダ様）: 40点/個
   let pat1 = [true, false, true, true, true, false, true, false, false, false, false]
   let pat2 = [false, false, false, false, true, false, true, true, true, false, true]
@@ -86,6 +101,10 @@ pub fn penalty(m : Matrix) -> Int {
       }
     }
   }
+  score
+}
+
+fn penalty_dark_balance(m : Matrix) -> Int {
   // N4: 黒率の50%からの乖離 5%毎に10点
   let mut dark = 0
   for y = 0; y < m.size; y = y + 1 {
@@ -98,8 +117,7 @@ pub fn penalty(m : Matrix) -> Int {
   let total = m.size * m.size
   let percent = dark * 100 / total
   let dev = if percent >= 50 { percent - 50 } else { 50 - percent }
-  score = score + dev / 5 * 10
-  score
+  dev / 5 * 10
 }
 
 ///| 8マスク試行して最小ペナルティのマスク番号を返す（フォーマット情報込みで評価）。
