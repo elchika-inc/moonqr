@@ -142,6 +142,20 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   if n == 0 {
     return None
   }
+  let byte_prefix = segment_utf8_byte_prefix(text)
+  let run_char_offsets : Array[Int] = []
+  let run_byte_offsets : Array[Int] = []
+  for r in runs {
+    run_char_offsets.push(r.start)
+    run_byte_offsets.push(byte_prefix[r.start])
+  }
+  let text_len = runs[n - 1].start + runs[n - 1].len
+  run_char_offsets.push(text_len)
+  run_byte_offsets.push(byte_prefix[text_len])
+  Some(plan_run_segments(runs, run_char_offsets, run_byte_offsets, version))
+}
+
+fn segment_utf8_byte_prefix(text : String) -> Array[Int] {
   let byte_prefix : Array[Int] = [0]
   for c in text {
     let cp = c.to_int()
@@ -156,15 +170,25 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
     }
     byte_prefix.push(byte_prefix[byte_prefix.length() - 1] + byte_len)
   }
-  let charpos : Array[Int] = []
-  let bytepos : Array[Int] = []
-  for r in runs {
-    charpos.push(r.start)
-    bytepos.push(byte_prefix[r.start])
-  }
-  let text_len = runs[n - 1].start + runs[n - 1].len
-  charpos.push(text_len)
-  bytepos.push(byte_prefix[text_len])
+  byte_prefix
+}
+
+fn plan_run_segments(
+  runs : Array[Run],
+  run_char_offsets : Array[Int],
+  run_byte_offsets : Array[Int],
+  version : Int,
+) -> Array[Segment] {
+  let n = runs.length()
+  // 2文字11bit・3文字10bitを整数で比較するため、コストの単位を1/6bitにする。
+  let cost_scale = 6
+  let byte_unit_cost6 = 8 * cost_scale
+  let alnum_unit_cost6 = 11 * cost_scale / 2
+  let numeric_unit_cost6 = 10 * cost_scale / 3
+  let alnum_odd_padding6 = 6 * cost_scale - alnum_unit_cost6
+  let byte_header6 = cost_scale * (4 + cci_bits(Mode::Byte, version))
+  let alnum_header6 = cost_scale * (4 + cci_bits(Mode::Alphanumeric, version))
+  let numeric_header6 = cost_scale * (4 + cci_bits(Mode::Numeric, version))
   // dp6[j] = 先頭から j 個のランを符号化する最小ビット数の6倍（dp6[0] = 0）
   let inf = 0x7FFFFFFF
   let dp6 = Array::make(n + 1, inf)
@@ -172,65 +196,65 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   // from_run[j] / from_mode[j] = dp6[j] を達成する直前の状態
   let from_run = Array::make(n + 1, 0)
   let from_mode = Array::make(n + 1, Mode::Byte)
-  // Byte は任意の run 区間を覆えるため、開始点 i の変換済みコストの最小値を持つ。
-  let mut best_byte = inf
-  let mut best_byte_i = 0
-  // Alphanumeric は Byte run を跨げず、データ部の端数は開始文字位置の偶奇で決まる。
-  let best_alnum = Array::make(2, inf)
-  let best_alnum_i = Array::make(2, 0)
+  // Byte は任意のラン区間を覆える。開始位置までのデータコストを引いた最小値を持つ。
+  let mut best_byte_base6 = inf
+  let mut best_byte_start = 0
+  // Alphanumeric は Byte ランを跨げず、データ部の端数は開始文字位置の偶奇で決まる。
+  let best_alnum_base6 = Array::make(2, inf)
+  let best_alnum_start = Array::make(2, 0)
   for j = 1; j <= n; j = j + 1 {
     let i = j - 1
     if dp6[i] != inf {
-      let byte_cand = dp6[i] - 48 * bytepos[i]
-      if byte_cand < best_byte {
-        best_byte = byte_cand
-        best_byte_i = i
+      let byte_base6 = dp6[i] - byte_unit_cost6 * run_byte_offsets[i]
+      if byte_base6 < best_byte_base6 {
+        best_byte_base6 = byte_base6
+        best_byte_start = i
       }
       if runs[i].mode == Mode::Byte {
-        best_alnum[0] = inf
-        best_alnum[1] = inf
+        best_alnum_base6[0] = inf
+        best_alnum_base6[1] = inf
       } else {
-        let parity = charpos[i] % 2
-        let alnum_cand = dp6[i] - 33 * charpos[i]
-        if alnum_cand < best_alnum[parity] {
-          best_alnum[parity] = alnum_cand
-          best_alnum_i[parity] = i
+        let parity = run_char_offsets[i] % 2
+        let alnum_base6 = dp6[i] - alnum_unit_cost6 * run_char_offsets[i]
+        if alnum_base6 < best_alnum_base6[parity] {
+          best_alnum_base6[parity] = alnum_base6
+          best_alnum_start[parity] = i
         }
       }
     }
 
-    if best_byte != inf {
-      let cost = 6 * (4 + cci_bits(Mode::Byte, version)) +
-        48 * bytepos[j] + best_byte
+    if best_byte_base6 != inf {
+      let cost6 = byte_header6 +
+        byte_unit_cost6 * run_byte_offsets[j] + best_byte_base6
       if segment_candidate_is_better(
-        cost,
-        best_byte_i,
+        cost6,
+        best_byte_start,
         Mode::Byte,
         dp6[j],
         from_run[j],
         from_mode[j],
       ) {
-        dp6[j] = cost
-        from_run[j] = best_byte_i
+        dp6[j] = cost6
+        from_run[j] = best_byte_start
         from_mode[j] = Mode::Byte
       }
     }
 
     for parity = 0; parity < 2; parity = parity + 1 {
-      if best_alnum[parity] != inf {
-        let remainder = (charpos[j] - parity) % 2
-        let cost = 6 * (4 + cci_bits(Mode::Alphanumeric, version)) +
-          33 * charpos[j] + 3 * remainder + best_alnum[parity]
+      if best_alnum_base6[parity] != inf {
+        let remainder = (run_char_offsets[j] - parity) % 2
+        let cost6 = alnum_header6 + alnum_unit_cost6 * run_char_offsets[j] +
+          alnum_odd_padding6 * remainder + best_alnum_base6[parity]
         if segment_candidate_is_better(
-          cost,
-          best_alnum_i[parity],
+          cost6,
+          best_alnum_start[parity],
           Mode::Alphanumeric,
           dp6[j],
           from_run[j],
           from_mode[j],
         ) {
-          dp6[j] = cost
-          from_run[j] = best_alnum_i[parity]
+          dp6[j] = cost6
+          from_run[j] = best_alnum_start[parity]
           from_mode[j] = Mode::Alphanumeric
         }
       }
@@ -239,30 +263,48 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
     if runs[i].mode == Mode::Numeric && dp6[i] != inf {
       let len = runs[i].len
       let remainder = len % 3
-      let c3 = if remainder == 1 { 2 } else if remainder == 2 { 1 } else { 0 }
-      let cost = dp6[i] + 6 * (4 + cci_bits(Mode::Numeric, version)) +
-        20 * len + 2 * c3
+      // 端数1文字は4bit、2文字は7bitになるよう、平均コストとの差を足す。
+      let numeric_padding6 = if remainder == 1 {
+        4 * cost_scale - numeric_unit_cost6
+      } else if remainder == 2 {
+        7 * cost_scale - 2 * numeric_unit_cost6
+      } else {
+        0
+      }
+      let cost6 = dp6[i] + numeric_header6 +
+        numeric_unit_cost6 * len + numeric_padding6
       if segment_candidate_is_better(
-        cost,
+        cost6,
         i,
         Mode::Numeric,
         dp6[j],
         from_run[j],
         from_mode[j],
       ) {
-        dp6[j] = cost
+        dp6[j] = cost6
         from_run[j] = i
         from_mode[j] = Mode::Numeric
       }
     }
   }
-  // 復元
+  restore_segment_path(from_run, from_mode, run_char_offsets)
+}
+
+fn restore_segment_path(
+  from_run : Array[Int],
+  from_mode : Array[Mode],
+  run_char_offsets : Array[Int],
+) -> Array[Segment] {
   let rev : Array[Segment] = []
-  let mut j = n
+  let mut j = from_run.length() - 1
   while j > 0 {
     let i = from_run[j]
     rev.push(
-      Segment::{ mode: from_mode[j], start: charpos[i], len: charpos[j] - charpos[i] },
+      Segment::{
+        mode: from_mode[j],
+        start: run_char_offsets[i],
+        len: run_char_offsets[j] - run_char_offsets[i],
+      },
     )
     j = i
   }
@@ -270,7 +312,7 @@ fn optimal_segments(text : String, version : Int) -> Array[Segment]? {
   for idx = rev.length() - 1; idx >= 0; idx = idx - 1 {
     out.push(rev[idx])
   }
-  Some(out)
+  out
 }
 
 ///| 最適分割に基づいて複数セグメントを書く。
