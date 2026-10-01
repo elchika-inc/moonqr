@@ -137,12 +137,11 @@ fn correct_data_blocks(
     for i = 0; i < ecount; i = i + 1 {
       msg.push(ec_blocks[b][i])
     }
-    match @gf256.rs_decode(msg, ecount) {
-      None => return None
-      Some(fixed) =>
-        for i = 0; i < dcount; i = i + 1 {
-          corrected_data.push(fixed[i])
-        }
+    guard @gf256.rs_decode(msg, ecount) is Some(fixed) else {
+      return None
+    }
+    for i = 0; i < dcount; i = i + 1 {
+      corrected_data.push(fixed[i])
     }
   }
   Some(corrected_data)
