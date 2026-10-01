@@ -36,6 +36,16 @@ fn num_between(value : Int, lo : Int, hi : Int) -> Int {
 ///| RGBA → 二値行列。返り値 (binarized, inverted)。
 ///| jsQR 同様、反転版も同時生成する（invertAttempts 用）
 pub fn binarize(data : Bytes, width : Int, height : Int) -> (BitMatrix, BitMatrix) {
+  let gray = rgba_to_grayscale(data, width, height)
+  let h_regions = (width + block_size - 1) / block_size
+  let v_regions = (height + block_size - 1) / block_size
+  let black_points = calculate_black_points(
+    gray, width, height, h_regions, v_regions,
+  )
+  binarize_with_black_points(gray, width, height, black_points, h_regions, v_regions)
+}
+
+fn rgba_to_grayscale(data : Bytes, width : Int, height : Int) -> FixedArray[Int] {
   // 1. グレースケール化（jsQR L37: 0.2126R + 0.7152G + 0.0722B）
   let gray = FixedArray::make(width * height, 0)
   for y = 0; y < height; y = y + 1 {
@@ -47,7 +57,16 @@ pub fn binarize(data : Bytes, width : Int, height : Int) -> (BitMatrix, BitMatri
       gray[y * width + x] = clamp_u8(0.2126 * r + 0.7152 * g + 0.0722 * b)
     }
   }
+  gray
+}
 
+fn calculate_black_points(
+  gray : FixedArray[Int],
+  width : Int,
+  height : Int,
+  h_regions : Int,
+  v_regions : Int,
+) -> FixedArray[Int] {
   // jsQR は width/height が block_size の倍数でない場合、最終ブロックの
   // 読み出しが次行へオーバーランする未定義動作になる（Uint8ClampedArray
   // の範囲外読み出しは undefined → NaN 伝播）。ここではクラッシュや
@@ -58,76 +77,82 @@ pub fn binarize(data : Bytes, width : Int, height : Int) -> (BitMatrix, BitMatri
     let cy = if y >= height { height - 1 } else { y }
     gray[cy * width + cx]
   }
-  let h_regions = (width + block_size - 1) / block_size
-  let v_regions = (height + block_size - 1) / block_size
-
   // 2. ブロック平均 → 低分散判定 → 近傍しきい値継承（jsQR L44-88 を移植）
   let black_points = FixedArray::make(h_regions * v_regions, 0)
   for vr = 0; vr < v_regions; vr = vr + 1 {
     for hr = 0; hr < h_regions; hr = hr + 1 {
-      let mut sum = 0
-      let mut min_v = 256
-      let mut max_v = 0
-      for dy = 0; dy < block_size; dy = dy + 1 {
-        for dx = 0; dx < block_size; dx = dx + 1 {
-          let lum = sample(hr * block_size + dx, vr * block_size + dy)
-          sum = sum + lum
-          if lum < min_v {
-            min_v = lum
-          }
-          if lum > max_v {
-            max_v = lum
-          }
-        }
-      }
-      let mut average = sum.to_double() / (block_size * block_size).to_double()
-      if max_v - min_v <= min_dynamic_range {
-        // ブロック内の分散が低い = 一様な明/暗ブロックとみなす。
-        // この場合 average をそのまま使うとノイズから偽のデータ境界を
-        // 作ってしまうため、min の半分をデフォルトのしきい値とする
-        // （＝実質的に白側へ倒す）。
-        average = min_v.to_double() / 2.0
-        if vr > 0 && hr > 0 {
-          // 「白背景」前提の補正: 近傍（上・左・左上）ブロックのしきい値
-          // 平均と比較する。暗いシンボルは必ず妥当なしきい値が推定できる
-          // 明るい背景に囲まれているという前提に基づき、境界で推定された
-          // しきい値を内部（一様ブロック）へ伝播させる。
-          let neighbor_avg = (
-            black_points[(vr - 1) * h_regions + hr].to_double() +
-            2.0 * black_points[vr * h_regions + hr - 1].to_double() +
-            black_points[(vr - 1) * h_regions + hr - 1].to_double()
-          ) /
-          4.0
-          if min_v.to_double() < neighbor_avg {
-            average = neighbor_avg
-          }
-        }
-      }
-      black_points[vr * h_regions + hr] = clamp_u8(average)
+      black_points[vr * h_regions + hr] = calculate_block_black_point(
+        sample, black_points, h_regions, hr, vr,
+      )
     }
   }
+  black_points
+}
 
+fn calculate_block_black_point(
+  sample : (Int, Int) -> Int,
+  black_points : FixedArray[Int],
+  h_regions : Int,
+  hr : Int,
+  vr : Int,
+) -> Int {
+  let mut sum = 0
+  let mut min_v = 256
+  let mut max_v = 0
+  for dy = 0; dy < block_size; dy = dy + 1 {
+    for dx = 0; dx < block_size; dx = dx + 1 {
+      let lum = sample(hr * block_size + dx, vr * block_size + dy)
+      sum = sum + lum
+      if lum < min_v {
+        min_v = lum
+      }
+      if lum > max_v {
+        max_v = lum
+      }
+    }
+  }
+  let mut average = sum.to_double() / (block_size * block_size).to_double()
+  if max_v - min_v <= min_dynamic_range {
+    // ブロック内の分散が低い = 一様な明/暗ブロックとみなす。
+    // この場合 average をそのまま使うとノイズから偽のデータ境界を
+    // 作ってしまうため、min の半分をデフォルトのしきい値とする
+    // （＝実質的に白側へ倒す）。
+    average = min_v.to_double() / 2.0
+    if vr > 0 && hr > 0 {
+      // 「白背景」前提の補正: 近傍（上・左・左上）ブロックのしきい値
+      // 平均と比較する。暗いシンボルは必ず妥当なしきい値が推定できる
+      // 明るい背景に囲まれているという前提に基づき、境界で推定された
+      // しきい値を内部（一様ブロック）へ伝播させる。
+      let neighbor_avg = (
+        black_points[(vr - 1) * h_regions + hr].to_double() +
+        2.0 * black_points[vr * h_regions + hr - 1].to_double() +
+        black_points[(vr - 1) * h_regions + hr - 1].to_double()
+      ) /
+      4.0
+      if min_v.to_double() < neighbor_avg {
+        average = neighbor_avg
+      }
+    }
+  }
+  clamp_u8(average)
+}
+
+fn binarize_with_black_points(
+  gray : FixedArray[Int],
+  width : Int,
+  height : Int,
+  black_points : FixedArray[Int],
+  h_regions : Int,
+  v_regions : Int,
+) -> (BitMatrix, BitMatrix) {
   // 3. 5x5近傍ブロック平均でしきい値化（jsQR L95-118）
   let binarized = BitMatrix::make(width, height)
   let inverted = BitMatrix::make(width, height)
   for vr = 0; vr < v_regions; vr = vr + 1 {
     for hr = 0; hr < h_regions; hr = hr + 1 {
-      let left = num_between(hr, 2, h_regions - 3)
-      let top = num_between(vr, 2, v_regions - 3)
-      let mut sum = 0
-      for yr = -2; yr <= 2; yr = yr + 1 {
-        for xr = -2; xr <= 2; xr = xr + 1 {
-          // jsQR の TypedArray は範囲外読みを undefined（後続で NaN）として
-          // 許容するが、MoonBit の FixedArray はパニックする。格子が 5x5 未満
-          // （画像の一辺が 33px 未満）のときだけ近傍座標を実在範囲へ寄せる。
-          // 5x5 以上では元の top/left ± 2 と同じ座標になるため、既存画像の
-          // 二値化結果は変わらない。
-          let neighbor_y = num_between(top + yr, 0, v_regions - 1)
-          let neighbor_x = num_between(left + xr, 0, h_regions - 1)
-          sum = sum + black_points[neighbor_y * h_regions + neighbor_x]
-        }
-      }
-      let threshold = sum.to_double() / 25.0
+      let threshold = average_neighbor_black_points(
+        black_points, h_regions, v_regions, hr, vr,
+      )
       for yr = 0; yr < block_size; yr = yr + 1 {
         for xr = 0; xr < block_size; xr = xr + 1 {
           let x = hr * block_size + xr
@@ -143,4 +168,29 @@ pub fn binarize(data : Bytes, width : Int, height : Int) -> (BitMatrix, BitMatri
     }
   }
   (binarized, inverted)
+}
+
+fn average_neighbor_black_points(
+  black_points : FixedArray[Int],
+  h_regions : Int,
+  v_regions : Int,
+  hr : Int,
+  vr : Int,
+) -> Double {
+  let left = num_between(hr, 2, h_regions - 3)
+  let top = num_between(vr, 2, v_regions - 3)
+  let mut sum = 0
+  for yr = -2; yr <= 2; yr = yr + 1 {
+    for xr = -2; xr <= 2; xr = xr + 1 {
+      // jsQR の TypedArray は範囲外読みを undefined（後続で NaN）として
+      // 許容するが、MoonBit の FixedArray はパニックする。格子が 5x5 未満
+      // （画像の一辺が 33px 未満）のときだけ近傍座標を実在範囲へ寄せる。
+      // 5x5 以上では元の top/left ± 2 と同じ座標になるため、既存画像の
+      // 二値化結果は変わらない。
+      let neighbor_y = num_between(top + yr, 0, v_regions - 1)
+      let neighbor_x = num_between(left + xr, 0, h_regions - 1)
+      sum = sum + black_points[neighbor_y * h_regions + neighbor_x]
+    }
+  }
+  sum.to_double() / 25.0
 }
