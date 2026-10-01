@@ -81,9 +81,10 @@ fn place_alignment_patterns(m : Matrix, version : Int) -> Unit {
       // 3つのファインダ位置と重なるものはスキップ
       let overlaps = (cx <= 8 && cy <= 8) ||
         (cx >= m.size - 9 && cy <= 8) || (cx <= 8 && cy >= m.size - 9)
-      if !overlaps {
-        place_alignment_pattern(m, cx, cy)
+      if overlaps {
+        continue
       }
+      place_alignment_pattern(m, cx, cy)
     }
   }
 }
