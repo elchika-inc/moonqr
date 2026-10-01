@@ -343,3 +343,34 @@
 - **ACCEPTED_RISKS**: F3（stalls の閾値を書かない）。理由は上記 F3 の項
 - **確定した偽陽性**: なし（F1 のレビュアーの前提の一部誤りは、残る指摘が真であったため偽陽性として登録していない）
 <!-- review-cycle:end moonqr-releasing-moon-add-no-update-11b2f17 -->
+
+<!-- review-cycle:start 2026-10-01-moonqr-refactor-mask-penalty-41ff404 -->
+## 2026-10-01 penalty の4規則の分離と振る舞い固定
+- **Cycle ID**: 2026-10-01-moonqr-refactor-mask-penalty-41ff404
+- **対象 HEAD**: 41ff4045df57a5e13deb9c4d2d122a4b4028f58e（main 58332a5からの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/encode/mask.mbt` のpenaltyと抽出した非公開4関数、`core/src/encode/mask_test.mbt` の追加18テスト。レビュー記録は全文でなく差分だけを渡した（R1時点の差分は空）
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上の残flag 0、optional 0
+- **レンズ別 flag 件数**: Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 実装変更はpenaltyと非公開ヘルパーに限定され、公開シグネチャ・doc・対象外3関数の保持、点数と走査範囲の互換性を提示差分で確認
+- **Security**: 行列の読み取りと整数計算だけで、外部I/O・依存・公開APIの追加なし。隣接セルと11マスの参照範囲は元実装と一致
+- **Core Logic**: N1の色変更時リセット、5連続で3点・以降1点を維持。N2の比較、N3の両パターン・終端・個別加算、N4の整数除算順を照合
+- **Tests**: 指定の境界・量を追加18件で固定し、手計算の内訳と入力が整合。既存4件の保持、破壊検証・復元・テスト凍結・再構築後の検証は実装担当が提示した証拠として確認。レビュアー自身はテストを実行していない
+- **Domain**: QRの4規則と公開penaltyの互換性を確認。黒201/441・240/441のN4=10/0点を維持し、比較実装との差を記録。ISO適合性や参照実装の正否は断定しない
+- **レビュアー**: fresh contextのCodex 1名、`codex-cli 0.155.0` / `gpt-6-astra` / reasoning effort `high` / sandbox `read-only` / ephemeral。1名が5レンズを直列に適用し、sub-workerは起動していない
+- **起動方法**: 指示文をファイルに書き、`perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ渡し、stdoutとstderrを別ファイルへ保存。main...HEAD差分・対象2ファイル全文・PR本文・Matrix公開面の補足・scope/確信度フィルタを渡した。ツールを使わず提示内容だけを読む静的レビューとして実施
+- **レビューの実体**: CLI exit 0。応答に5ロールの境界付きLGTMブロックが各1個あることを検証し、原文のままロール別に保存。終了時のMCP DELETE HTTP 404は本文生成後のセッション片付けで、レビューexit 0と区別して記録
+- **副作用の確認**: レビュー前後でmask.mbt / mask_test.mbtのgit hash-objectがそれぞれ一致し、git status --porcelainも空。最小コンテキストの任意のcode-review-graph工程は厳密な変更範囲を保つため省略し、全文と差分を直接提供した
+- **収束規律**: flagはcorrectness・明示要件・セキュリティに影響する確信度80%以上だけ。CODING.md §5.2のMUSTは振る舞いを変えない本PRには適用せず、他の原則や類型不足はoptionalとする条件をレビュー前に明示。事後の格下げ・受容による処理はない
+- **検証範囲**: 段0のbootstrap3本とtest/check5本はすべてexit 0。段0のMoonBit127/127、Node284/284、unit53+25+30、typecheck3 packages、lint66 files・19 warnings・9 infos。段4はrelease:buildでcore→packagesの順に再構築後、MoonBit145/145、Node284/284、unit53+25+30、typecheck、lintの5本をそれぞれ実行しexit 0。lint診断数は段0と同じで8件は表示上限により省略。NodeのMODULE_TYPELESS_PACKAGE_JSON警告も段0から存在
+- **振る舞い固定**: 段2コミット `02a5043a32e2d113352a762ce90c4033108614a0` はmask_test.mbtのみ171行追加。N1の4/5/6、N2右下、N3前後0000×行列終端、N4の黒198/199/201/202/203/240/242/243（総数441）、全黒・市松模様。全18件で個別の閾値・範囲破壊がassert_eqの不一致でexit 2（abortなし）、各復元後の実装差分は空/exit 0、全145/145成功。初回の補助スクリプトの失敗文言判定だけは実際のMoonBit出力形式へ訂正した
+- **段3の検証**: `1a9a3ef`（規則抽出）・`0ce7be2`（命名）・`41ff404`（N1の分岐）の各コミット直前にmoon test --target jsを実行し145/145・exit 0。段2からHEADのテスト差分はMoonBit用の `*_test.mbt` / `*_wbtest.mbt` も含め出力空/exit 0
+- **公開面と計測**: pubの行はmask_bit/apply_mask/penalty/choose_maskの4本だけ。対象外関数全文とpenalty直前docはbyte保持。宣言行から終端まで数えてpenaltyは73行/ネスト5→4行/0、runsは32/4、blocksは14/3、finder_patternsは38/5、dark_balanceは20/3。関数行数合計は73→108、全体最大ネストは5のまま
+- **検証の補足**: Nodeのmatrix parityはpenaltyの固定の証拠に数えていない。site変更なしのためブラウザ検証は対象外。全配置・全バージョンの網羅と性能ベンチマークは未実施。公開・マージ・デプロイは行っていない
+- **裁量で変えた点**: 規則別の4ヘルパー名と分割、抽出・命名・制御フローのコミット粒度、追加18テストの名前と市松模様／行順の黒配置による入力生成。ブランチはDispatchのものを維持
+- **レビュー記録の置き場**: lens-review-cycleの既定cycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: なし。N4の既存の非対称は振る舞い維持のため未修正の差としてPRへ記録
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-01-moonqr-refactor-mask-penalty-41ff404 -->
