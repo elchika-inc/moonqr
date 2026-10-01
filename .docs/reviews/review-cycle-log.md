@@ -401,3 +401,39 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-01-moonqr-rs-decode-9d570a4 -->
+
+<!-- review-cycle:start 2026-10-01-moonqr-optimal-segments-503f3ba -->
+## 2026-10-01 optimal_segments の standards-refactor
+- **Cycle ID**: 2026-10-01-moonqr-optimal-segments-503f3ba
+- **対象 HEAD**: 503f3ba196c2fe305f15251d82ab13cfe88b70fe（本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/encode/segment.mbt` の `optimal_segments` と抽出した非公開3関数、`core/src/encode/segment_wbtest.mbt` の1テスト・12行追記。対象外10関数、型、入口doc、既存テストは保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM、確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 工程抽出・命名・等価なコスト式への置換に限定され、シグネチャ・対象外関数・型・既存docを保持。累積バイト位置と既存utf8_encodeの用途の違い、過剰な汎用化を避けた3関数の責務を確認
+- **Security**: 容量上限・空入力の早期returnを保持し、非公開関数は入口で構築した配列だけを扱う。新しい外部I/O・情報出力・共有状態・依存なし
+- **Core Logic**: Byte/Alphanumeric/Numericの係数48/33/20、Alphanumeric端数3、Numeric端数の剰余0/1/2に対する0/4/2が旧式と一致。候補比較順、厳密な比較、Byteランによる候補リセット、復元開始位置・区間長・順序・Some/Noneを照合
+- **Tests**: 追加テストは入力とSegment配列を直接比較し、抽出関数や内部呼出回数に依存しない。version10の100bit対99bitと48→47変異による優劣の逆転が期待値・実行記録と整合。既存テスト全文は提示せず、破壊検証と凍結の記録は実装担当の証拠として評価。レビュアー自身はテスト未実行
+- **Domain**: Numericの3文字10bitと端数4/7bit、Alphanumericの2文字11bitと端数6bit、Byteの1バイト8bitの6倍整数計算、UTF-8判定、CCIヘッダ、線形の構造を保持。ループ内の新規配列・タプル割り当てなし。性能値の増加と各1回測定の限界も明示されていることを確認
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、segment.mbt全文、テスト追記diff、レビュー記録diff（R1時点は空）、PR下書き、CODING.mdを提示。既存whiteboxテスト全文とレビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0、5ロールの境界付き非空LGTMブロック各1個を検査し、原文のままロール別に永続化して読戻し一致を確認。MCP初期化時のContext7認証/404と終了時DELETE 404をstderrに記録。レビューはツールを使用せず完走し、有効な本文とexit 0を確認した
+- **副作用の確認**: 許可4ファイルのSHA-256はレビュー前後で一致し、git statusも空。任意のcode-review-graph工程は省略し、対象全文と差分を直接提供した
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞いを変えない本PRは§5.2 MUST対象外、他の原則・類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後格下げはしていない
+- **段0**: install / release:build / fetch-fixturesの3本が各exit 0（fixture254/254）。Key Commands5本も各exit 0、MoonBit152/152、Node284/284/skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。Node v24.21.0 / moon 0.1.20260713。対象の139行・ネスト4を指定の数え方で確認
+- **振る舞い固定**: 段2コミット8d4626ed01f1361df68eebe1d39ba8c2b9267264はsegment_wbtest.mbtの12行追記のみ。UTF-8の1バイト文字を2と数える破壊は5件、Alphanumeric偶奇反転は1件、Numeric20→19は1件、復元順の反転は3件がアサーション失敗・exit 2（abort 0）。いずれもreference corpusが検出
+- **追加テストの理由**: Byte係数の両箇所48→47は既存152件では検出されなかったため、`a12345678a` / version10の現出力Some([Byte(0,1), Numeric(1,8), Byte(9,1)])を固定するテストを追加。未変更実装で153/153成功、同じ変異で追加した1件がアサーション失敗・exit 2となることを確認
+- **復元確認**: 全6回でgit diff --statがsegment.mbtだけと確認して指定のgit checkoutで復元。原文byte一致、実装diff空/exit 0、MoonBit152/152（追加後153/153）/exit 0を確認。追加したテストはstageして実装の復元と分離
+- **段3**: 5387ba8（3工程の抽出）と503f3ba（単位とコスト式の命名）の各コミット直前に全MoonBit153/153・exit 0。段3のテスト失敗0回、テスト変更0
+- **段4**: core→packagesの順に再構築してexit 0後、Key Commands5本が各exit 0。MoonBit153/153、Node284/284/skip0、unit53+25+30、typecheck3 packages、lintは段0と同じ。Nodeのground truth214件は両実装214一致、negative40件は両実装検出0
+- **性能実測（段0→段4、ms）**: forced search比較77.130959→143.736959、7,088交互Byte/Numeric51.376667→56.627875、5,356交互Numeric/Alphanumeric39.502667→44.247875、交互ラン3倍以内比較715.097958→1095.037709。4テストとも成功、1,000ms上限2件の前比は1.102/1.120で自分の段0の2倍以下。各1回のNodeテスト所要時間であり、全環境の性能改善とは主張しない
+- **公開面と実測**: pub行はMode/detect_mode/cci_bits/utf8_encode/write_segmentの5行のみ。optimal_segmentsは139行/ネスト4→21/1、抽出関数はsegment_utf8_byte_prefix17/2、plan_run_segments116/4、restore_segment_path24/2。宣言〜終端の両端・空行・コメント込み、文字列と//コメントの括弧を除き最大深さ−1で計測。関数行数合計139→178、全体の最大ネスト4は維持
+- **差分確認**: 段2以後のテスト差分は指定4パターンに `*_test.mbt` / `*_wbtest.mbt` を足して出力空/exit 0。対象外10関数、型・入口docを含む前半、write_segment_list以後の後半がmainとbyte一致。既存テスト全文を保持した末尾追記も確認
+- **検証の補足**: ブラウザはsite変更なしでN/A。fixture取得中の先行MoonBit実行は正式ベースラインに数えず、取得完了後の再実行を使用。独立検査出力の対象外関数数の固定文言を総数11と取り違えたため、実際の名前一覧から対象外10へ記録を訂正。マージ・デプロイ・公開は未実施
+- **裁量で変えた点**: 抽出3関数の分け方と名前、係数をグローバル定数ではなくDP内の不変letで表す選択、追加1テストの入力・名前、テスト固定→工程分割→命名/コスト式→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-optimal-segmentsブランチを使用
+- **レビュー記録の置き場**: lens-review-cycleの現行版はcycles配下を指定するが、本リポの既存ログ追記の慣習と委任仕様を優先する司令塔のask裁定に従い、本ログ末尾へ追記した
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-01-moonqr-optimal-segments-503f3ba -->
