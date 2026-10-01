@@ -48,10 +48,19 @@ fn place_finder(m : Matrix, ox : Int, oy : Int) -> Unit {
 }
 
 pub fn place_function_patterns(m : Matrix, version : Int) -> Unit {
+  // 後続の工程が既存の機能領域を参照するため、この順序を保つ。
   place_finder(m, 0, 0)
   place_finder(m, m.size - 7, 0)
   place_finder(m, 0, m.size - 7)
-  // タイミングパターン（row/col 6、偶数座標が黒）
+  place_timing_patterns(m)
+  place_alignment_patterns(m, version)
+  // ダークモジュール
+  m.set_function(8, version * 4 + 9, true)
+  reserve_format_areas(m)
+  reserve_version_areas(m, version)
+}
+
+fn place_timing_patterns(m : Matrix) -> Unit {
   for i = 8; i < m.size - 8; i = i + 1 {
     let dark = i % 2 == 0
     if !m.is_function(i, 6) {
@@ -61,7 +70,9 @@ pub fn place_function_patterns(m : Matrix, version : Int) -> Unit {
       m.set_function(6, i, dark)
     }
   }
-  // アライメントパターン（ファインダと重なる位置は除外）
+}
+
+fn place_alignment_patterns(m : Matrix, version : Int) -> Unit {
   let pos = alignment_positions(version)
   for a = 0; a < pos.length(); a = a + 1 {
     for b = 0; b < pos.length(); b = b + 1 {
@@ -71,19 +82,23 @@ pub fn place_function_patterns(m : Matrix, version : Int) -> Unit {
       let overlaps = (cx <= 8 && cy <= 8) ||
         (cx >= m.size - 9 && cy <= 8) || (cx <= 8 && cy >= m.size - 9)
       if !overlaps {
-        for dy = -2; dy <= 2; dy = dy + 1 {
-          for dx = -2; dx <= 2; dx = dx + 1 {
-            let dark = dx == -2 || dx == 2 || dy == -2 || dy == 2 ||
-              (dx == 0 && dy == 0)
-            m.set_function(cx + dx, cy + dy, dark)
-          }
-        }
+        place_alignment_pattern(m, cx, cy)
       }
     }
   }
-  // ダークモジュール
-  m.set_function(8, version * 4 + 9, true)
-  // フォーマット情報領域の予約（値は Task 10 で書く）
+}
+
+fn place_alignment_pattern(m : Matrix, cx : Int, cy : Int) -> Unit {
+  for dy = -2; dy <= 2; dy = dy + 1 {
+    for dx = -2; dx <= 2; dx = dx + 1 {
+      let dark = dx == -2 || dx == 2 || dy == -2 || dy == 2 ||
+        (dx == 0 && dy == 0)
+      m.set_function(cx + dx, cy + dy, dark)
+    }
+  }
+}
+
+fn reserve_format_areas(m : Matrix) -> Unit {
   for i = 0; i <= 8; i = i + 1 {
     if !m.is_function(i, 8) {
       m.set_function(i, 8, false)
@@ -100,7 +115,9 @@ pub fn place_function_patterns(m : Matrix, version : Int) -> Unit {
       m.set_function(8, m.size - 1 - i, false)
     }
   }
-  // バージョン情報領域（v7+、6x3 を2箇所）予約
+}
+
+fn reserve_version_areas(m : Matrix, version : Int) -> Unit {
   if version >= 7 {
     for i = 0; i < 6; i = i + 1 {
       for j = 0; j < 3; j = j + 1 {
