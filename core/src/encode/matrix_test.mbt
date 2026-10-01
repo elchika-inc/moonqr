@@ -55,3 +55,32 @@ test "place_data fills all non-function modules" {
   }
   assert_eq(dark_data, 208)
 }
+
+test "v1のフォーマット領域の交点 → (8,8)を白で予約する" {
+  let m = @encode.Matrix::new(1)
+  @encode.place_function_patterns(m, 1)
+  assert_true(m.is_function(8, 8))
+  assert_false(m.get(8, 8))
+}
+
+test "v6のバージョン情報候補位置 → データ領域のまま残す" {
+  let m = @encode.Matrix::new(6)
+  @encode.place_function_patterns(m, 6)
+  assert_false(m.is_function(0, 30))
+  assert_false(m.is_function(5, 32))
+  assert_false(m.is_function(30, 0))
+  assert_false(m.is_function(32, 5))
+}
+
+test "v7のバージョン情報領域 → 対称な2領域を白で予約する" {
+  let m = @encode.Matrix::new(7)
+  @encode.place_function_patterns(m, 7)
+  assert_true(m.is_function(0, 34))
+  assert_true(m.is_function(5, 36))
+  assert_true(m.is_function(34, 0))
+  assert_true(m.is_function(36, 5))
+  assert_false(m.get(0, 34))
+  assert_false(m.get(5, 36))
+  assert_false(m.get(34, 0))
+  assert_false(m.get(36, 5))
+}

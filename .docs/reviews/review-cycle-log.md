@@ -438,6 +438,41 @@
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-01-moonqr-optimal-segments-503f3ba -->
 
+<!-- review-cycle:start 2026-10-02-moonqr-place-function-patterns-e2836df -->
+## 2026-10-02 place_function_patterns の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-place-function-patterns-e2836df
+- **対象 HEAD**: e2836df（起点38ee3d3からの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/encode/matrix.mbt` の `place_function_patterns` と抽出した非公開5関数、`core/src/encode/matrix_test.mbt` の3テスト・29行追記。対象外7関数、先頭の型、既存doc、既存4テストは保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 入口で6工程の順序を読め、抽出5関数が走査・描画を担うことを確認。公開面・対象外関数は維持され、不要な転送層・汎用化は見当たらないと判定
+- **Security**: 既存の行列操作の抽出に限定され、外部I/O・依存・公開入口・座標計算を変更せず、配列アクセス範囲と反復回数が維持されていることを確認
+- **Core Logic**: 6工程の順序、ループ境界、色の式、書き込み座標を照合。重なりの早期continueは内側ループの後続が描画だけなので等価。タイミングとフォーマットだけがis_functionを確認する構造を保持
+- **Tests**: 追加3件が公開APIの予約状態・色を観測し、抽出関数に依存しないことを確認。テスト凍結、9破壊の検出、復元、ビルド順、全行列比較、未実施条件と既存警告の記録を提示証拠として評価。レビュアー自身はテストを実行していない
+- **Domain**: ファインダとの重なり除外、タイミング後のアライメント上書き、後続フォーマット予約によるダーク保持、v7以上の対称2領域予約を維持。エンコーダとデコーダの互換性を崩す差分は見当たらないと判定
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: 指示文をファイルへ書き、`perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ渡した。stdoutとstderrは別保存。main...HEAD差分、matrix.mbt全文、段2テスト追記diff、レビュー記録diff（R1時点は空）、PR下書き、CODING.mdを提示。既存テスト全文とレビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0。5ロールの境界付き非空LGTMブロックが各1個、flag件数との整合、原文のままのロール別保存と読戻し一致を検証。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーとして、レビューexit 0と区別して記録
+- **副作用の確認**: matrix.mbt / matrix_test.mbt / 本ログ / risk-registryのgit hash-objectがレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graph工程は省略し、対象全文と差分を直接提供。前回の完全ログに確定FPはなく、引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞いを変えない本PRは§5.2 MUST対象外、他の原則と類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後の格下げなし
+- **段0**: install / release:build / fetch-fixturesの3本は各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit153/153、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。環境はNode v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。対象63行・ネスト5を実測し指定値と一致
+- **テスト固定**: 段2コミットf335c41f683cbbeab676fce8eb908af4f9675ac6はmatrix_test.mbtの29行追記のみ。v1の(8,8)フォーマット予約、v6のバージョン領域非予約、v7の対称2領域の白予約を現在の実装で固定。新しいテストはMatrix::new/get/is_function/place_function_patternsだけを使用
+- **破壊検証**: ファインダのxずれ、タイミング偶奇反転、アライメント重なり反転、アライメント中心白化、ダーク白化、フォーマット終端除外、フォーマット下側のis_function確認除去、バージョン開始>=8、バージョン開始>=6の9破壊は全てMoonBit156件を実行してexit 2。失敗件数は順に10/1/9/4/1/1/1/1/1。全てmatrix_testのアサーションが検出し、finder破壊には副次的なfail(...)・JSON parse例外も発生した。abortによる失敗は観測なし。全失敗名と出力をPR本文へ収録
+- **復元確認**: 追加テストをstageし、毎回git diff --stat/name-onlyで未stage差分がmatrix.mbtのみと確認して指定のgit checkoutで復元。全9回で原文byte一致、対象diffの出力空・exit 0、MoonBit156/156・exit 0を確認。意図的な破壊はコミットしていない
+- **段3**: b463db6（工程の分割・命名）とe2836df（重なり候補の早期continue）の各コミット直前にMoonBit156/156・exit 0。段3のテスト失敗0回、テスト変更0
+- **段4**: core→packages順にrelease:buildを実行しexit 0後、Key Commands5本を個別実行して全てexit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Nodeの再実行なし。jsQR ground truth214件は両実装214一致、negative40件は両実装検出0。NodeのMODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: grep -n '^pub'の出力はMatrix型、new/get/set/is_function、place_function_patterns、place_dataの7行だけ。段2以後のテスト差分は指定4パターンに*_test.mbt / *_wbtest.mbtを加えて出力空・exit 0。対象外7関数と型・docはmainとbyte一致、既存4テストの全文保持も別途確認
+- **前後の実測**: 宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の括弧を除き最大深さ−1で計測。place_function_patternsは63行/ネスト5→12/0、抽出関数はplace_timing_patterns11/2、place_alignment_patterns16/3、place_alignment_pattern9/2、reserve_format_areas18/2、reserve_version_areas10/3。対象+抽出関数の合計行数63→76、最大ネスト5→3。continue変更単独では最大ネストは変わらない
+- **裁量で変えた点**: 抽出5関数の分け方と名前、追加3テストの名前と入力、テスト固定→分割/命名→早期除外→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-place-function-patternsブランチを維持
+- **検証の補足**: 不正version・サイズ不整合・同じMatrixの使い回しは現在の呼び出し元から来ないため追加検査を除外。I/O・時刻と地域・並行は関与しない。site変更なしでブラウザ検証はN/A。性能ベンチマーク・実機読取り・マージ・公開は未実施
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-place-function-patterns-e2836df -->
+
 <!-- review-cycle:start 2026-10-02-moonqr-binarize-969c4f1 -->
 ## 2026-10-02 binarize の standards-refactor
 - **Cycle ID**: 2026-10-02-moonqr-binarize-969c4f1
