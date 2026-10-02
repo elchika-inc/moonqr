@@ -507,3 +507,40 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-binarize-969c4f1 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-encode-22f6d0a -->
+## 2026-10-02 encode / encode_js の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-encode-22f6d0a
+- **対象 HEAD**: 22f6d0a（main 794abbbからの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/encode/encode.mbt` の `encode` / `encode_js` と抽出した非公開2関数、`encode_test.mbt` への3テスト・22行追記、RISK-002/005のanchor指定2箇所。SVG関数とdoc、既存9テスト全文は保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 公開シグネチャ、SVG関数、抽出2関数の非公開性、許可範囲、risk anchorだけの変更を確認
+- **Security**: version/ec/空文字/Model2容量の拒否条件と順序を保持。外部I/O・依存・公開入口の追加なしと判定
+- **Core Logic**: 3帯を試行前に各1回計画し、明示versionでも先行計算を通ること、BitWriter生成からplace_formatまでの順序、1..40の昇順探索を確認
+- **Tests**: 追加3件は公開出力のv10先頭行と明示容量不足時のNone/空配列を固定し、内部呼出しに依存しないことを確認。提示された最終テスト差分と段2差分の一致を確認。テスト実行と履歴の独立検証はレビュアー自身には実施させていない
+- **Domain**: CCI帯の代表1/10/27と境界9/26、Model2範囲、失敗伝播、EC対応、version0、先頭size+行優先0/1を保持と判定
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、encode.mbt全文、段2テスト追記diff、レビュー記録diff（R1時点は空）、PR下書き、実行記録、取得したCODING.mdを提示。既存テスト全文とレビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0、5ロールの境界付き非空LGTMブロック各1個を検査し、原文のままロール別に保存して読戻し一致を確認。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーとしてexit 0と区別して記録
+- **副作用の確認**: 対象ソース/テスト/本ログ/risk-registryのSHA-256がレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graphは省略し、対象全文と差分を直接提示。直前の完全ログは確定FPなしのため引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞いを変えない本PRは§5.2 MUST対象外、他原則と類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとして数えた
+- **段0**: install/release:build/fetch-fixturesの3本とKey Commands5本を個別実行し全てexit 0。178 packages、fixture254/254、MoonBit159/159、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos/表示省略8。Node v24.21.0 / moon 0.1.20260713 / pnpm10.32.1。encode63行/ネスト4、encode_js24/5を実測し指定値と一致
+- **テスト固定**: 段2コミットc64a3218a0c6786561eb9105621b314d6a1a5fa0はencode_test.mbtの22行追記のみ。a123456a/v10/Mの先頭行、18桁数字/v1/HのNone、同じJS境界の空配列を現在の公開出力で固定。追加時のif式に括弧がなく初回compile exit 1だったが、構文だけ修正して162/162・exit 0
+- **破壊検証**: 逆順探索は既存2件がアサーション失敗・exit 2。帯境界v<=9→v<=10は既存MoonBit159件と再build後の関連Node234件では未検出だったが、追加v10テスト1件がアサーション失敗・exit 2。ECのL/M入替はsweepのL/M80件、列優先化は160件全て、format書込みをmask選択前へ移動はv5-Q以外159件がアサーション失敗・exit 1。Node各破壊の前にrelease:build・exit 0を確認
+- **失敗経路の破壊**: assemble失敗を空Matrix成功へ変えると追加Noneテストがabort、追加JSテストがアサーション失敗。既存長文/分割2件がアサーション、Kanji round-tripがfailとなり計5件失敗・exit 2
+- **復元確認**: 全7回、git diff --statで未stage変更がencode.mbtだけと確認して指定のgit checkoutで復元。実装diff空/exit 0とMoonBit159/159または追加後162/162・exit 0を確認。テスト追記はstageして復元対象と分離。意図的な破壊は未コミット
+- **段3**: f0af318（責務分離と命名）、393102e（早期return）、22f6d0a（許可anchor置換）の各コミット直前にMoonBit162/162・exit 0。段3のテスト失敗0回、テスト変更0
+- **段4**: core→packages順でrelease:build・exit 0後、Key Commands5本を個別実行して全てexit 0。MoonBit162/162、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Node再試行なし。ground truth214件は両実装214一致、negative40件は両実装検出0。NodeのMODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **性能実測（段0→段4、ms）**: forced search86.960125→85.869833、7,088交互Byte/Numeric72.94→56.711416、5,356交互Numeric/Alphanumeric26.3465→27.701833、交互ラン3倍比較985.278708→912.751541。1,000ms上限2件の前比0.777508/1.051443で自分の段0の2倍以下。Node reporterのテスト全体の時間であり、内部計測区間や全環境の性能改善は主張しない
+- **公開面と実測**: pub行は5:encode / 55:encode_js / 74:to_svg_string_jsの3宣言だけ。encode63/4→46/2、encode_js24/5→16/1、assemble_matrix新規13/1、matrix_to_js_array新規9/3。宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の括弧を除き最大深さ−1。合計行数87→84、全体最大ネスト5→3
+- **差分確認**: 未コミット変更なしで段2以後のテスト差分を既定4パターンに*_test.mbt / *_wbtest.mbtを加えて検査し、出力空/exit 0。独立assertで公開宣言一致、SVG関数+docのbyte保持、既存テストのprefix保持、riskの2文字列だけの置換、3帯呼出し数/位置、候補と行列組み立ての工程順を確認
+- **裁量で変えた点**: 2ヘルパーの分け方/名前、追加3テストの入力/名前、固定→抽出→早期return→anchor→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-encodeブランチを使用
+- **検証の補足**: 全入力・全分割組合せ、内部spyによる計画回数、メモリ枯渇、実機読取りは未検証。同期計算でI/O・時刻・locale・共有状態なし。ブラウザはsite変更なしでN/A。新規バグ発見なし。moon fmt / lint:fix / マージ / 公開は未実施
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-encode-22f6d0a -->
