@@ -507,3 +507,39 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-binarize-969c4f1 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-multiscale-92c8303 -->
+## 2026-10-02 multiScaleDecode の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-multiscale-92c8303
+- **対象 HEAD**: 92c8303cb6c2b54258fb2b9bcb7212744b81ce02（起点794abbbからの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `packages/scanner/src/multiscale.ts` の `multiScaleDecode` と抽出した非公開2関数、`packages/scanner/src/multiscale.test.ts` の12ケース・133行追記。公開型・MAX_PIXELS・halveRGBA・冒頭/JSDoc・対象署名・既存テストを保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM、確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 画像準備の2工程を非公開関数へ抽出し試行を公開入口に残す構成、公開面・doc・定数の保持、テスト追記と段2差分の一致を確認。既存レビュー記録は差分が空のため判定していない
+- **Security**: 外部通信・動的コード実行・共有可変状態・信頼境界の追加なし。画素数ガード、半減処理、例外伝播を保持していることを確認
+- **Core Logic**: currentの置換が元の画素・寸法・scale更新と等価で、保存済みレベルを変更しないことを確認。ガードの >、ピラミッドの >=150、逆順試行、試行前のscale記録、truthy判定、早期return、全失敗nullを保持
+- **Tests**: 追加12ケースの境界・上限・scale・順序・falsy・画素・参照同一性・例外伝播を静的確認。公開引数のdecodeFnだけを差し替え、抽出関数に依存しない。レビュアー自身はテストを実行せず、実装担当の実測を独立に再実行してはいない
+- **Domain**: 直前画像への既存2x2ボックス平均、奇数端切捨て、同じレベル集合の先行構築、小画像から大画像への試行を保持。実機性能・読取精度の新規測定とは区別
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・外部通信・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: 指示文をファイルに書き、`perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ渡し、stdout/stderrを別保存。main...HEAD差分、multiscale.ts全文、段2追記テストdiff、レビュー記録diff（空）、PR下書き、CODING.mdを提示。テストとレビュー記録の全文は渡していない
+- **レビューの実体**: CLI exit 0。5ロールの境界付き非空LGTMブロック各1個、flag/optional 0、原文のままのロール別保存と読戻し一致を確認。本文生成後のMCP DELETE HTTP 404は片付けエラーとして有効な本文・exit 0と区別
+- **副作用の確認**: multiscale.ts / multiscale.test.ts / 本ログ / risk-registryのSHA-256はレビュー前後で一致し、git status --porcelainは空。任意のcode-review-graph工程は省略して全文と差分を直接提示。直近の完全な既存ログに確定FPはなく引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞いを変えないため§5.2 MUST対象外、他原則と類型不足はoptionalと事前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけflagとして集計
+- **段0**: install / release:build / fetch-fixturesは順に各exit 0、178 packages / fixture254件を確認。Key Commands5本は各exit 0。MoonBit159/159、Node284/284・skip0、unit53+25+30、型3packages、lint66files・19warnings・9infos（表示省略8）。Node v24.21.0 / pnpm10.32.1 / moon0.1.20260713。対象54行/ネスト3で指定値と一致
+- **テスト固定**: 段2コミット17a3949c073571422b0991e72e43033e9cc2428cはmultiscale.test.ts末尾の133行追記だけ。149/150の横長・縦長、成功段と試行列、全失敗、空文字/0、16M上限の等号・超過・元解像度除外、奇数画像の平均画素、例外伝播の12ケースを固定。既存importを保つため追加importも末尾に置き、Biomeと型検査通過
+- **破壊検証**: 大画像優先、ピラミッド>150、ガード>=MAX_PIXELS、ガード無効化、ガードscale未計上、成功判定!==null、縮小段への元画素引渡しの7破壊を対象Vitest16件で検査。全てexit 1、失敗件数は順に8/5/1/1/1/2/1、全てAssertionErrorでabortなし。順序/150境界/等号/元解像度除外/事前scale/falsy/平均画素の対応ケースが検出
+- **復元確認**: 追加テストをstageし、毎回git diff --stat/name-onlyで未stage差分がmultiscale.tsのみと確認してから指定のgit checkoutで復元。全7回で原文byte一致、対象diff空/exit 0、MoonBit159/159/exit 0、対象Vitest16/16/exit 0を確認。意図的破壊はコミットしていない
+- **段3**: 76a558e（工程抽出）と92c8303（状態集約・命名）の各コミット前にMoonBit159/159・対象Vitest16/16がexit 0。段3のテスト失敗0回、テスト変更0
+- **段4**: core→packages順のrelease:build後、Key Commands5本は各exit 0。MoonBit159/159、Node284/284・skip0、unit53+25+42、型3packages、lintは段0と同件数。Node再試行なし。jsQR ground truth214件は両実装214一致、negative40件は両実装検出0。NodeのMODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: export行はRGBAImage・MultiScaleOutcome<T>・halveRGBA・multiScaleDecode<T>の4行のみ。未コミット変更なしで段2以後のテストdiffを指定4パターンと*_test.mbt / *_wbtest.mbtで検査し出力空/exit 0。型・定数・halveRGBA・冒頭doc・対象署名のbyte一致、既存テスト全文のprefix一致を別途確認
+- **前後の実測**: multiScaleDecodeは54行/ネスト3→27/3、shrinkToPixelLimitは13/2、buildScalePyramidは12/2。対象と抽出関数の合計行数54→52、最大ネスト3を維持。関数宣言から本体終端まで両端・空行・コメント込み、本体最大波括弧深さ−1。最初の補助計測器が型注釈を終端と誤認したため、TypeScript ASTで本体を特定してScannerで文字列・コメントを除外する計測器へ修正し、前後を同じ方法で再計測
+- **直さなかった箇所**: 公開型のattemptedScales docの「昇順」は数値降順との表現が曖昧だが変更禁止の型を保持。if (!level) continueとif (result)も保持。実行上の新規バグは未発見
+- **検証の補足**: 不正寸法/バッファ不整合、全画素・全寸法、ガード2回以上の巨大画像、メモリ枯渇は追加未検証でPR本文に理由を記録。同期処理のため日時・共有状態の並行は関与なし。site変更なしでブラウザN/A。性能ベンチマーク・実機撮影・マージ・公開は未実施
+- **裁量で変えた点**: 抽出2関数の責務と名前、currentへの状態集約、追加12ケースの入力と名前、テスト固定→工程抽出→変数整理→レビュー記録のコミット粒度。Dispatchのnaoto24kawa/refactor-multiscaleブランチを維持
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、委任仕様と本リポの慣習に従い本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-multiscale-92c8303 -->
