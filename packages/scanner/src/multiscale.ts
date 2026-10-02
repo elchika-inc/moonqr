@@ -119,36 +119,9 @@ export function multiScaleDecode<T>(
   width: number,
   height: number,
 ): MultiScaleOutcome<T> | null {
-  let curData = data;
-  let curW = width;
-  let curH = height;
-  let scale = 1; // 入力ネイティブ解像度に対する総縮小率（事前半減も計上する）
+  const baseLevel = shrinkToPixelLimit(data, width, height);
+  const levels = buildScalePyramid(baseLevel);
 
-  // 1. メモリガード（16Mピクセル上限に収まるまで先に縮小。この半減も scale に
-  //    計上する——計上しないと「事前半減のおかげで初めて成功した」ケースが
-  //    scale=1（無縮小成功）として報告されてしまう）
-  while (curW * curH > MAX_PIXELS) {
-    const halved = halveRGBA(curData, curW, curH);
-    curData = halved.data;
-    curW = halved.width;
-    curH = halved.height;
-    scale *= 2;
-  }
-
-  // 2. 半減ピラミッド構築（levels[0] = 基点 = 最大レベル）
-  const levels: Array<{ data: Uint8Array; width: number; height: number; scale: number }> = [
-    { data: curData, width: curW, height: curH, scale },
-  ];
-  while (Math.max(curW, curH) >= 150) {
-    const halved = halveRGBA(curData, curW, curH);
-    curData = halved.data;
-    curW = halved.width;
-    curH = halved.height;
-    scale *= 2;
-    levels.push({ data: curData, width: curW, height: curH, scale });
-  }
-
-  // 3. 小スケール（画素数の少ない）レベルから昇順に試行
   const attemptedScales: number[] = [];
   for (let i = levels.length - 1; i >= 0; i--) {
     const lv = levels[i];
@@ -166,4 +139,49 @@ export function multiScaleDecode<T>(
     }
   }
   return null;
+}
+
+function shrinkToPixelLimit(
+  data: Uint8Array,
+  width: number,
+  height: number,
+): RGBAImage & { scale: number } {
+  let curData = data;
+  let curW = width;
+  let curH = height;
+  let scale = 1; // 入力ネイティブ解像度に対する総縮小率（事前半減も計上する）
+
+  // メモリガード（16Mピクセル上限に収まるまで先に縮小。この半減も scale に
+  //    計上する——計上しないと「事前半減のおかげで初めて成功した」ケースが
+  //    scale=1（無縮小成功）として報告されてしまう）
+  while (curW * curH > MAX_PIXELS) {
+    const halved = halveRGBA(curData, curW, curH);
+    curData = halved.data;
+    curW = halved.width;
+    curH = halved.height;
+    scale *= 2;
+  }
+
+  return { data: curData, width: curW, height: curH, scale };
+}
+
+function buildScalePyramid(
+  baseLevel: RGBAImage & { scale: number },
+): Array<RGBAImage & { scale: number }> {
+  let curData = baseLevel.data;
+  let curW = baseLevel.width;
+  let curH = baseLevel.height;
+  let scale = baseLevel.scale;
+  const levels: Array<{ data: Uint8Array; width: number; height: number; scale: number }> = [
+    { data: curData, width: curW, height: curH, scale },
+  ];
+  while (Math.max(curW, curH) >= 150) {
+    const halved = halveRGBA(curData, curW, curH);
+    curData = halved.data;
+    curW = halved.width;
+    curH = halved.height;
+    scale *= 2;
+    levels.push({ data: curData, width: curW, height: curH, scale });
+  }
+  return levels;
 }
