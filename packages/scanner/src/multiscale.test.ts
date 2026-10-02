@@ -96,3 +96,136 @@ describe("halveRGBA", () => {
     expect(out.data.length).toBe(0);
   });
 });
+
+import { multiScaleDecode } from "./multiscale.js";
+
+describe("multiScaleDecode", () => {
+  it("最大辺が149px → 元画像だけをscale=1で返す", () => {
+    const data = new Uint8Array(149 * 100 * 4);
+    const outcome = multiScaleDecode((pixels) => pixels, data, 149, 100);
+    expect(outcome).toEqual({
+      result: data,
+      scale: 1,
+      width: 149,
+      height: 100,
+      attemptedScales: [1],
+    });
+    expect(outcome?.result).toBe(data);
+  });
+
+  it.each([
+    [150, 100, 75, 50],
+    [100, 150, 50, 75],
+  ])("%ix%iで最大辺が150px → %ix%iの段から試す", (width, height, halfWidth, halfHeight) => {
+    const data = new Uint8Array(width * height * 4);
+    expect(multiScaleDecode(() => "成功", data, width, height)).toEqual({
+      result: "成功",
+      scale: 2,
+      width: halfWidth,
+      height: halfHeight,
+      attemptedScales: [2],
+    });
+  });
+
+  it("複数段のうち300x200で成功 → 小さい順の試行列を成功段で打ち切る", () => {
+    const data = new Uint8Array(600 * 400 * 4);
+    const result = { text: "成功" };
+    const outcome = multiScaleDecode(
+      (_pixels, width, height) => (width === 300 && height === 200 ? result : null),
+      data,
+      600,
+      400,
+    );
+    expect(outcome).toEqual({
+      result,
+      scale: 2,
+      width: 300,
+      height: 200,
+      attemptedScales: [8, 4, 2],
+    });
+    expect(outcome?.result).toBe(result);
+  });
+
+  it("全段でnull → nullを返す", () => {
+    const data = new Uint8Array(600 * 400 * 4);
+    expect(multiScaleDecode(() => null, data, 600, 400)).toBeNull();
+  });
+
+  it.each(["", 0])("小さい段で%j → 失敗として次の段を試す", (failure) => {
+    const data = new Uint8Array(300 * 200 * 4);
+    expect(
+      multiScaleDecode<string | number>(
+        (_pixels, width) => (width === 300 ? "成功" : failure),
+        data,
+        300,
+        200,
+      ),
+    ).toEqual({
+      result: "成功",
+      scale: 1,
+      width: 300,
+      height: 200,
+      attemptedScales: [4, 2, 1],
+    });
+  });
+
+  it("4096x4096で画素数が上限と等しい → 元解像度も試せる", () => {
+    const data = new Uint8Array(4096 * 4096 * 4);
+    expect(
+      multiScaleDecode((_pixels, width) => (width === 4096 ? "成功" : null), data, 4096, 4096),
+    ).toEqual({
+      result: "成功",
+      scale: 1,
+      width: 4096,
+      height: 4096,
+      attemptedScales: [32, 16, 8, 4, 2, 1],
+    });
+  });
+
+  it("4097x4097で画素数が上限超過 → 事前半減もscaleに含める", () => {
+    const data = new Uint8Array(4097 * 4097 * 4);
+    expect(
+      multiScaleDecode((_pixels, width) => (width === 2048 ? "成功" : null), data, 4097, 4097),
+    ).toEqual({
+      result: "成功",
+      scale: 2,
+      width: 2048,
+      height: 2048,
+      attemptedScales: [32, 16, 8, 4, 2],
+    });
+  });
+
+  it("上限超過の元解像度でしか成功しない → 元解像度は試さずnullを返す", () => {
+    const data = new Uint8Array(4097 * 4097 * 4);
+    expect(
+      multiScaleDecode((_pixels, width) => (width === 4097 ? "成功" : null), data, 4097, 4097),
+    ).toBeNull();
+  });
+
+  it("151x101の奇数画像 → 端を切り捨てた75x50の平均画素をデコーダへ渡す", () => {
+    const data = new Uint8Array(151 * 101 * 4);
+    data.set([0, 1, 2, 3, 40, 41, 42, 43]);
+    data.set([80, 81, 82, 83, 120, 121, 122, 123], 151 * 4);
+    expect(multiScaleDecode((pixels) => Array.from(pixels.slice(0, 4)), data, 151, 101)).toEqual({
+      result: [60, 61, 62, 63],
+      scale: 2,
+      width: 75,
+      height: 50,
+      attemptedScales: [2],
+    });
+  });
+
+  it("decodeFnが例外を投げる → 握りつぶさず呼び出し元へ伝播する", () => {
+    const failure = new Error("デコード失敗");
+    expect(() =>
+      multiScaleDecode(
+        () => {
+          throw failure;
+        },
+        new Uint8Array(4),
+        1,
+        1,
+      ),
+    ).toThrow(failure);
+  });
+});
