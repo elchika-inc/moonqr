@@ -15,17 +15,14 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
   }
   // 文字数指示子は 1-9 / 10-26 / 27-40 の帯でのみ変わるため、
   // 最適分割は帯ごとに1回だけ求めてバージョン試行間で再利用する。
-  let segments_low = match optimal_segments(text, 1) {
-    Some(segments) => segments
-    None => return None
+  guard optimal_segments(text, 1) is Some(segments_low) else {
+    return None
   }
-  let segments_mid = match optimal_segments(text, 10) {
-    Some(segments) => segments
-    None => return None
+  guard optimal_segments(text, 10) is Some(segments_mid) else {
+    return None
   }
-  let segments_high = match optimal_segments(text, 27) {
-    Some(segments) => segments
-    None => return None
+  guard optimal_segments(text, 27) is Some(segments_high) else {
+    return None
   }
   let try_version = fn(v : Int) -> Matrix? {
     let writer = BitWriter::new()
@@ -39,19 +36,17 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
     write_segment_list(writer, text, v, segments)
     assemble_matrix(writer, v, ec)
   }
-  match version {
-    Some(v) => try_version(v)
-    None => {
-      // cci_bits がバージョン帯(1-9/10-26/27-40)で変わるため素直に線形試行
-      for v = 1; v <= 40; v = v + 1 {
-        match try_version(v) {
-          Some(m) => return Some(m)
-          None => continue
-        }
-      }
-      None
+  if version is Some(v) {
+    return try_version(v)
+  }
+  // cci_bits がバージョン帯(1-9/10-26/27-40)で変わるため素直に線形試行
+  for v = 1; v <= 40; v = v + 1 {
+    match try_version(v) {
+      Some(m) => return Some(m)
+      None => continue
     }
   }
+  None
 }
 
 ///| JS境界用: [size, m00, m01, ...] の平坦配列。エラー時は空配列。
@@ -100,19 +95,17 @@ pub fn to_svg_string_js(
 }
 
 fn assemble_matrix(writer : BitWriter, version : Int, ec : EcLevel) -> Matrix? {
-  match assemble(writer, version, ec) {
-    None => None
-    Some(codewords) => {
-      let matrix = Matrix::new(version)
-      place_function_patterns(matrix, version)
-      place_version(matrix, version)
-      place_data(matrix, codewords)
-      let mask = choose_mask(matrix, ec)
-      apply_mask(matrix, mask)
-      place_format(matrix, ec, mask)
-      Some(matrix)
-    }
+  guard assemble(writer, version, ec) is Some(codewords) else {
+    return None
   }
+  let matrix = Matrix::new(version)
+  place_function_patterns(matrix, version)
+  place_version(matrix, version)
+  place_data(matrix, codewords)
+  let mask = choose_mask(matrix, ec)
+  apply_mask(matrix, mask)
+  place_format(matrix, ec, mask)
+  Some(matrix)
 }
 
 fn matrix_to_js_array(matrix : Matrix) -> Array[Int] {
