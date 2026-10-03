@@ -338,44 +338,42 @@ fn find_alignment_pattern(
   top_left : Point,
   bottom_left : Point,
 ) -> AlignmentResult? {
-  match compute_dimension(top_left, top_right, bottom_left, matrix) {
-    None => None
-    Some(dim) => {
-      let bottom_right_x = top_right.x - top_left.x + bottom_left.x
-      let bottom_right_y = top_right.y - top_left.y + bottom_left.y
-      let modules_between = (distance(top_left, bottom_left) + distance(top_left, top_right)) /
-        2.0 /
-        dim.module_size
-      let correction_to_top_left = 1.0 - 3.0 / modules_between
-      let expected : Point = {
-        x: top_left.x + correction_to_top_left * (bottom_right_x - top_left.x),
-        y: top_left.y + correction_to_top_left * (bottom_right_y - top_left.y),
-      }
-      let ratios_1_1_1 : Array[Double] = [1.0, 1.0, 1.0]
-      let candidates : Array[ScoredPoint] = []
-      for q in alignment_pattern_quads {
-        let cx = (q.top.start_x + q.top.end_x + q.bottom.start_x + q.bottom.end_x).to_double() /
-          4.0
-        let cy = (q.top.y + q.bottom.y + 1).to_double() / 2.0
-        if matrix.get(cx.floor().to_int(), cy.floor().to_int()) {
-          let score_point : Point = { x: cx.floor(), y: cy.floor() }
-          let size_score = score_pattern(score_point, ratios_1_1_1, matrix)
-          let center : Point = { x: cx, y: cy }
-          let score = size_score + distance(center, expected)
-          // size フィールドは未使用（アライメント候補には size ペナルティが無いため）。
-          // idx は挿入順（安定ソートエミュレーション用タイブレーカ）。
-          candidates.push({ point: center, score, size: 0.0, idx: candidates.length() })
-        }
-      }
-      candidates.sort_by(compare_scored_point)
-      let alignment_point = if modules_between >= 15.0 && candidates.length() > 0 {
-        candidates[0].point
-      } else {
-        expected
-      }
-      Some({ point: alignment_point, dimension: dim.dimension, module_size: dim.module_size })
+  guard compute_dimension(top_left, top_right, bottom_left, matrix) is Some(dim) else {
+    return None
+  }
+  let bottom_right_x = top_right.x - top_left.x + bottom_left.x
+  let bottom_right_y = top_right.y - top_left.y + bottom_left.y
+  let modules_between = (distance(top_left, bottom_left) + distance(top_left, top_right)) /
+    2.0 /
+    dim.module_size
+  let correction_to_top_left = 1.0 - 3.0 / modules_between
+  let expected : Point = {
+    x: top_left.x + correction_to_top_left * (bottom_right_x - top_left.x),
+    y: top_left.y + correction_to_top_left * (bottom_right_y - top_left.y),
+  }
+  let ratios_1_1_1 : Array[Double] = [1.0, 1.0, 1.0]
+  let candidates : Array[ScoredPoint] = []
+  for q in alignment_pattern_quads {
+    let cx = (q.top.start_x + q.top.end_x + q.bottom.start_x + q.bottom.end_x).to_double() /
+      4.0
+    let cy = (q.top.y + q.bottom.y + 1).to_double() / 2.0
+    if matrix.get(cx.floor().to_int(), cy.floor().to_int()) {
+      let score_point : Point = { x: cx.floor(), y: cy.floor() }
+      let size_score = score_pattern(score_point, ratios_1_1_1, matrix)
+      let center : Point = { x: cx, y: cy }
+      let score = size_score + distance(center, expected)
+      // size フィールドは未使用（アライメント候補には size ペナルティが無いため）。
+      // idx は挿入順（安定ソートエミュレーション用タイブレーカ）。
+      candidates.push({ point: center, score, size: 0.0, idx: candidates.length() })
     }
   }
+  candidates.sort_by(compare_scored_point)
+  let alignment_point = if modules_between >= 15.0 && candidates.length() > 0 {
+    candidates[0].point
+  } else {
+    expected
+  }
+  Some({ point: alignment_point, dimension: dim.dimension, module_size: dim.module_size })
 }
 
 ///| 二値行列からファインダパターン3点とアライメントパターン、dimension を推定する
