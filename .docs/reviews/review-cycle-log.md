@@ -581,3 +581,39 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-assemble-a09a368 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-decode-data-dc57bb7 -->
+## 2026-10-02 decode_data・decode_numeric・utf8_decode の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-decode-data-dc57bb7
+- **対象 HEAD**: dc57bb7f97bef9cd132528289d77d7aaf73599a5（本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/decode/data.mbt` の指定3関数と抽出した非公開2関数、`core/src/decode/data_test.mbt` の257行追記（23テストと手組みByte helper）。他の関数・型・doc・空行、NULコメント、帰属ヘッダを保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 既存実装の変更は指定3関数に限定され、新規2関数が非公開、既存署名が維持されていることを確認。モード対応、数値1グループ、UTF-8の1コードポイントという責務の分割と、自前抽出の理由を下書きで確認
+- **Security**: UTF-8の先頭/継続参照の境界、1〜4バイトの進行量、Numeric上限検査後のASCII追加、追加bytes内からのchars転記を照合。新しい外部I/O・秘密出力・範囲外参照・進行停止は見当たらないと判定
+- **Core Logic**: モード0の即時成功、3/9の失敗、5/未知値の4bit消費、各None伝播、短絡評価による0bit/全0末尾判定が旧実装と対応。数値の先頭0とグループごとのbytes→chars順序、UTF-8のビット合成と列全体の失敗を保持
+- **Tests**: 追加23件が公開decode_dataの戻り値/text/bytesを観測し、数値上限・ビット不足・版境界・UTF-8境界/拒否条件・セグメント継続を固定していることを確認。段2差分と最終差分のテスト追記が一致。179件成功と24破壊のRED/復元は実装担当の提示証拠として評価し、レビュアー自身はテスト未実行
+- **Domain**: 3/2/1桁に対する10/7/4bitと上限1000/100/10、CCI幅10/12/12/14、UTF-8最小値・サロゲート除外・最大値を照合。未知モード、不正UTF-8のbytes保持、ECIの割り切り、Kanji未登録値のNUL化も維持
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: 指示文ファイルを `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ渡し、stdout/stderrを別保存。main...HEADのテキスト差分、data.mbt全文、段2テスト追記diff、ログdiff（R1時点で空）、PR下書き、CODING.mdを提示。既存テスト全文とレビューログ全文は渡していない
+- **レビューの実体**: CLI exit 0。5 roleの非空LGTMブロックが各1個、flag件数整合、原文のままのrole別保存と読戻し一致を確認。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーであり、レビュー本文とexit 0を確認して無害と判定
+- **副作用の確認**: data.mbt / data_test.mbt / 本ログ / risk-registryのgit hash-objectはレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graphは省略し、対象全文と差分を直接提供。前回の完全ログに確定FPはなく、引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞い維持なので§5.2 MUST対象外、他原則と類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後の格下げなし
+- **段0**: install / release:build / fetch-fixturesの3本は各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。環境はNode v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。対象の行数/ネストはdecode_data66/3、decode_numeric57/2、utf8_decode56/3で指定値と一致
+- **テスト固定**: 段2コミットd2409a2d2f9a9047652aa2ebcaa07d9cafd9a6fbはdata_test.mbtの257行追記のみ。既存12件と補助関数はbyte一致。現行出力を手組み符号語で固定し、追加23件すべてが少なくとも1破壊で失敗したことを照合
+- **破壊検証**: 未割当モード拒否、FNC1 first拒否、終端子拒否、空入力拒否、999拒否、数字bytes順序変更、1000/100/10受理、数値グループ/CCI不足の受理、CCI版ずれ、ASCII値ずれ、空Byte拒否、UTF-8の2/3/4バイト過長受理、サロゲート受理、最大超受理、途中切れ受理、継続バイト検査弱化、先頭不正受理、全0末尾拒否、非0末尾受理の24回は全てMoonBit179件を実行しexit 2。破壊ごとのテスト名と失敗種別をPR本文へ記録
+- **失敗種別**: Noneを期待する数値境界、bytes順序、ASCII、UTF-8過長/サロゲート/途中切れ/継続/先頭不正はassertion、モード/空入力/数値上限正常/版/空Byte/末尾はabortで検出。UTF-8最大超はRangeError（Invalid code point 1114112）。終端子破壊の他の往復テストには副次的なassertionとJSON parse例外もあった
+- **復元確認**: テスト追記をstageし、毎回git diff --stat/name-onlyで未stage差分がdata.mbtのみと確認後、指定のgit checkoutで復元。24回とも原文byte一致、対象diff出力空・exit 0、MoonBit179/179・exit 0を確認。破壊はコミットしていない
+- **段3**: 1ca5b96（モード選択・失敗判定）、b342b4e（数値グループ共通化）、dc57bb7（UTF-8走査/検証分離）の各コミット直前でMoonBit179/179・exit 0。段3のテスト失敗0、テスト変更0
+- **段4**: release:buildでcore→packagesを再ビルドしexit 0後、Key Commands5本を個別実行して全てexit 0。MoonBit179/179、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Node時間上限テストの再実行なし。jsQR ground truth214件は両実装214一致、negative40件は両実装検出0。MODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: `grep -an '^pub'` は `29:pub struct DecodedData {` と `349:pub fn decode_data(codewords : Array[Int], version : Int) -> DecodedData? {` の2行。段2以後のテスト差分は指定4パターンに*_test.mbt / *_wbtest.mbtを追加し、出力空・exit 0。対象外領域全体をbyte比較し、NUL文字1個、全署名、既存テストを維持
+- **前後の実測**: 宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の波括弧を除き最大深さ−1で計測。decode_data66/3→33/3、decode_numeric57/2→18/2、utf8_decode56/3→12/2。抽出関数はdecode_numeric_group26/1、decode_utf8_codepoint32/2。対象と抽出の合計行数179→121
+- **裁量で変えた点**: 非公開2関数の分け方と名前、追加23テストの名前/入力、手組みByte helper、テスト固定→モード選択→数値→UTF-8→レビュー記録のコミット粒度とメッセージ。割当済みnaoto24kawa/refactor-decode-dataブランチを使用
+- **検証の補足**: 段2でrootからmoon testを呼びexit255（cwdをcoreへ修復）、タプルのfor束縛が構文エラーでexit1（let束縛へ修正）を観測し、その後179件成功してから破壊検証に進んだ。不正version/8bit外の符号語は呼出元の契約外、最大長負荷試験とUTF-8全並び列挙は追加していない。時刻と地域・並行は関与しない。site変更なしでブラウザ検証N/A。性能ベンチマーク・実機読取り・マージ・公開は未実施
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-decode-data-dc57bb7 -->
