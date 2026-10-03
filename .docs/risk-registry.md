@@ -33,7 +33,7 @@
 
 - **Status**: accepted
 - **Date**: 2026-07-29
-- **anchor**: `packages/moonqr/test/segment-optimization.test.mjs` の 5,000ms 検査は auto 経路（`encode_js(text, EC.M, 0)`）だけを計測しており、明示 version 経路の遅延を固定するテストは無い。明示 version 経路は `packages/moonqr/test/version-sweep.test.mjs`（version 1〜40 × EC 4 の 160 ケースを明示 version で CI `test` check ごとに実行）が毎 PR 通過しており、極端な退化は CI の所要時間増加（job の `timeout-minutes: 20`）として現れる。3 帯を無条件に計算する箇所は `core/src/encode/encode.mbt` 16〜28 行で、その変更は PR diff に現れる。利用者からの性能報告は GitHub Issue に届く
+- **anchor**: `packages/moonqr/test/segment-optimization.test.mjs` の 5,000ms 検査は auto 経路（`encode_js(text, EC.M, 0)`）だけを計測しており、明示 version 経路の遅延を固定するテストは無い。明示 version 経路は `packages/moonqr/test/version-sweep.test.mjs`（version 1〜40 × EC 4 の 160 ケースを明示 version で CI `test` check ごとに実行）が毎 PR 通過しており、極端な退化は CI の所要時間増加（job の `timeout-minutes: 20`）として現れる。3 帯を無条件に計算する箇所は `core/src/encode/encode.mbt` の `encode` 内の `segments_low` / `segments_mid` / `segments_high` を束縛する3つの `optimal_segments` 呼び出しで、その変更は PR diff に現れる。利用者からの性能報告は GitHub Issue に届く
 
 **内容**: セグメント最適化の DP は文字数指示子のバージョン帯（1-9 / 10-26 / 27-40）ごとに計算する。`encode(text, ec, Some(v))` のように version を明示した呼び出しでは、実際に使う 1 帯だけで足りるが、現状は 3 帯すべてを計算している。
 
@@ -81,7 +81,7 @@
 
 - **Status**: accepted
 - **Date**: 2026-08-28
-- **anchor**: `packages/moonqr/test/segment-optimization.test.mjs` の `auto version selection stays below 1000ms for 7,088 alternating byte/numeric runs` と `... for 5,356 alternating numeric/alphanumeric runs`（1,000ms 上限。旧 O(n^2) 実装は CI で 3,000ms 以上になる設計）、および `auto version selection matches forced search within 5 seconds`（5,000ms 上限と auto / forced の version 一致）が CI `test` check で毎 PR 実行される。帯 DP を version 試行間で再利用する実装は `core/src/encode/encode.mbt` 16〜38 行（`segments_low` / `segments_mid` / `segments_high`）にあり、`optimal_segments` 本体は `core/src/encode/segment.mbt` にある。いずれの変更も PR diff に現れる
+- **anchor**: `packages/moonqr/test/segment-optimization.test.mjs` の `auto version selection stays below 1000ms for 7,088 alternating byte/numeric runs` と `... for 5,356 alternating numeric/alphanumeric runs`（1,000ms 上限。旧 O(n^2) 実装は CI で 3,000ms 以上になる設計）、および `auto version selection matches forced search within 5 seconds`（5,000ms 上限と auto / forced の version 一致）が CI `test` check で毎 PR 実行される。帯 DP を version 試行間で再利用する実装は `core/src/encode/encode.mbt` の `encode` 内の `try_version`（`segments_low` / `segments_mid` / `segments_high`）にあり、`optimal_segments` 本体は `core/src/encode/segment.mbt` にある。いずれの変更も PR diff に現れる
 
 **内容**: auto version 選択が帯ごとの DP を version 試行間で再利用する性質を検知していた `autoElapsed * 2 < forcedElapsed` の比率アサーションを、O(n) DP 化に伴って削除した。絶対時間 5,000ms と auto / forced の version 一致検査は維持している。
 
