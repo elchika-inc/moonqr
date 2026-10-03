@@ -185,3 +185,51 @@ test "locate returns empty on noise-only matrix without crashing" {
   let locations = @decode.locate(bm)
   assert_eq(locations.length(), 0)
 }
+
+///| 任意の間隔・大きさで候補を置くため、外周と中央が黒い正方形を描く。
+///| side=7 はファインダ、side=5 はアライメントの白黒配置になる。
+fn draw_locator_square_pattern(
+  matrix : @decode.BitMatrix,
+  ox : Int,
+  oy : Int,
+  module_px : Int,
+  side : Int,
+) -> Unit {
+  for my = 0; my < side; my = my + 1 {
+    for mx = 0; mx < side; mx = mx + 1 {
+      let black = mx == 0 || my == 0 || mx == side - 1 || my == side - 1 ||
+        (mx >= 2 && my >= 2 && mx < side - 2 && my < side - 2)
+      if black {
+        for dy = 0; dy < module_px; dy = dy + 1 {
+          for dx = 0; dx < module_px; dx = dx + 1 {
+            matrix.set(ox + mx * module_px + dx, oy + my * module_px + dy, true)
+          }
+        }
+      }
+    }
+  }
+}
+
+test "大小のファインダが斜めに並び一部重なる → 現在のモジュールサイズを返す" {
+  let matrix = @decode.BitMatrix::make(220, 180)
+  draw_locator_square_pattern(matrix, 90, 30, 3, 7)
+  draw_locator_square_pattern(matrix, 117, 57, 2, 7)
+  draw_locator_square_pattern(matrix, 55, 43, 6, 7)
+  let locations = @decode.locate(matrix)
+  assert_eq(locations.length(), 2)
+  // 整ったQRではない入力も現在の検出値で固定し、幾何的な理想値へ補正しない。
+  assert_eq(locations[0].module_size, 4.782606379758733)
+}
+
+test "ファインダ間隔が15モジュールで候補がある → 予想位置ではなく候補中心を返す" {
+  let matrix = @decode.BitMatrix::make(124, 124)
+  draw_locator_square_pattern(matrix, 16, 16, 4, 7)
+  draw_locator_square_pattern(matrix, 76, 16, 4, 7)
+  draw_locator_square_pattern(matrix, 16, 76, 4, 7)
+  // 予想位置(78,78)からずらし、候補を採用したか出力で区別できるようにする。
+  draw_locator_square_pattern(matrix, 72, 72, 4, 5)
+  let locations = @decode.locate(matrix)
+  assert_eq(locations.length(), 2)
+  assert_eq(locations[0].alignment.x, 82.0)
+  assert_eq(locations[0].alignment.y, 82.0)
+}
