@@ -508,6 +508,155 @@
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-binarize-969c4f1 -->
 
+<!-- review-cycle:start 2026-10-02-moonqr-read-data-d97a076 -->
+## 2026-10-02 read_data の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-read-data-d97a076
+- **対象 HEAD**: d97a0764152525b770aa04057ae0dc27000c0323（起点07a85f9。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/decode/codewords.mbt` の `read_data` と抽出した非公開2関数。対象外の `read_bits_zigzag` / `bits_to_codewords`、既存doc、既存5テストと補助関数は保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 工程抽出・局所変数の改名・guard化に限定され、各抽出関数に実処理があり、不要な汎用化・依存追加がないことを確認。公開シグネチャと変更禁止2関数を維持
+- **Security**: 外部I/O・ログ・秘密情報・公開入口の追加なし。配列の長さ・添字・参照条件を保持し、新たな範囲外アクセス経路は見当たらないと判定
+- **Core Logic**: 配列確保・最大長・データ部→EC部・読取位置の更新条件を照合。msgをデータ→ECで構成し、訂正済み先頭dcount個をブロック順に連結。guard失敗のNoneが入口へ直接返り、後続ブロックを処理しないことを確認
+- **Tests**: 件数を含む段0/4の成功、4破壊の失敗と復元、空コミットと凍結を実装担当の提示証拠として評価。未検証条件と理由がPR下書きに明示されていることを確認。レビュアー自身は既存テスト全文・Git実体の確認やテスト実行をしていない。本ログの後続追記はレビュー対象外
+- **Domain**: 可変長ブロックを飛ばすときにコードワードを消費しないこと、データ配分後のEC配分、EC長の引渡し、データ部分だけの連結を保持。encodeの機能マップ再利用・ジグザグ・マスク解除・コードワード化を維持
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、codewords.mbt全文、段2テスト追記diff（空）、レビュー記録diff（空）、PR下書き、CODING.mdを提示。既存テスト全文と本ログ全文は渡していない
+- **レビューの実体**: CLI exit 0。指定順の5ロールに境界付き非空LGTMブロックが各1個、flag件数との整合、原文のロール別保存と読戻し一致を検証。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーで、レビューexit 0と区別して記録
+- **副作用の確認**: 許可4ファイルのgit hash-objectがレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graph工程は省略し、対象全文と差分を直接提示。直前の完全ログに確定FPはなく引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。本PRは振る舞いを変えないため§5.2 MUST対象外、他の原則・類型不足はoptionalと事前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後格下げなし
+- **段0**: bootstrap3本（install / release:build / fetch-fixtures）は各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。環境はNode v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。対象74行・ネスト3を実測し指定値と一致
+- **テスト固定**: 段2コミットaa20de2d7cb11d44dd15bc62edb71d409cda50edは空コミット。git show --statでファイル変更なしを確認。既存5件は公開面とencodeの独立経路を照合する振る舞いのテストで、4破壊を検出したため追加・置換なし
+- **破壊検証**: 毎回moon test --target js -f 'read_data:*'で5件実行・exit 2。デインターリーブのEC先行はv1-M/v5-H/v7-L/能力内訂正の4件が期待Someに対するNoneでテスト内abort。Noneでcontinueは能力超過の1件が期待Noneに対するSomeでテスト内abort。ブロック逆順はv5-H/v7-Lの2件がassert_eq失敗。RSのSome(msg)への置換は能力内訂正がassert_eq、能力超過がテスト内abortの計2件で失敗
+- **復元確認**: 全4回でgit diff --statがcodewords.mbtのみと確認して指定のgit checkoutで復元。対象diff空・exit 0、全MoonBit156/156・exit 0を確認。RS無効化時はunused_package warningが2件出たが、5件が実行されて失敗したことを確認
+- **段3**: 08218ce（工程分離・命名）とd97a076（早期return）の各コミット前にMoonBit156/156・exit 0。実装変更中のテスト失敗0回・テスト変更0
+- **段4**: core→packages順のrelease:buildがexit 0後、Key Commands5本を個別実行して各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Node再実行なし。段0/4ともjsQR ground truth214件は両実装214一致、negative40件は両実装検出0
+- **公開面と凍結**: grep -n '^pub'は `62:pub fn read_data(m : BitMatrix, version : Int, fmt : FormatInfo) -> Array[Int]? {` の1行のみ。段2以後のテスト差分は指定4パターンに*_test.mbt / *_wbtest.mbtを加え、cleanな状態で出力空・exit 0。対象外2関数・既存doc・read_data前半の機能マップ〜コードワード生成・既存テスト全文がmainとbyte一致
+- **前後の実測**: 宣言〜終端を両端・空行・コメント込み、文字列と//コメント内の括弧を除き最大深さ−1で計測。read_dataは74行/ネスト3→16/1、deinterleave_codewordsは42/3、correct_data_blocksは25/2。対象＋抽出関数の合計行数74→83、最大ネスト3を維持
+- **裁量で変えた点**: 抽出2関数の分け方・名前、局所変数名、guardの使用、追加テストなしの判断、テスト固定→工程分離→早期return→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-read-dataブランチを維持
+- **検証の補足**: 訂正能力ちょうど5/6バイト境界・特定位置ブロックだけの失敗・空文字列専用入力は追加せず、理由をPR本文に記録。後続ブロックの非実行は内部mockではなく即時returnの差分で確認。不正version/寸法/formatは現在の呼出元で確認されるため追加条件から除外。日時・地域・並行は関与しない。site変更なしでブラウザはN/A。性能測定・実機カメラ・マージ・公開は未実施
+- **運用上の補足**: fixture取得中の先行MoonBit実行は正式基準に数えず取得完了後に再実行。byte比較Pythonの初回は日本語bytes literalのSyntaxError/exit 1だったため文字列.encode()へ直してexit 0を確認。NodeのMODULE_TYPELESS_PACKAGE_JSON警告とlint既存診断は段0から存在し変更範囲外
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-read-data-d97a076 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-assemble-a09a368 -->
+## 2026-10-02 assemble の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-assemble-a09a368
+- **対象 HEAD**: a09a36821d36ba646ed44567c60a904232a1984d（起点07a85f9からの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/encode/assemble.mbt` のassembleと抽出した非公開3関数、`core/src/encode/assemble_test.mbt` の8テスト・96行追記。公開シグネチャ・入口doc・既存3テストを保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 工程順を示す入口とデータ/EC走査の共通化に過剰実装なし。公開シグネチャ、既存配列操作、依存・独自アルゴリズムの非追加を確認。本ログの追記はレビュー後のためレビュアーの確認範囲外
+- **Security**: 容量超過時はWriterを書き換える前にNone、成功時のWriter変更は終端子のみ。ブロックコピーとインターリーブの添字・範囲確認を維持し、外部I/Oや漏えい経路の追加なし。範囲外versionの表本体や呼出元まではレビュアーは検証していない
+- **Core Logic**: 終端子0〜4bit、端数ゼロ詰め、0xEC/0x11交互パディング、累積data_countによる分割とtotal_count−data_countによるRS生成、データ→ECの順、短いブロックの除外を照合。data_capacityの再利用は提示された副作用のない集計と整合
+- **Tests**: 追加8件は公開assembleの成否とWriterの長さ・内容を観測し、抽出関数に依存しない。段2と最終差分のテスト追記、RED/GREENと凍結の記録は整合。既存テスト全文とコミット実体・環境は未提示で、レビュアー自身の実行証拠ではない
+- **Domain**: version/ECから容量とRSブロックを得る経路、ブロック内のデータ順、訂正符号語数、異長ブロックの列走査を維持。テーブルやRS実装の正しさ、QR規格適合を独立に再検証したものではない
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: 指示文をファイルへ書き、`perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ渡した。stdout/stderrを別保存。main...HEAD差分、assemble.mbt全文、段2テスト追記diff、レビュー記録diff（R1時点は空）、BitWriter・rs_blocks/data_capacityの補足、CODING.md、段0〜4の記録とPR下書きを提示。テスト全文とレビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0。5ロールの境界付き非空LGTMブロック各1個、ブロック外の本文なし、flag件数との整合を検査し、原文のままロール別保存・読戻し一致を確認。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーで、レビューexit 0と区別して記録
+- **副作用の確認**: assemble.mbt / assemble_test.mbt / 本ログ / risk-registryのgit hash-objectはレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graph工程は省略して対象全文・差分を直接提供。直近完了サイクルに確定FPはなく引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞い不変の本PRは§5.2 MUST対象外、他の原則と類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後格下げなし
+- **段0**: install / release:build / fetch-fixturesを指定順に実行し各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。Node v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。assembleは64行・ネスト3で委任仕様と一致
+- **テスト固定**: 段2コミット5a4598d85dc8b9f4735615ebc5098091b53b9d96はassemble_test.mbtの96行追記のみ。空、5bit、残容量1/2/3bit、容量一致、1bit超過、再呼出の8件を現在の実装で固定。全8件が少なくとも1破壊で失敗し、既存3テストのbyte保持も確認
+- **既存テストの破壊検証**: 終端上限4→3はdecodeのfull pipelineでfail("decode failed")・1件失敗、パディング0x11開始はassembleのassert・1件、EC先行はassemble2件のassertを含む16件（周辺decodeにabort/fail/JSON parse例外あり）、容量判定>→>=はv5-Hのabort・1件。全てmoon testのexit 2
+- **副作用の検出漏れと補強**: Writer複製は既存MoonBit156件と、release:buildで再構築したversion-sweep160件が全成功したため、上記8テストを追加。複製を再度入れると6件の状態assertが失敗・exit 2。終端上限3bitの再検証でも空・5bit・再呼出の3件がassert失敗（既存の1件と合わせて4件）
+- **追加の破壊検証**: 分割offsetを進めない破壊はv5-Hのassert・1件、データ部ブロック順反転は5件（v7-Lのassertと異長配列境界エラー）、EC部ブロック順反転は3件（v5-H/v7-Lのassertとdecodeのabort）。残容量に関係なく4bit終端を追記すると4件のassert、超過時1bit書いてNoneにすると1件のassert、終端子を1にすると13件（追加6件の内容assertと周辺decodeのabort/fail/JSON parse例外）が失敗。全てexit 2。全失敗名と分類はPR本文へ記録
+- **復元確認**: 11種類・計13回（上限3bitとWriter複製を追加前後で実行）とも、git diff --stat/name-onlyで未stage差分がassemble.mbtのみと確認して指定のgit checkoutで復元。原文byte一致、対象diff空・exit 0、MoonBit156/156または164/164・exit 0。追加テストをstageして復元と分離し、意図的破壊はコミットしていない
+- **段3**: 53e1dd7102d7672219068627e2e1cf128c198c11（工程抽出）とa09a36821d36ba646ed44567c60a904232a1984d（単位・役割の命名）の各コミット前にMoonBit164/164・exit 0。段3のテスト失敗0回、テスト変更0
+- **段4**: release:buildでcore→packagesを再構築してexit 0後、Key Commands5本を個別実行し各exit 0。MoonBit164/164、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同じ件数。Nodeの再実行なし。jsQR ground truth214件は両実装214一致、negative40件は両実装検出0。MODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: 未コミット変更なしで段2..HEADのテスト差分を指定4パターンと*_test.mbt / *_wbtest.mbtで確認し、出力空・exit 0。grep -n '^pub'は `3:pub fn assemble(bits : BitWriter, version : Int, ec : EcLevel) -> Array[Int]? {` の1行だけ。公開docも起点とbyte一致
+- **前後の実測**: 宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の括弧を除き最大深さ−1で計測。assembleは64行/ネスト3→12/1、pad_data_codewordsは17/2、build_codeword_blocksは21/2、append_interleaved_codewordsは18/3。対象と抽出関数の行数合計64→68、最大ネスト3は維持
+- **直さなかった箇所**: 公開面、容量超過の早期None、終端上限分岐、toggle、offset、RS生成、ブロックコピー、短ブロック除外を維持。範囲外versionの直接入力は現在のencodeから来ないため追加検査を除外。時刻と地域・外部I/O・並行は関与なし。見つけた製品のバグなし
+- **裁量で変えた点**: 非公開3関数の分け方・名前、局所変数名、追加8テストの名前・入力、テスト固定→工程分割→命名整理→レビュー記録のコミット粒度・メッセージ。Dispatchのnaoto24kawa/refactor-assembleブランチを維持
+- **検証の補足**: ブラウザはsite変更なしでN/A。全ビット列網羅、性能ベンチマーク、実機読取り、マージ、公開は未実施
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-assemble-a09a368 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-decode-data-dc57bb7 -->
+## 2026-10-02 decode_data・decode_numeric・utf8_decode の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-decode-data-dc57bb7
+- **対象 HEAD**: dc57bb7f97bef9cd132528289d77d7aaf73599a5（本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/decode/data.mbt` の指定3関数と抽出した非公開2関数、`core/src/decode/data_test.mbt` の257行追記（23テストと手組みByte helper）。他の関数・型・doc・空行、NULコメント、帰属ヘッダを保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 既存実装の変更は指定3関数に限定され、新規2関数が非公開、既存署名が維持されていることを確認。モード対応、数値1グループ、UTF-8の1コードポイントという責務の分割と、自前抽出の理由を下書きで確認
+- **Security**: UTF-8の先頭/継続参照の境界、1〜4バイトの進行量、Numeric上限検査後のASCII追加、追加bytes内からのchars転記を照合。新しい外部I/O・秘密出力・範囲外参照・進行停止は見当たらないと判定
+- **Core Logic**: モード0の即時成功、3/9の失敗、5/未知値の4bit消費、各None伝播、短絡評価による0bit/全0末尾判定が旧実装と対応。数値の先頭0とグループごとのbytes→chars順序、UTF-8のビット合成と列全体の失敗を保持
+- **Tests**: 追加23件が公開decode_dataの戻り値/text/bytesを観測し、数値上限・ビット不足・版境界・UTF-8境界/拒否条件・セグメント継続を固定していることを確認。段2差分と最終差分のテスト追記が一致。179件成功と24破壊のRED/復元は実装担当の提示証拠として評価し、レビュアー自身はテスト未実行
+- **Domain**: 3/2/1桁に対する10/7/4bitと上限1000/100/10、CCI幅10/12/12/14、UTF-8最小値・サロゲート除外・最大値を照合。未知モード、不正UTF-8のbytes保持、ECIの割り切り、Kanji未登録値のNUL化も維持
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: 指示文ファイルを `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ渡し、stdout/stderrを別保存。main...HEADのテキスト差分、data.mbt全文、段2テスト追記diff、ログdiff（R1時点で空）、PR下書き、CODING.mdを提示。既存テスト全文とレビューログ全文は渡していない
+- **レビューの実体**: CLI exit 0。5 roleの非空LGTMブロックが各1個、flag件数整合、原文のままのrole別保存と読戻し一致を確認。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーであり、レビュー本文とexit 0を確認して無害と判定
+- **副作用の確認**: data.mbt / data_test.mbt / 本ログ / risk-registryのgit hash-objectはレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graphは省略し、対象全文と差分を直接提供。前回の完全ログに確定FPはなく、引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞い維持なので§5.2 MUST対象外、他原則と類型不足はoptionalとレビュー前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後の格下げなし
+- **段0**: install / release:build / fetch-fixturesの3本は各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。環境はNode v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。対象の行数/ネストはdecode_data66/3、decode_numeric57/2、utf8_decode56/3で指定値と一致
+- **テスト固定**: 段2コミットd2409a2d2f9a9047652aa2ebcaa07d9cafd9a6fbはdata_test.mbtの257行追記のみ。既存12件と補助関数はbyte一致。現行出力を手組み符号語で固定し、追加23件すべてが少なくとも1破壊で失敗したことを照合
+- **破壊検証**: 未割当モード拒否、FNC1 first拒否、終端子拒否、空入力拒否、999拒否、数字bytes順序変更、1000/100/10受理、数値グループ/CCI不足の受理、CCI版ずれ、ASCII値ずれ、空Byte拒否、UTF-8の2/3/4バイト過長受理、サロゲート受理、最大超受理、途中切れ受理、継続バイト検査弱化、先頭不正受理、全0末尾拒否、非0末尾受理の24回は全てMoonBit179件を実行しexit 2。破壊ごとのテスト名と失敗種別をPR本文へ記録
+- **失敗種別**: Noneを期待する数値境界、bytes順序、ASCII、UTF-8過長/サロゲート/途中切れ/継続/先頭不正はassertion、モード/空入力/数値上限正常/版/空Byte/末尾はabortで検出。UTF-8最大超はRangeError（Invalid code point 1114112）。終端子破壊の他の往復テストには副次的なassertionとJSON parse例外もあった
+- **復元確認**: テスト追記をstageし、毎回git diff --stat/name-onlyで未stage差分がdata.mbtのみと確認後、指定のgit checkoutで復元。24回とも原文byte一致、対象diff出力空・exit 0、MoonBit179/179・exit 0を確認。破壊はコミットしていない
+- **段3**: 1ca5b96（モード選択・失敗判定）、b342b4e（数値グループ共通化）、dc57bb7（UTF-8走査/検証分離）の各コミット直前でMoonBit179/179・exit 0。段3のテスト失敗0、テスト変更0
+- **段4**: release:buildでcore→packagesを再ビルドしexit 0後、Key Commands5本を個別実行して全てexit 0。MoonBit179/179、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Node時間上限テストの再実行なし。jsQR ground truth214件は両実装214一致、negative40件は両実装検出0。MODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: `grep -an '^pub'` は `29:pub struct DecodedData {` と `349:pub fn decode_data(codewords : Array[Int], version : Int) -> DecodedData? {` の2行。段2以後のテスト差分は指定4パターンに*_test.mbt / *_wbtest.mbtを追加し、出力空・exit 0。対象外領域全体をbyte比較し、NUL文字1個、全署名、既存テストを維持
+- **前後の実測**: 宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の波括弧を除き最大深さ−1で計測。decode_data66/3→33/3、decode_numeric57/2→18/2、utf8_decode56/3→12/2。抽出関数はdecode_numeric_group26/1、decode_utf8_codepoint32/2。対象と抽出の合計行数179→121
+- **裁量で変えた点**: 非公開2関数の分け方と名前、追加23テストの名前/入力、手組みByte helper、テスト固定→モード選択→数値→UTF-8→レビュー記録のコミット粒度とメッセージ。割当済みnaoto24kawa/refactor-decode-dataブランチを使用
+- **検証の補足**: 段2でrootからmoon testを呼びexit255（cwdをcoreへ修復）、タプルのfor束縛が構文エラーでexit1（let束縛へ修正）を観測し、その後179件成功してから破壊検証に進んだ。不正version/8bit外の符号語は呼出元の契約外、最大長負荷試験とUTF-8全並び列挙は追加していない。時刻と地域・並行は関与しない。site変更なしでブラウザ検証N/A。性能ベンチマーク・実機読取り・マージ・公開は未実施
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-decode-data-dc57bb7 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-write-segment-36b779e -->
+## 2026-10-02 write_segment の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-write-segment-36b779e
+- **対象 HEAD**: 36b779e644bd06491b543898ce7185d5d3f4c515（起点794abbbからの差分をレビュー。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/encode/segment.mbt` の `write_segment` と抽出した非公開3関数、`core/src/encode/segment_test.mbt` の9テスト・61行追記。公開シグネチャ・doc・対象外コード・既存テスト全文を保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM、確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 公開入口のモード選択と各モードの詳細が分離され、公開シグネチャ・doc・対象外関数を保持していると判定
+- **Security**: 外部I/O・依存・共有状態の追加なし。Alphanumeric範囲外文字は元と同じ条件・メッセージのabortへ到達し、不正なビット列を書き込んで続行する変更なし
+- **Core Logic**: 抽出先の式・ループ境界・書き込み順が元の分岐と一致し、cci_bitsに渡すModeの固定も分岐で既に確定した値と等価。空入力・既存writerへの追記も保持
+- **Tests**: 追加9件は公開ビット長・コードワード・abortを観測し、抽出関数の構造に依存しない。段2コミット・凍結検査・11破壊と復元は添付された実行記録として評価し、レビュアー自身はテストを実行していない
+- **Domain**: モード指示子4bit、版別CCI、Numericの3桁10bit/余り2桁7bit/1桁4bit、Alphanumericの対の係数45と11bit/余り6bit、ByteのUTF-8バイト数CCIと各バイト8bitを保持。abortは指示子の後、全文字変換終了とCCIの前に発生する順序を維持
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、segment.mbt全文、段2テスト追記diff、レビュー記録diff（R1時点は空）、PR下書き、実行記録、CODING.mdを提示。既存テスト全文とレビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0。5ロールの境界付き非空LGTMブロック各1個、結論とflag件数の整合、原文のままのロール別保存と読戻し一致を検証。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーで、レビュー本文・exit 0と区別して記録
+- **副作用の確認**: segment.mbt / segment_test.mbt / 本ログ / risk-registryのSHA-256はレビュー前後で一致し、git statusも空。レビュアーのツール呼び出しなし。任意のcode-review-graph工程は省略し、対象全文と差分を直接提示。前回ログの確定FPはなく引継ぎなし
+- **適用ポリシー**: standardsをfetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。振る舞いを変えない本PRは§5.2 MUST対象外、その他原則と類型不足はoptionalと事前に明示。確信度80%以上でcorrectness・セキュリティ・明示要件に影響するものだけをflagとした
+- **司令塔の裁定**: 既存Numeric/Alphanumericの直接テストはbit_lengthだけでコードワード内容は未固定だったことをaskで報告。司令塔が背景記述を訂正し、コードワード内容・Numeric余り1/2桁・Byte多バイト・Alphanumeric abortの段2追記を承認した。既存は振る舞いのテストとの判断を維持
+- **成功基準**: bootstrap3本とKey Commands5本の段0/段4のexit 0、独立テスト固定コミット、11破壊の検出と復元、段3のMoonBit成功、公開面/他関数保持、段2以後テスト凍結、許可ファイルだけの差分、レビューflag 0、cleanな状態でmain向けPRを開くこと。検証前に一時PR作業記録へ記載し、本ブロックとPR本文へ転記
+- **段0**: install / release:build / fetch-fixturesの3本は各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit159/159、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos/表示省略8。Node v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。write_segmentは62行・ネスト4で指定値と一致
+- **テスト固定**: 段2コミット5dfedb8f01f14898626cafa89f09a0cecfc5f49aはgit show --statでsegment_test.mbtの61行追記だけと確認。追加9件は未変更の実装で168/168・exit 0。Numericの3桁/余り1/2桁、Alphanumericの対/余り、Byteの1/2/3/4バイト文字、3モードの空入力、範囲外文字のabortを公開面で固定
+- **破壊検証**: Numeric3桁10→9bit、余り2桁7→6bit、余り1桁4→3bit、Alphanumeric対の係数45→44、余り6→5bit、abort条件無効化、Byte CCIをtext.lengthへ、各バイト8→7bit、Numeric/Alphanumeric/Byteの指示子変更の11破壊を実行。REDは全てexit 2で168件実行、失敗数は順に3/3/2/7/6/1/3/4/6/8/5。全失敗名はPR本文へ収録
+- **失敗の種類**: abort無効化は追加panicテストの「panic is expected」が検出。それ以外は追加segment_testの長さ/コードワードのアサーションが検出。副次的にByte幅・Alphanumeric指示子・Byte指示子の破壊は既存decode/data_testのabort、Byte指示子破壊はdecode_jsのJSON parse例外も発生
+- **復元確認**: 追加テストをstageし、毎回git diff --stat/name-onlyで未stage差分がsegment.mbtだけと確認してから指定のgit checkoutで復元。全11回で対象のdiff出力空・exit 0とMoonBit168/168・exit 0を確認。02〜11は逐次subprocessで各コマンドを独立実行しexitと出力を保存。検証コマンドにpipeを挟まず、-fも使用していない
+- **段3**: 36b779e（§4のモード別処理抽出）のコミット直前にMoonBit168/168・exit 0。段3の失敗0回、テスト変更0。局所の式・変数・コメントを保持し、CCI引数は既知のMode値へ置換
+- **段4**: core→packages順でrelease:buildを再実行しexit 0後、Key Commands5本は各exit 0。MoonBit168/168、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。段0/段4ともNode再試行なし。jsQR ground truth214件は双方214一致、negative40件は双方検出0。MODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: `grep -n '^pub'`の出力は `1:pub(all) enum Mode {`、`38:pub fn detect_mode(text : String) -> Mode {`、`342:pub fn cci_bits(mode : Mode, version : Int) -> Int {`、`364:pub fn utf8_encode(text : String) -> Array[Int] {`、`391:pub fn write_segment(` の5行だけ。未コミット変更なしで段2..HEADのテストdiffを指定4パターンと*_test.mbt/*_wbtest.mbtで検査し、出力空・exit 0
+- **独立した差分検査**: 対象関数以前の全コード/型/docのbyte一致、公開シグネチャ/宣言一致、既存テスト全文のprefix一致をassert。抽出3関数の本文も元の各match分岐とインデントおよび既知Mode置換以外がbyte一致
+- **前後の実測**: 宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の括弧を除き最大深さ−1で計測。write_segment62行/ネスト4→12/1、write_numeric_segment21/1、write_alphanumeric_segment24/2、write_byte_segment8/1。合計行数62→65、最大ネスト4→2
+- **裁量で決めた点**: 抽出3関数の分け方と名前、追加9テストの入力・名前、テスト固定→抽出→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-write-segmentブランチを使用
+- **検証の補足**: Numericの数字以外・範囲外version・CCI容量超過の直接入力は現在の呼び出し元の前提外。全Unicode/全長/全CCI境界の直接列は網羅せず既存版別/行列検証を併用。abort直前のwriterは観測不可で本文照合により時点を保持。外部I/O・時刻・並行は非関与、メモリ枯渇・性能ベンチマーク・実機読取りは未実施。site変更なしでブラウザN/A。マージ・デプロイ・公開は未実施
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの既存ログ末尾へ追記する委任仕様と司令塔のask裁定に従った
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-write-segment-36b779e -->
+
 <!-- review-cycle:start 2026-10-02-moonqr-correct-errors-aea4d52 -->
 ## 2026-10-02 correct_errors の standards-refactor
 - **Cycle ID**: 2026-10-02-moonqr-correct-errors-aea4d52

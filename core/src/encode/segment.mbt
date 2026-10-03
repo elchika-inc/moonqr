@@ -395,58 +395,64 @@ pub fn write_segment(
   version : Int,
 ) -> Unit {
   match mode {
-    Mode::Numeric => {
-      w.write(0b0001, 4)
-      let chars : Array[Char] = []
-      for c in text {
-        chars.push(c)
-      }
-      w.write(chars.length(), cci_bits(mode, version))
-      let mut i = 0
-      while i + 3 <= chars.length() {
-        let v = (chars[i].to_int() - 48) * 100 +
-          (chars[i + 1].to_int() - 48) * 10 + (chars[i + 2].to_int() - 48)
-        w.write(v, 10)
-        i = i + 3
-      }
-      let rest = chars.length() - i
-      if rest == 2 {
-        w.write((chars[i].to_int() - 48) * 10 + (chars[i + 1].to_int() - 48), 7)
-      } else if rest == 1 {
-        w.write(chars[i].to_int() - 48, 4)
-      }
+    Mode::Numeric => write_numeric_segment(w, text, version)
+    Mode::Alphanumeric => write_alphanumeric_segment(w, text, version)
+    Mode::Byte => write_byte_segment(w, text, version)
+  }
+}
+
+fn write_numeric_segment(w : BitWriter, text : String, version : Int) -> Unit {
+  w.write(0b0001, 4)
+  let chars : Array[Char] = []
+  for c in text {
+    chars.push(c)
+  }
+  w.write(chars.length(), cci_bits(Mode::Numeric, version))
+  let mut i = 0
+  while i + 3 <= chars.length() {
+    let v = (chars[i].to_int() - 48) * 100 +
+      (chars[i + 1].to_int() - 48) * 10 + (chars[i + 2].to_int() - 48)
+    w.write(v, 10)
+    i = i + 3
+  }
+  let rest = chars.length() - i
+  if rest == 2 {
+    w.write((chars[i].to_int() - 48) * 10 + (chars[i + 1].to_int() - 48), 7)
+  } else if rest == 1 {
+    w.write(chars[i].to_int() - 48, 4)
+  }
+}
+
+fn write_alphanumeric_segment(w : BitWriter, text : String, version : Int) -> Unit {
+  w.write(0b0010, 4)
+  let idx : Array[Int] = []
+  for c in text {
+    let i = alnum_index(c)
+    // 契約: Alphanumeric モードで write_segment を呼ぶのは detect_mode が
+    // 全文字を英数字と判定した場合のみ（内部呼び出しは常にこの前提を満たす）。
+    // alnum_index が -1 を返す文字が来るのは呼び出し側の契約違反であり、
+    // 誤ったビット列を無言で書き込むよりも早期に abort して検知する。
+    if i < 0 {
+      abort("write_segment: non-alphanumeric char in Alphanumeric mode (caller contract violation)")
     }
-    Mode::Alphanumeric => {
-      w.write(0b0010, 4)
-      let idx : Array[Int] = []
-      for c in text {
-        let i = alnum_index(c)
-        // 契約: Alphanumeric モードで write_segment を呼ぶのは detect_mode が
-        // 全文字を英数字と判定した場合のみ（内部呼び出しは常にこの前提を満たす）。
-        // alnum_index が -1 を返す文字が来るのは呼び出し側の契約違反であり、
-        // 誤ったビット列を無言で書き込むよりも早期に abort して検知する。
-        if i < 0 {
-          abort("write_segment: non-alphanumeric char in Alphanumeric mode (caller contract violation)")
-        }
-        idx.push(i)
-      }
-      w.write(idx.length(), cci_bits(mode, version))
-      let mut i = 0
-      while i + 2 <= idx.length() {
-        w.write(idx[i] * 45 + idx[i + 1], 11)
-        i = i + 2
-      }
-      if i < idx.length() {
-        w.write(idx[i], 6)
-      }
-    }
-    Mode::Byte => {
-      w.write(0b0100, 4)
-      let bytes = utf8_encode(text)
-      w.write(bytes.length(), cci_bits(mode, version))
-      for i = 0; i < bytes.length(); i = i + 1 {
-        w.write(bytes[i], 8)
-      }
-    }
+    idx.push(i)
+  }
+  w.write(idx.length(), cci_bits(Mode::Alphanumeric, version))
+  let mut i = 0
+  while i + 2 <= idx.length() {
+    w.write(idx[i] * 45 + idx[i + 1], 11)
+    i = i + 2
+  }
+  if i < idx.length() {
+    w.write(idx[i], 6)
+  }
+}
+
+fn write_byte_segment(w : BitWriter, text : String, version : Int) -> Unit {
+  w.write(0b0100, 4)
+  let bytes = utf8_encode(text)
+  w.write(bytes.length(), cci_bits(Mode::Byte, version))
+  for i = 0; i < bytes.length(); i = i + 1 {
+    w.write(bytes[i], 8)
   }
 }
