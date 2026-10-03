@@ -202,3 +202,260 @@ test "decode_data rejects out-of-range alphanumeric index" {
     None => assert_true(true)
   }
 }
+
+///| モードと文字数を明示して、エンコーダの文字変換を通さずByte入力を組む。
+fn hand_built_byte_codewords(payload : Array[Int]) -> Array[Int] {
+  let w = @encode.BitWriter::new()
+  w.write(0x4, 4)
+  w.write(payload.length(), 8)
+  for byte in payload {
+    w.write(byte, 8)
+  }
+  w.write(0, 4)
+  w.to_codewords()
+}
+
+test "decode_data: 空の符号語 → 空のテキストとbytes" {
+  guard @decode.decode_data([], 1) is Some(got) else { abort("成功を期待") }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, [])
+}
+
+test "decode_data: 終端子の直後が未対応モード → 後続を読まず成功" {
+  guard @decode.decode_data([0x03], 1) is Some(got) else { abort("成功を期待") }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, [])
+}
+
+test "decode_data: 未割当モードの直後にByte → 指示子だけ飛ばして文字を復元" {
+  for mode in [0x6, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF] {
+    guard @decode.decode_data([(mode << 4) | 0x4, 1, 0x41], 1) is Some(got) else {
+      abort("未割当モード後の継続を期待")
+    }
+    assert_eq(got.text, "A")
+    assert_eq(got.bytes, [0x41])
+  }
+}
+
+test "decode_data: 数値グループが999・99・9 → 上限値を復元" {
+  for case in [
+    (3, 10, 999, "999"),
+    (2, 7, 99, "99"),
+    (1, 4, 9, "9"),
+  ] {
+    let (digits, width, value, expected) = case
+    let w = @encode.BitWriter::new()
+    w.write(0x1, 4)
+    w.write(digits, 10)
+    w.write(value, width)
+    w.write(0, 4)
+    guard @decode.decode_data(w.to_codewords(), 1) is Some(got) else {
+      abort("数値グループ上限の成功を期待")
+    }
+    assert_eq(got.text, expected)
+    assert_eq(got.bytes, @encode.utf8_encode(expected))
+  }
+}
+
+test "decode_data: 先頭0を含む複数数値グループ → 桁数とbytesの順序を保持" {
+  let w = @encode.BitWriter::new()
+  w.write(0x1, 4)
+  w.write(8, 10)
+  w.write(7, 10)
+  w.write(80, 10)
+  w.write(9, 7)
+  w.write(0, 4)
+  guard @decode.decode_data(w.to_codewords(), 1) is Some(got) else {
+    abort("数値グループの復元を期待")
+  }
+  assert_eq(got.text, "00708009")
+  assert_eq(got.bytes, [48, 48, 55, 48, 56, 48, 48, 57])
+}
+
+test "decode_data: 3桁グループが1000 → None" {
+  let w = @encode.BitWriter::new()
+  w.write(0x1, 4)
+  w.write(3, 10)
+  w.write(1000, 10)
+  assert_eq(@decode.decode_data(w.to_codewords(), 1), None)
+}
+
+test "decode_data: 2桁グループが100 → None" {
+  let w = @encode.BitWriter::new()
+  w.write(0x1, 4)
+  w.write(2, 10)
+  w.write(100, 7)
+  assert_eq(@decode.decode_data(w.to_codewords(), 1), None)
+}
+
+test "decode_data: 1桁グループが10 → None" {
+  let w = @encode.BitWriter::new()
+  w.write(0x1, 4)
+  w.write(1, 10)
+  w.write(10, 4)
+  assert_eq(@decode.decode_data(w.to_codewords(), 1), None)
+}
+
+test "decode_data: 数値グループのビット不足 → None" {
+  // mode=1、CCI=3の後は2bitしか残らず、3桁に必要な10bitを読めない。
+  assert_eq(@decode.decode_data([0x10, 0x0C], 1), None)
+}
+
+test "decode_data: 数値の文字数指示子が途中で切れる → None" {
+  assert_eq(@decode.decode_data([0x10], 1), None)
+}
+
+test "decode_data: 版9・10・26・27の数値 → 版に合う文字数幅で復元" {
+  for case in [(9, 10), (10, 12), (26, 12), (27, 14)] {
+    let (version, count_width) = case
+    let w = @encode.BitWriter::new()
+    w.write(0x1, 4)
+    w.write(1, count_width)
+    w.write(9, 4)
+    w.write(0, 4)
+    guard @decode.decode_data(w.to_codewords(), version) is Some(got) else {
+      abort("版ごとの文字数幅での成功を期待")
+    }
+    assert_eq(got.text, "9")
+    assert_eq(got.bytes, [57])
+  }
+}
+
+test "decode_data: UTF-8の各幅とサロゲート前後の境界 → 元の文字とbytes" {
+  for case in [
+    ([0x00], 0x00),
+    ([0x7F], 0x7F),
+    ([0xC2, 0x80], 0x80),
+    ([0xDF, 0xBF], 0x7FF),
+    ([0xE0, 0xA0, 0x80], 0x800),
+    ([0xED, 0x9F, 0xBF], 0xD7FF),
+    ([0xEE, 0x80, 0x80], 0xE000),
+    ([0xEF, 0xBF, 0xBF], 0xFFFF),
+    ([0xF0, 0x90, 0x80, 0x80], 0x10000),
+    ([0xF4, 0x8F, 0xBF, 0xBF], 0x10FFFF),
+  ] {
+    let (payload, codepoint) = case
+    guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+      abort("Byteセグメントの成功を期待")
+    }
+    assert_eq(got.text, Int::unsafe_to_char(codepoint).to_string())
+    assert_eq(got.bytes, payload)
+  }
+}
+
+test "decode_data: 空のByteセグメント → 空のテキストとbytes" {
+  guard @decode.decode_data(hand_built_byte_codewords([]), 1) is Some(got) else {
+    abort("空のByteセグメントの成功を期待")
+  }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, [])
+}
+
+test "decode_data: 過長な2バイトUTF-8 → 文字を捨てbytesを保持" {
+  let payload = [0xC0, 0xAF]
+  guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+    abort("Byteセグメントの成功を期待")
+  }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, payload)
+}
+
+test "decode_data: 過長な3バイトUTF-8 → 文字を捨てbytesを保持" {
+  let payload = [0xE0, 0x9F, 0xBF]
+  guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+    abort("Byteセグメントの成功を期待")
+  }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, payload)
+}
+
+test "decode_data: 過長な4バイトUTF-8 → 文字を捨てbytesを保持" {
+  let payload = [0xF0, 0x8F, 0xBF, 0xBF]
+  guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+    abort("Byteセグメントの成功を期待")
+  }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, payload)
+}
+
+test "decode_data: UTF-8がサロゲート範囲 → 文字を捨てbytesを保持" {
+  for payload in [[0xED, 0xA0, 0x80], [0xED, 0xBF, 0xBF]] {
+    guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+      abort("Byteセグメントの成功を期待")
+    }
+    assert_eq(got.text, "")
+    assert_eq(got.bytes, payload)
+  }
+}
+
+test "decode_data: UTF-8がU+10FFFF超 → 文字を捨てbytesを保持" {
+  let payload = [0xF4, 0x90, 0x80, 0x80]
+  guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+    abort("Byteセグメントの成功を期待")
+  }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, payload)
+}
+
+test "decode_data: UTF-8が途中で切れる → 文字を捨てbytesを保持" {
+  for payload in [[0xC2], [0xE3, 0x81], [0xF0, 0x90, 0x80]] {
+    guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+      abort("Byteセグメントの成功を期待")
+    }
+    assert_eq(got.text, "")
+    assert_eq(got.bytes, payload)
+  }
+}
+
+test "decode_data: UTF-8の継続位置にASCII → 文字を捨てbytesを保持" {
+  for payload in [
+    [0xC2, 0x41],
+    [0xE3, 0x41, 0x82],
+    [0xE3, 0x81, 0x41],
+    [0xF0, 0x41, 0x80, 0x80],
+    [0xF0, 0x90, 0x41, 0x80],
+    [0xF0, 0x90, 0x80, 0x41],
+  ] {
+    guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+      abort("Byteセグメントの成功を期待")
+    }
+    assert_eq(got.text, "")
+    assert_eq(got.bytes, payload)
+  }
+}
+
+test "decode_data: UTF-8の先頭が継続バイトまたは0xF8 → 文字を捨てbytesを保持" {
+  for payload in [[0x80], [0xF8]] {
+    guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+      abort("Byteセグメントの成功を期待")
+    }
+    assert_eq(got.text, "")
+    assert_eq(got.bytes, payload)
+  }
+}
+
+test "decode_data: Byte内の正常文字の後に不正UTF-8 → そのセグメントの文字全体を捨てる" {
+  let payload = [0x41, 0xC0, 0xAF]
+  guard @decode.decode_data(hand_built_byte_codewords(payload), 1) is Some(got) else {
+    abort("Byteセグメントの成功を期待")
+  }
+  assert_eq(got.text, "")
+  assert_eq(got.bytes, payload)
+}
+
+test "decode_data: 正常Byte・不正UTF-8・正常Byte → 不正セグメントだけ文字を捨てて継続" {
+  let w = @encode.BitWriter::new()
+  for payload in [[0x41], [0xC0, 0xAF], [0x42]] {
+    w.write(0x4, 4)
+    w.write(payload.length(), 8)
+    for byte in payload {
+      w.write(byte, 8)
+    }
+  }
+  w.write(0, 4)
+  guard @decode.decode_data(w.to_codewords(), 1) is Some(got) else {
+    abort("Byteセグメントを越える継続を期待")
+  }
+  assert_eq(got.text, "AB")
+  assert_eq(got.bytes, [0x41, 0xC0, 0xAF, 0x42])
+}

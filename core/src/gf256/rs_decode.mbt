@@ -103,6 +103,29 @@ fn correct_errors(
   err_loc : Array[Int],
   positions : Array[Int],
 ) -> Array[Int]? {
+  let omega = compute_error_evaluator(synd, err_loc)
+  let locator_derivative = differentiate_error_locator(err_loc)
+  let corrected = msg.copy()
+  for k = 0; k < positions.length(); k = k + 1 {
+    let pos = positions[k]
+    let position_exponent = msg.length() - 1 - pos // α^{i}, i = 末尾からの冪
+    let x = exp(position_exponent)
+    let x_inv = div(1, x)
+    let evaluator_value = evaluate_polynomial(omega, x_inv)
+    let derivative_value = evaluate_polynomial(locator_derivative, x_inv)
+    if derivative_value == 0 {
+      return None
+    }
+    let magnitude = mul(x, div(evaluator_value, derivative_value))
+    corrected[pos] = add(corrected[pos], magnitude)
+  }
+  Some(corrected)
+}
+
+fn compute_error_evaluator(
+  synd : Array[Int],
+  err_loc : Array[Int],
+) -> Array[Int] {
   // エラーエバリュエータ Ω(x) = [S(x)·σ(x)] mod x^n_ec
   // S(x) は S_0 を最低次とする（index 0 = 最高次表現に変換して poly_mul）
   let synd_rev : Array[Int] = []
@@ -116,41 +139,31 @@ fn correct_errors(
   for i = start; i < omega_full.length(); i = i + 1 {
     omega.push(omega_full[i])
   }
+  omega
+}
+
+fn differentiate_error_locator(err_loc : Array[Int]) -> Array[Int] {
   // σ'(x): 形式微分（GF(2^8)では偶数次の項が消える）
-  let deriv : Array[Int] = []
-  let deg = err_loc.length() - 1
+  let derivative : Array[Int] = []
+  let degree = err_loc.length() - 1
   for i = 0; i < err_loc.length() - 1; i = i + 1 {
-    let power = deg - i // この係数の次数
+    let power = degree - i // この係数の次数
     if power % 2 == 1 {
-      deriv.push(err_loc[i])
+      derivative.push(err_loc[i])
     } else {
-      deriv.push(0)
+      derivative.push(0)
     }
   }
-  // deriv は σ の形式微分（GF(2^8) では偶数次項が消える）。plain Horner で x_inv を評価する
-  let out = msg.copy()
-  for k = 0; k < positions.length(); k = k + 1 {
-    let pos = positions[k]
-    let x_inv_log = msg.length() - 1 - pos // α^{i}, i = 末尾からの冪
-    let x = exp(x_inv_log)
-    let x_inv = div(1, x)
-    // Ω(x^{-1})
-    let mut om = 0
-    for j = 0; j < omega.length(); j = j + 1 {
-      om = add(mul(om, x_inv), omega[j])
-    }
-    // σ'(x^{-1}) を直接評価（deriv の各項は元の次数-1）
-    let mut dv = 0
-    for j = 0; j < deriv.length(); j = j + 1 {
-      dv = add(mul(dv, x_inv), deriv[j])
-    }
-    if dv == 0 {
-      return None
-    }
-    let magnitude = mul(x, div(om, dv))
-    out[pos] = add(out[pos], magnitude)
+  derivative
+}
+
+///| 係数は先頭が最高次。Horner 法で評価する。
+fn evaluate_polynomial(coefficients : Array[Int], x : Int) -> Int {
+  let mut value = 0
+  for j = 0; j < coefficients.length(); j = j + 1 {
+    value = add(mul(value, x), coefficients[j])
   }
-  Some(out)
+  value
 }
 
 ///| RS復号: 訂正済み符号語を返す。訂正不能は None。
