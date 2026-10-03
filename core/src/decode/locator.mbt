@@ -168,21 +168,7 @@ fn count_black_white_run_towards_point(
   let switch_xs : Array[Int] = [origin.x.floor().to_int()]
   let switch_ys : Array[Int] = [origin.y.floor().to_int()]
   let steep = Double::abs(end.y - origin.y) > Double::abs(end.x - origin.x)
-  let (from_x, from_y, to_x, to_y) = if steep {
-    (
-      origin.y.floor().to_int(),
-      origin.x.floor().to_int(),
-      end.y.floor().to_int(),
-      end.x.floor().to_int(),
-    )
-  } else {
-    (
-      origin.x.floor().to_int(),
-      origin.y.floor().to_int(),
-      end.x.floor().to_int(),
-      end.y.floor().to_int(),
-    )
-  }
+  let (from_x, from_y, to_x, to_y) = normalize_run_coordinates(origin, end, steep)
   let dx = Int::abs(to_x - from_x)
   let dy = Int::abs(to_y - from_y)
   let mut error = ((-dx).to_double() / 2.0).floor().to_int()
@@ -212,6 +198,36 @@ fn count_black_white_run_towards_point(
     }
     x = x + x_step
   }
+  distances_between_switches(switch_xs, switch_ys, length)
+}
+
+fn normalize_run_coordinates(
+  origin : Point,
+  end : Point,
+  steep : Bool,
+) -> (Int, Int, Int, Int) {
+  if steep {
+    (
+      origin.y.floor().to_int(),
+      origin.x.floor().to_int(),
+      end.y.floor().to_int(),
+      end.x.floor().to_int(),
+    )
+  } else {
+    (
+      origin.x.floor().to_int(),
+      origin.y.floor().to_int(),
+      end.x.floor().to_int(),
+      end.y.floor().to_int(),
+    )
+  }
+}
+
+fn distances_between_switches(
+  switch_xs : Array[Int],
+  switch_ys : Array[Int],
+  length : Int,
+) -> Array[Double] {
   let distances : Array[Double] = []
   for i = 0; i < length; i = i + 1 {
     if i + 1 < switch_xs.length() {
@@ -351,6 +367,20 @@ fn find_alignment_pattern(
     x: top_left.x + correction_to_top_left * (bottom_right_x - top_left.x),
     y: top_left.y + correction_to_top_left * (bottom_right_y - top_left.y),
   }
+  let candidates = score_alignment_candidates(matrix, alignment_pattern_quads, expected)
+  let alignment_point = if modules_between >= 15.0 && candidates.length() > 0 {
+    candidates[0].point
+  } else {
+    expected
+  }
+  Some({ point: alignment_point, dimension: dim.dimension, module_size: dim.module_size })
+}
+
+fn score_alignment_candidates(
+  matrix : BitMatrix,
+  alignment_pattern_quads : Array[Quad],
+  expected : Point,
+) -> Array[ScoredPoint] {
   let ratios_1_1_1 : Array[Double] = [1.0, 1.0, 1.0]
   let candidates : Array[ScoredPoint] = []
   for q in alignment_pattern_quads {
@@ -368,12 +398,7 @@ fn find_alignment_pattern(
     }
   }
   candidates.sort_by(compare_scored_point)
-  let alignment_point = if modules_between >= 15.0 && candidates.length() > 0 {
-    candidates[0].point
-  } else {
-    expected
-  }
-  Some({ point: alignment_point, dimension: dim.dimension, module_size: dim.module_size })
+  candidates
 }
 
 ///| 二値行列からファインダパターン3点とアライメントパターン、dimension を推定する
