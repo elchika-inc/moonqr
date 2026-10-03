@@ -96,60 +96,49 @@ fn alnum_char(idx : Int) -> Char {
 ///| （jsQR の decodeURIComponent 失敗＝try/catchでtext破棄に相当する判定を、
 ///| 標準的なUTF-8構造検証として明示的に実装）。
 fn utf8_decode(bytes : Array[Int]) -> Array[Int]? {
-  let cps : Array[Int] = []
-  let mut i = 0
-  let n = bytes.length()
-  fn is_cont(b : Int) -> Bool {
-    (b & 0xC0) == 0x80
-  }
-
-  while i < n {
-    let b0 = bytes[i]
-    if b0 < 0x80 {
-      cps.push(b0)
-      i = i + 1
-    } else if (b0 & 0xE0) == 0xC0 {
-      if i + 1 >= n || !is_cont(bytes[i + 1]) {
-        return None
-      }
-      let cp = ((b0 & 0x1F) << 6) | (bytes[i + 1] & 0x3F)
-      if cp < 0x80 {
-        return None // overlong
-      }
-      cps.push(cp)
-      i = i + 2
-    } else if (b0 & 0xF0) == 0xE0 {
-      if i + 2 >= n || !is_cont(bytes[i + 1]) || !is_cont(bytes[i + 2]) {
-        return None
-      }
-      let b2 = bytes[i + 2]
-      let cp = ((b0 & 0x0F) << 12) | ((bytes[i + 1] & 0x3F) << 6) | (b2 & 0x3F)
-      if cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF) {
-        return None // overlong または UTF-16 サロゲート範囲
-      }
-      cps.push(cp)
-      i = i + 3
-    } else if (b0 & 0xF8) == 0xF0 {
-      if i + 3 >= n ||
-        !is_cont(bytes[i + 1]) ||
-        !is_cont(bytes[i + 2]) ||
-        !is_cont(bytes[i + 3]) {
-        return None
-      }
-      let cp = ((b0 & 0x07) << 18) |
-        ((bytes[i + 1] & 0x3F) << 12) |
-        ((bytes[i + 2] & 0x3F) << 6) |
-        (bytes[i + 3] & 0x3F)
-      if cp < 0x10000 || cp > 0x10FFFF {
-        return None
-      }
-      cps.push(cp)
-      i = i + 4
-    } else {
+  let codepoints : Array[Int] = []
+  let mut offset = 0
+  while offset < bytes.length() {
+    guard decode_utf8_codepoint(bytes, offset) is Some((codepoint, byte_count)) else {
       return None
     }
+    codepoints.push(codepoint)
+    offset = offset + byte_count
   }
-  Some(cps)
+  Some(codepoints)
+}
+
+fn decode_utf8_codepoint(bytes : Array[Int], offset : Int) -> (Int, Int)? {
+  let lead = bytes[offset]
+  if lead < 0x80 {
+    return Some((lead, 1))
+  }
+  let (byte_count, lead_mask, min_codepoint) = if (lead & 0xE0) == 0xC0 {
+    (2, 0x1F, 0x80)
+  } else if (lead & 0xF0) == 0xE0 {
+    (3, 0x0F, 0x800)
+  } else if (lead & 0xF8) == 0xF0 {
+    (4, 0x07, 0x10000)
+  } else {
+    return None
+  }
+  if offset + byte_count > bytes.length() {
+    return None
+  }
+  let mut codepoint = lead & lead_mask
+  for i = 1; i < byte_count; i = i + 1 {
+    let continuation = bytes[offset + i]
+    if (continuation & 0xC0) != 0x80 {
+      return None
+    }
+    codepoint = (codepoint << 6) | (continuation & 0x3F)
+  }
+  if codepoint < min_codepoint ||
+    (codepoint >= 0xD800 && codepoint <= 0xDFFF) ||
+    codepoint > 0x10FFFF {
+    return None
+  }
+  Some((codepoint, byte_count))
 }
 
 ///| Kanjiモードの文字数指示子ビット幅（ISO 18004 Table 3。jsQR decodeKanji の
@@ -174,53 +163,41 @@ fn decode_numeric(
   bytes : Array[Int],
 ) -> Unit? {
   let width = @encode.cci_bits(@encode.Mode::Numeric, version)
-  let mut length = match r.read_bits(width) {
-    Some(v) => v
-    None => return None
+  guard r.read_bits(width) is Some(length) else { return None }
+  let mut remaining_digits = length
+  while remaining_digits > 0 {
+    let digit_count = if remaining_digits >= 3 { 3 } else { remaining_digits }
+    guard decode_numeric_group(r, digit_count, chars, bytes) is Some(_) else {
+      return None
+    }
+    remaining_digits = remaining_digits - digit_count
   }
-  while length >= 3 {
-    let num = match r.read_bits(10) {
-      Some(v) => v
-      None => return None
-    }
-    if num >= 1000 {
-      return None
-    }
-    let a = num / 100
-    let b = num / 10 % 10
-    let c = num % 10
-    bytes.push(48 + a)
-    bytes.push(48 + b)
-    bytes.push(48 + c)
-    chars.push(Int::unsafe_to_char(48 + a))
-    chars.push(Int::unsafe_to_char(48 + b))
-    chars.push(Int::unsafe_to_char(48 + c))
-    length = length - 3
+  Some(())
+}
+
+fn decode_numeric_group(
+  r : BitReader,
+  digit_count : Int,
+  chars : Array[Char],
+  bytes : Array[Int],
+) -> Unit? {
+  let (bit_width, limit, first_divisor) = match digit_count {
+    3 => (10, 1000, 100)
+    2 => (7, 100, 10)
+    _ => (4, 10, 1)
   }
-  if length == 2 {
-    let num = match r.read_bits(7) {
-      Some(v) => v
-      None => return None
-    }
-    if num >= 100 {
-      return None
-    }
-    let a = num / 10
-    let b = num % 10
-    bytes.push(48 + a)
-    bytes.push(48 + b)
-    chars.push(Int::unsafe_to_char(48 + a))
-    chars.push(Int::unsafe_to_char(48 + b))
-  } else if length == 1 {
-    let num = match r.read_bits(4) {
-      Some(v) => v
-      None => return None
-    }
-    if num >= 10 {
-      return None
-    }
-    bytes.push(48 + num)
-    chars.push(Int::unsafe_to_char(48 + num))
+  guard r.read_bits(bit_width) is Some(num) else { return None }
+  if num >= limit {
+    return None
+  }
+  let group_begin = bytes.length()
+  let mut divisor = first_divisor
+  while divisor > 0 {
+    bytes.push(48 + num / divisor % 10)
+    divisor = divisor / 10
+  }
+  for i = group_begin; i < bytes.length(); i = i + 1 {
+    chars.push(Int::unsafe_to_char(bytes[i]))
   }
   Some(())
 }
@@ -378,60 +355,27 @@ pub fn decode_data(codewords : Array[Int], version : Int) -> DecodedData? {
       Some(v) => v
       None => abort("unreachable: available() >= 4 guarantees 4 bits")
     }
-    if mode == 0x0 {
-      // Terminator
-      return Some({ text: chars_to_string(chars), bytes })
-    } else if mode == 0x3 || mode == 0x9 {
-      // Structured Append / FNC1 second position は追加ヘッダを持つが未対応。
+    let segment = match mode {
+      0x0 => return Some({ text: chars_to_string(chars), bytes })
+      // Structured Append / FNC1 second は追加ヘッダを持つが未対応。
       // ペイロードを誤って別モードとして読まず失敗へ倒す。
-      return None
-    } else if mode == 0x5 {
-      // FNC1 first position は追加ヘッダを持たない。指示子だけを消費し、
-      // 直後の通常データセグメントを次のループで読む。
-      ()
-    } else if mode == 0x7 {
-      // ECI
-      match decode_eci(r) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x1 {
-      // Numeric
-      match decode_numeric(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x2 {
-      // Alphanumeric
-      match decode_alphanumeric(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x4 {
-      // Byte
-      match decode_byte(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
-    } else if mode == 0x8 {
-      // Kanji
-      match decode_kanji(r, version, chars, bytes) {
-        Some(_) => ()
-        None => return None
-      }
+      0x3 | 0x9 => return None
+      // FNC1 first は追加ヘッダを持たず、指示子だけ消費して継続する。
+      0x5 => Some(())
+      0x7 => decode_eci(r)
+      0x1 => decode_numeric(r, version, chars, bytes)
+      0x2 => decode_alphanumeric(r, version, chars, bytes)
+      0x4 => decode_byte(r, version, chars, bytes)
+      0x8 => decode_kanji(r, version, chars, bytes)
+      // 未割り当て値（0x6, 0xA-0xF）はjsQR同様、4bitだけ消費して継続する。
+      _ => Some(())
     }
-    // それ以外の未割り当て値（0x6, 0xA-0xF）は、jsQR と同じく
-    // モード4bitの消費のみでペイロードを読まず継続する。
+    guard segment is Some(_) else { return None }
   }
-  // ループを available() < 4 で抜けた（終端子に到達しないまま消費し切った）場合。
-  // 残りが0bit、または残り全ビットが0なら暗黙の終端子とみなして成功（jsQRの
-  // `stream.available() === 0 || stream.readBits(stream.available()) === 0` と同じ）。
-  if r.available() == 0 {
+  // 終端子なしで残り4bit未満になったときは、0bitまたは全0なら成功する。
+  if r.available() == 0 || r.read_bits(r.available()) == Some(0) {
     Some({ text: chars_to_string(chars), bytes })
   } else {
-    match r.read_bits(r.available()) {
-      Some(0) => Some({ text: chars_to_string(chars), bytes })
-      _ => None
-    }
+    None
   }
 }
