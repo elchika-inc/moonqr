@@ -656,3 +656,38 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-write-segment-36b779e -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-correct-errors-aea4d52 -->
+## 2026-10-02 correct_errors の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-correct-errors-aea4d52
+- **対象 HEAD**: aea4d52ec7787183d251dc98b3fd4020c3a5c5c3（main 794abbba788def8d331a36e5f259d4bee20efe7fからの差分。本ブロックはレビュー後に追記）
+- **対象差分**: `core/src/gf256/rs_decode.mbt` の `correct_errors` と抽出した非公開3関数。対象外6関数・doc・対象シグネチャ・全テストを保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: Ω構築・形式微分・Horner評価の抽出と命名整理に限定され、対象シグネチャ・他6関数・doc・非公開性を保持していることを確認
+- **Security**: 新規I/O・共有状態・依存はなく、ヘルパーの書込先は新規配列かローカル変数。途中でNoneを返す場合も入力msgを変更しないことを確認
+- **Core Logic**: シンドローム逆順化、poly_mulの引数、Ωの末尾範囲、微分係数の生成順、exp→逆数→Ω評価→微分評価→ゼロ判定→誤り量→訂正の順序と演算引数を確認
+- **Tests**: 6種類の破壊・復元・159件成功・段2空コミット以後のテスト凍結の提示証跡を評価。レビュアー自身はテストや履歴確認を再実行していない
+- **Domain**: 最高次先頭、mod x^n_ec、標数2で偶数次項を消しゼロ係数で次数を保持する微分、逆数でのHorner評価、ForneyのX係数と微分値0のNoneを保持していることを確認
+- **レビュアー**: fresh contextのCodex 1名、gpt-6-astra / high / codex-cli 0.155.0 / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinに指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、rs_decode.mbt全文、段2テスト差分（空）、レビュー記録差分（空）、PR作業下書き、破壊検証の実測、CODING.mdを提示。既存テストと既存レビュー記録の全文は渡していない
+- **レビューの実体**: CLI exit 0。5ロールの境界付き非空LGTMブロック各1個を検証し、原文のまま分割保存して読戻し一致。末尾DELETE 404はexit 0と有効な本文を確認して無害と判断
+- **副作用の確認**: 対象ソース・テスト・本ログ・risk-registryのSHA-256はレビュー前後で一致し、git statusも空。任意のcode-review-graph工程は省略し、対象全文と差分を直接提示
+- **適用ポリシー**: CODING.mdはstandardsをfetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）から取得。振る舞いを変えないため§5.2 MUST対象外、他原則とテスト類型不足はoptional。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとする旨を事前に指示
+- **段0**: install / release:build / fetch-fixturesは各exit 0（fixture254/254）。Key Commands5本も各exit 0。MoonBit159/159、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos/表示省略8。Node v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。対象55行・ネスト2は指定値と一致
+- **テスト固定**: 段2コミット28fd428649bf61d1cec5f916e1225cc1cf2e4755は空コミット（git show --statで変更なし）。既存10件は公開面の振る舞いテストと判断し、追加・置換0件
+- **破壊検証**: Ωの末尾係数削除・形式微分の偶奇反転・magnitudeのmul(x, ...)除去は、各6件（property50試行、1誤り、5誤り、別配列、入力不変、read_dataのEC内訂正）がNone分岐のabortで失敗。Ω・微分それぞれのHorner評価点x_inv→xは各3件（property、5誤り、read_data）がabort。msg.copy()→msgは別配列・入力不変の2件がアサーション失敗。全6破壊は全159件を実行してexit 2、コンパイルエラーによるREDは0
+- **復元確認**: 全6回でgit diff --statがrs_decode.mbtだけと読んでからgit checkoutで復元し、実装diff空/exit 0とMoonBit159/159/exit 0を各回確認。破壊はコミットしていない。-fは未使用
+- **段3**: d5402d1（§4工程抽出・§3変数スコープ縮小）とaea4d52（§2命名）の各コミット直前にMoonBit159/159・exit 0。段3の失敗0回、段2以後のテスト変更0件
+- **段4**: core→packagesの順にrelease:buildしてexit 0後、Key Commands5本を個別に実行し各exit 0。MoonBit159/159、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Node再試行なし。jsQR ground truth214件は両実装214一致、negative40件は両実装非null0。MODULE_TYPELESS_PACKAGE_JSON警告は段0から存在
+- **公開面と凍結**: `grep -n '^pub'` の出力は `171:pub fn rs_decode(msg : Array[Int], n_ec : Int) -> Array[Int]? {` の1行。未コミット変更なしで段2以後のテスト差分を指定4パターンと `*_test.mbt` / `*_wbtest.mbt` で検査し、出力空・exit 0。対象外6関数・doc・対象シグネチャは起点とbyte一致を別途assertで確認
+- **前後の実測**: correct_errorsは55行/ネスト2→24/2。抽出関数compute_error_evaluatorは19/1、differentiate_error_locatorは14/2、evaluate_polynomialは7/1。対象と抽出関数の合計行数55→64、最大ネスト2は維持。宣言〜終端の両端・空行・コメント込み、文字列と//コメント内の括弧を除いた最大深さ−1で計測
+- **検証の補足**: dv==0は委任仕様にある前PRの10,000試行で到達入力未発見のため追加探索せず分岐を保持。最終シンドローム検証や対象外Horner2箇所も変更なし。不正な公開入力、全誤り配置・全EC長の網羅、性能ベンチマーク、実機読取りは未実施。site変更なしでブラウザ検証はN/A。moon fmt / lint:fix / マージ / 公開は実行していない
+- **裁量で変えた点**: 抽出3関数の分け方と名前、変数名、6種類の破壊内容、テスト固定（空）→工程抽出→命名→レビュー記録のコミット粒度とメッセージ。追加テスト0件、Dispatchのnaoto24kawa/refactor-correct-errorsブランチを維持
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従い本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-correct-errors-aea4d52 -->
