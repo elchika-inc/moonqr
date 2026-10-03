@@ -507,3 +507,39 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-binarize-969c4f1 -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-read-data-d97a076 -->
+## 2026-10-02 read_data の standards-refactor
+- **Cycle ID**: 2026-10-02-moonqr-read-data-d97a076
+- **対象 HEAD**: d97a0764152525b770aa04057ae0dc27000c0323（起点07a85f9。本ブロックはレビュー後に末尾へ追記）
+- **対象差分**: `core/src/decode/codewords.mbt` の `read_data` と抽出した非公開2関数。対象外の `read_bits_zigzag` / `bits_to_codewords`、既存doc、既存5テストと補助関数は保持
+- **総ラウンド数**: 1（上限3）
+- **終了理由**: 初回ラウンドで全5レンズLGTM。確信度80%以上のflag 0、optional 0
+- **レンズ別 flag 件数**: R1 = Fresh Eyes 0 / Security 0 / Core Logic 0 / Tests 0 / Domain 0
+- **適用順**: Fresh Eyes → Security → Core Logic → Tests → Domain
+- **Fresh Eyes**: 工程抽出・局所変数の改名・guard化に限定され、各抽出関数に実処理があり、不要な汎用化・依存追加がないことを確認。公開シグネチャと変更禁止2関数を維持
+- **Security**: 外部I/O・ログ・秘密情報・公開入口の追加なし。配列の長さ・添字・参照条件を保持し、新たな範囲外アクセス経路は見当たらないと判定
+- **Core Logic**: 配列確保・最大長・データ部→EC部・読取位置の更新条件を照合。msgをデータ→ECで構成し、訂正済み先頭dcount個をブロック順に連結。guard失敗のNoneが入口へ直接返り、後続ブロックを処理しないことを確認
+- **Tests**: 件数を含む段0/4の成功、4破壊の失敗と復元、空コミットと凍結を実装担当の提示証拠として評価。未検証条件と理由がPR下書きに明示されていることを確認。レビュアー自身は既存テスト全文・Git実体の確認やテスト実行をしていない。本ログの後続追記はレビュー対象外
+- **Domain**: 可変長ブロックを飛ばすときにコードワードを消費しないこと、データ配分後のEC配分、EC長の引渡し、データ部分だけの連結を保持。encodeの機能マップ再利用・ジグザグ・マスク解除・コードワード化を維持
+- **レビュアー**: fresh contextのCodex 1名、codex-cli 0.155.0 / gpt-6-astra / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-workerは起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -` のstdinへ指示文ファイルを渡し、stdout/stderrを別保存。main...HEAD差分、codewords.mbt全文、段2テスト追記diff（空）、レビュー記録diff（空）、PR下書き、CODING.mdを提示。既存テスト全文と本ログ全文は渡していない
+- **レビューの実体**: CLI exit 0。指定順の5ロールに境界付き非空LGTMブロックが各1個、flag件数との整合、原文のロール別保存と読戻し一致を検証。終了時のMCP DELETE HTTP 404は本文生成後の片付けエラーで、レビューexit 0と区別して記録
+- **副作用の確認**: 許可4ファイルのgit hash-objectがレビュー前後で一致し、git status --porcelainも空。任意のcode-review-graph工程は省略し、対象全文と差分を直接提示。直前の完全ログに確定FPはなく引継ぎなし
+- **適用ポリシー**: standards fetch後のorigin/main（44b0a201546f6ef9c2bc413a8eadefbee062fd2b）からCODING.mdを取得。本PRは振る舞いを変えないため§5.2 MUST対象外、他の原則・類型不足はoptionalと事前に明示。明示要件・correctness・セキュリティに影響する確信度80%以上だけをflagとし、事後格下げなし
+- **段0**: bootstrap3本（install / release:build / fetch-fixtures）は各exit 0（178 packages、fixture254/254）。Key Commands5本も各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。環境はNode v24.21.0 / moon 0.1.20260713 / pnpm 10.32.1。対象74行・ネスト3を実測し指定値と一致
+- **テスト固定**: 段2コミットaa20de2d7cb11d44dd15bc62edb71d409cda50edは空コミット。git show --statでファイル変更なしを確認。既存5件は公開面とencodeの独立経路を照合する振る舞いのテストで、4破壊を検出したため追加・置換なし
+- **破壊検証**: 毎回moon test --target js -f 'read_data:*'で5件実行・exit 2。デインターリーブのEC先行はv1-M/v5-H/v7-L/能力内訂正の4件が期待Someに対するNoneでテスト内abort。Noneでcontinueは能力超過の1件が期待Noneに対するSomeでテスト内abort。ブロック逆順はv5-H/v7-Lの2件がassert_eq失敗。RSのSome(msg)への置換は能力内訂正がassert_eq、能力超過がテスト内abortの計2件で失敗
+- **復元確認**: 全4回でgit diff --statがcodewords.mbtのみと確認して指定のgit checkoutで復元。対象diff空・exit 0、全MoonBit156/156・exit 0を確認。RS無効化時はunused_package warningが2件出たが、5件が実行されて失敗したことを確認
+- **段3**: 08218ce（工程分離・命名）とd97a076（早期return）の各コミット前にMoonBit156/156・exit 0。実装変更中のテスト失敗0回・テスト変更0
+- **段4**: core→packages順のrelease:buildがexit 0後、Key Commands5本を個別実行して各exit 0。MoonBit156/156、Node284/284・skip0、unit53+25+30、typecheck3 packages、lintは段0と同件数。Node再実行なし。段0/4ともjsQR ground truth214件は両実装214一致、negative40件は両実装検出0
+- **公開面と凍結**: grep -n '^pub'は `62:pub fn read_data(m : BitMatrix, version : Int, fmt : FormatInfo) -> Array[Int]? {` の1行のみ。段2以後のテスト差分は指定4パターンに*_test.mbt / *_wbtest.mbtを加え、cleanな状態で出力空・exit 0。対象外2関数・既存doc・read_data前半の機能マップ〜コードワード生成・既存テスト全文がmainとbyte一致
+- **前後の実測**: 宣言〜終端を両端・空行・コメント込み、文字列と//コメント内の括弧を除き最大深さ−1で計測。read_dataは74行/ネスト3→16/1、deinterleave_codewordsは42/3、correct_data_blocksは25/2。対象＋抽出関数の合計行数74→83、最大ネスト3を維持
+- **裁量で変えた点**: 抽出2関数の分け方・名前、局所変数名、guardの使用、追加テストなしの判断、テスト固定→工程分離→早期return→レビュー記録のコミット粒度とメッセージ。Dispatchのnaoto24kawa/refactor-read-dataブランチを維持
+- **検証の補足**: 訂正能力ちょうど5/6バイト境界・特定位置ブロックだけの失敗・空文字列専用入力は追加せず、理由をPR本文に記録。後続ブロックの非実行は内部mockではなく即時returnの差分で確認。不正version/寸法/formatは現在の呼出元で確認されるため追加条件から除外。日時・地域・並行は関与しない。site変更なしでブラウザはN/A。性能測定・実機カメラ・マージ・公開は未実施
+- **運用上の補足**: fixture取得中の先行MoonBit実行は正式基準に数えず取得完了後に再実行。byte比較Pythonの初回は日本語bytes literalのSyntaxError/exit 1だったため文字列.encode()へ直してexit 0を確認。NodeのMODULE_TYPELESS_PACKAGE_JSON警告とlint既存診断は段0から存在し変更範囲外
+- **レビュー記録の置き場**: lens-review-cycle既定のcycles配下ではなく、本リポジトリの慣習と委任仕様に従って本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-read-data-d97a076 -->
