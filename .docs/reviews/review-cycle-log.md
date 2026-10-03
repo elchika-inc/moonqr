@@ -764,3 +764,57 @@
 - **ACCEPTED_RISKS**: 新規受容なし
 - **確定した偽陽性**: なし
 <!-- review-cycle:end 2026-10-02-moonqr-encode-22f6d0a -->
+
+<!-- review-cycle:start 2026-10-02-moonqr-locate-31a2012 -->
+## 2026-10-02: locate の standards-refactor
+
+- **サイクルID**: `2026-10-02-moonqr-locate-31a2012`
+- **対象**: `core/src/decode/locator.mbt` の `locate` と抽出した5つの非公開関数、許可されたヘッダ2行。レビュー時の HEAD は `31a20122ad5ab8a72845a8ca32d76a99ee7233c8`、base は `38ee3d3ed35fd28bd3e634a58c439c109ddf06c6`
+- **実装担当**: Codex / `gpt-6-astra`
+- **PR**: https://github.com/elchika-inc/moonqr/pull/65（main 向け）
+- **総ラウンド数**: 1
+- **終了理由**: 初回から5レンズとも flag 0、optional 0
+
+| レンズ | R1 flag | R1 optional |
+|---|---|---|
+| Fresh Eyes | 0 | 0 |
+| Security | 0 | 0 |
+| Core Logic | 0 | 0 |
+| Tests | 0 | 0 |
+| Domain | 0 | 0 |
+
+- **Fresh Eyes**: 入口から4工程を追え、quad 共通化が既存2箇所に限定されている。公開面・既存12関数・帰属情報の保持を確認
+- **Security**: 外部通信・ファイル操作・ログ出力・新規依存・公開入口の追加なし。更新する配列は呼出しごとの候補配列であり、共有状態や漏洩経路を増やしていない
+- **Core Logic**: 最初の一致を更新して return する処理は旧 matched フラグと等価。配列の挿入順・idx・比較式・候補探索上限を保持。空 groups の sort は空判定より前に移るが、添字アクセスは空判定後のみ。画素ループ内の新規配列・タプル・クロージャ割り当てなし
+- **Tests**: 5種の非等価変異の失敗・再ビルド・復元・段2空コミット・テスト凍結の報告に矛盾なし。等価変異は検出成功に数えていない。既存テスト全文と生ログはレビュアーへ渡しておらず、レビュアー自身はテスト未実行。静的な差分と報告の整合性の判断に限定
+- **Domain**: 走査端、行末確定、finder 高さ差2以上、alignment 高さ不問、両方の分子 s2、重心版→再センタリング版、最初が None でも次を試す経路を保持。比率第3項の包含関係を確認。上流の再取得はレビュアー未実施
+- **レビュアー**: fresh context の Codex 1名、codex-cli 0.155.0 / `gpt-6-astra` / reasoning effort high / sandbox read-only / ephemeral。ツール使用・ファイル変更・委任を禁止した静的レビュー。sub-worker は起動していない
+- **起動方法**: `perl -e 'alarm shift @ARGV; exec @ARGV' 1800 codex exec -m gpt-6-astra -c 'model_reasoning_effort="high"' -s read-only --ephemeral -`。指示文ファイルを stdin に渡し、stdout/stderr を別保存。main...HEAD 差分、locator.mbt 全文、段2テスト差分（空）、レビュー記録差分（空）、PR 下書き、CODING.md を提示。テスト全文・レビュー記録全文は渡していない
+- **レビューの実体**: CLI exit 0、5ロールの境界付き非空 LGTM ブロック各1個を検査。本文を原文のままロール別ファイルへ永続化し、読戻し一致を確認。Context7 の認証/404 と終了時 DELETE 404 は stderr に記録されたが、有効なレビュー本文と exit 0 を確認
+- **副作用の確認**: locator.mbt / locator_test.mbt / review-cycle-log.md / risk-registry.md の SHA-256 がレビュー前後で一致し、git status は空。任意の code-review-graph 工程は省略し、対象全文と差分を直接提示
+- **適用ポリシー**: standards fetch 後の origin/main `44b0a201546f6ef9c2bc413a8eadefbee062fd2b` の CODING.md。§5.2 MUST は振る舞いを変えない本PRの対象外、他の原則や類型不足は optional と事前指定。correctness・明示要件・セキュリティに影響する確信度80%以上のみ flag。事後の格下げなし
+- **成功基準**: 段0の bootstrap3本と検証5本成功、226行/ネスト8の一致、公開面・範囲維持、破壊/復元後の段2独立コミット、以後テスト凍結、段3各コミット前の MoonBit 成功、段4全検証成功、5レンズの収束、main 向けPRと clean 状態。検証前に一時報告書へ固定してから実施
+- **段0**: `pnpm install --frozen-lockfile` / `pnpm run release:build` / `node scripts/fetch-fixtures.mjs` が各 exit 0。fixture254/254。Key Commands5本も各 exit 0。MoonBit153/153、Node284/284/skip0、unit53+25+30、typecheck3 packages、lint66 files/19 warnings/9 infos（表示省略8）。Node v24.21.0、moon 0.1.20260713。対象226行/ネスト8で委任値と一致
+- **段1**: §1/§4 の4工程分離、§3 の matched 状態とネストの整理、§2 の正確なヘッダ、§5/§7 の事前固定を適用。既存変数 s0〜s4、数式、sort、走査条件、対象外関数・型は範囲と上流挙動を保つためそのまま。詳細な原則・場所・判断はPR本文に記載
+- **段2コミット**: `5dcc079e7c27e08067db5df35f805e090974f299`。`git show --stat` で変更ファイルのない空コミットと確認。既存の公開面テストで非等価変異5種を検出したため追加テストなし
+- **照合の破壊**: finder/alignment 両方で全一致 quad を更新すると、MoonBit153件は成功、再build後の parity は exit 1 / AssertionError（213 < 214、`issue-32-regression`）
+- **境界の破壊**: finder 確定の両箇所を `>=2` から `>=3` にすると、MoonBit153件は成功、parity は exit 1 / AssertionError（209 < 214、`131, 133, 134, 135, 4`）
+- **結果構築の破壊**: 再センタリング結果を返さないと、MoonBit153件は成功、parity は exit 1 / AssertionError（207 < 214、`148, 61, 82, 92, 94, 96, cupcake-2`）
+- **採点の破壊**: candidates 比較順の反転で MoonBit exit 2（141/153、12失敗）、parity exit 1 / AssertionError（3 < 214）
+- **グループ化の破壊**: groups の最良でなく末尾を選ぶと MoonBit exit 2（141/153、12失敗）、parity exit 1 / AssertionError（0 < 214）
+- **失敗の種類**: parity の失敗テスト名は `jsQR e2e corpus parity: our success count >= jsQR success count (spec rubric 1)`。全5変異とも assertion、abort 0。採点/グループ化の MoonBit は locator の中心・180度・90度回転を含む assert7件、fail4件、JSONパース例外1件、abort 0
+- **等価変異の裁定**: alignment の分子 s2→s3 は MoonBit153件・再build後の parity254画像とも成功。第3項の start<=qs && end>=qe は qs<=qe により第2項 end>=qs && start<=qe を含意するため、比率の真偽は OR の結果に効かない。司令塔が上流 jsQR 8e6a036 も同じ式（finder302〜303行、alignment324〜325行）と確認し、この破壊例を取り下げた。式と分子 s2 の維持指示は継続。PRの未修正バグ・直さなかった箇所に理由を記載
+- **復元確認**: 全6回で復元前 stat は locator.mbt だけ。指定 checkout 後の実装 diff は空/exit 0、MoonBit153/153・exit 0。変異ごとの release:build も各 exit 0。最後に再buildとparity成功で生成物を復元して段2コミット
+- **段3**: `1a501ec`（quad照合抽出）、`31a2012`（4工程抽出とヘッダ）の各コミット直前に MoonBit153/153・exit 0。段3の失敗0回、テスト変更0
+- **段4**: core→packages の順に再buildして exit 0 後、Key Commands5本すべて exit 0。MoonBit153/153、Node284/284/skip0、unit53+25+30、typecheck3 packages、lintは段0と同じ件数。時間上限テスト再試行なし。ground truth214件で両実装214一致、negative40件の検出0
+- **テスト凍結**: clean 状態で `git diff --exit-code --stat 5dcc079e7c27e08067db5df35f805e090974f299..HEAD -- '*.test.*' '*.spec.*' 'tests/' '__tests__/' '*_test.mbt' '*_wbtest.mbt'` は出力空/exit 0。MoonBit用の末尾2パターンを追加
+- **公開面**: `grep -n '^pub' core/src/decode/locator.mbt` は `15:pub struct QrLocation {` と `385:pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {` の2行のみ
+- **前後の実測**: locate226行/ネスト8→11/1。抽出関数は scan_pattern_quads78/5、score_finder_candidates23/3、group_finder_candidates44/5、build_qr_locations46/2、append_line_to_quads21/3。合計226→223行、最大ネスト8→5。宣言〜終端の両端・空行・コメントを含み、文字列と//コメント内の括弧を除く最大深さ−1で計測
+- **差分の実体**: 移植元2行、既存12関数、全型・定数・入口doc、locator_test.mbt、NOTICE、THIRD_PARTY_LICENSESはmainとbyte一致。実装変更はlocatorと抽出関数・許可ヘッダだけ。本記録は既存ログ末尾への追記
+- **外した条件**: 外部I/O・時刻/地域・並行は同期画像計算に該当しない。型違い/破損内部表現、寸法境界の網羅、巨大画像資源上限、全出力フィールドの一致、全同点配置、実機カメラ性能の専用検証は未実施。既存テストと保持した式/順序の範囲をPRに明記。site変更なしのためブラウザN/A、性能改善は主張しない
+- **裁量で決めた点**: 抽出5関数の分け方・名前、テスト追加なし、テスト固定→quad抽出→4工程抽出→レビュー記録のコミット粒度とメッセージ。Dispatchの既存ブランチを使用。外部機能/依存を導入する必要はなく、既存のローカル計算を抽出する方法を選択
+- **レビュー記録の置き場**: lens-review-cycle の cycles 配下指定より、委任仕様の明示指定と本リポの慣習を優先し、本ログ末尾へ追記
+- **INSPECTION_STATUS**: flag 0 / optional 0
+- **ACCEPTED_RISKS**: 新規受容なし
+- **確定した偽陽性**: なし
+<!-- review-cycle:end 2026-10-02-moonqr-locate-31a2012 -->

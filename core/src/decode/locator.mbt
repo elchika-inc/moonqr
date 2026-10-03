@@ -2,8 +2,8 @@
 ///| https://github.com/cozmo/jsQR/blob/8e6a036beafa7053dd44b1b76ac578d22b1b3311/src/locator/index.ts
 ///| 二値行列から3つのファインダパターン（1:1:3:1:1 のB:W:B:W:B 比率）と
 ///| アライメントパターン（1:1:1 のW:B:W 比率）を走査で検出し、Quad にまとめ、
-///| スコアリング → グルーピング → 再センタリング → 次元推定までを忠実に移植する。
-///| 詳細な行対応・アダプテーションは task-3-report.md 参照。
+///| スコアリング → グルーピング → 再センタリング → 次元推定の処理と結果を jsQR と揃える。
+///| 構造を整理し、工程ごとの関数分割は jsQR と異なる。
 
 let max_finderpatterns_to_search : Int = 4
 
@@ -384,8 +384,22 @@ fn find_alignment_pattern(
 ///| 使わず空配列に正規化する）。
 pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
   let finder_pattern_quads : Array[Quad] = []
-  let mut active_finder_pattern_quads : Array[Quad] = []
   let alignment_pattern_quads : Array[Quad] = []
+  scan_pattern_quads(matrix, finder_pattern_quads, alignment_pattern_quads)
+  let candidates = score_finder_candidates(matrix, finder_pattern_quads)
+  let groups = group_finder_candidates(candidates)
+  if groups.is_empty() {
+    return []
+  }
+  build_qr_locations(matrix, alignment_pattern_quads, groups[0])
+}
+
+fn scan_pattern_quads(
+  matrix : BitMatrix,
+  finder_pattern_quads : Array[Quad],
+  alignment_pattern_quads : Array[Quad],
+) -> Unit {
+  let mut active_finder_pattern_quads : Array[Quad] = []
   let mut active_alignment_pattern_quads : Array[Quad] = []
   for y = 0; y <= matrix.height; y = y + 1 {
     let mut length = 0
@@ -423,55 +437,14 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
           let end_x = x - s3 - s4
           let start_x = end_x - s2
           let line : Line = { start_x, end_x, y }
-          let mut matched = false
-          for i = 0; i < active_finder_pattern_quads.length(); i = i + 1 {
-            if !matched {
-              let q = active_finder_pattern_quads[i]
-              let ratio = s2.to_double() / (q.bottom.end_x - q.bottom.start_x).to_double()
-              let is_match = (start_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (end_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (
-                  start_x <= q.bottom.start_x &&
-                  end_x >= q.bottom.end_x &&
-                  ratio < max_quad_ratio &&
-                  ratio > min_quad_ratio
-                )
-              if is_match {
-                active_finder_pattern_quads[i] = { top: q.top, bottom: line }
-                matched = true
-              }
-            }
-          }
-          if !matched {
-            active_finder_pattern_quads.push({ top: line, bottom: line })
-          }
+          append_line_to_quads(active_finder_pattern_quads, line, s2)
         }
         if valid_alignment {
           let end_x = x - s4
           let start_x = end_x - s3
           let line : Line = { start_x, end_x, y }
-          let mut matched = false
-          for i = 0; i < active_alignment_pattern_quads.length(); i = i + 1 {
-            if !matched {
-              let q = active_alignment_pattern_quads[i]
-              let ratio = s2.to_double() / (q.bottom.end_x - q.bottom.start_x).to_double()
-              let is_match = (start_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (end_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
-                (
-                  start_x <= q.bottom.start_x &&
-                  end_x >= q.bottom.end_x &&
-                  ratio < max_quad_ratio &&
-                  ratio > min_quad_ratio
-                )
-              if is_match {
-                active_alignment_pattern_quads[i] = { top: q.top, bottom: line }
-                matched = true
-              }
-            }
-          }
-          if !matched {
-            active_alignment_pattern_quads.push({ top: line, bottom: line })
-          }
+          // 線の長さは s3 でも、比率の分子は jsQR と同じ s2 を保つ。
+          append_line_to_quads(active_alignment_pattern_quads, line, s2)
         }
       }
     }
@@ -498,8 +471,9 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
   for q in active_alignment_pattern_quads {
     alignment_pattern_quads.push(q)
   }
+}
 
-  // ---- ファインダパターン候補の初期スコアリング（比率のみ、位置は未考慮） ----
+fn score_finder_candidates(matrix : BitMatrix, finder_pattern_quads : Array[Quad]) -> Array[ScoredPoint] {
   let candidates : Array[ScoredPoint] = []
   let ratios_1_1_3_1_1 : Array[Double] = [1.0, 1.0, 3.0, 1.0, 1.0]
   for q in finder_pattern_quads {
@@ -520,8 +494,10 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
     }
   }
   candidates.sort_by(compare_scored_point)
+  candidates
+}
 
-  // ---- 近いサイズの3点でグループ化 ----
+fn group_finder_candidates(candidates : Array[ScoredPoint]) -> Array[FinderGroup] {
   let groups : Array[FinderGroup] = []
   for i = 0; i < candidates.length(); i = i + 1 {
     if i <= max_finderpatterns_to_search {
@@ -553,9 +529,6 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
       }
     }
   }
-  if groups.is_empty() {
-    return []
-  }
   // groups もスコア同点時は挿入順で決着（安定ソートエミュレーション）
   let cmp_groups = fn(a : FinderGroup, b : FinderGroup) -> Int {
     let c = compare_double(a.score, b.score)
@@ -566,7 +539,14 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
     }
   }
   groups.sort_by(cmp_groups)
-  let best = groups[0]
+  groups
+}
+
+fn build_qr_locations(
+  matrix : BitMatrix,
+  alignment_pattern_quads : Array[Quad],
+  best : FinderGroup,
+) -> Array[QrLocation] {
   let (bottom_left, top_left, top_right) = reorder_finder_patterns(best.p0, best.p1, best.p2)
   let result : Array[QrLocation] = []
   match find_alignment_pattern(matrix, alignment_pattern_quads, top_right, top_left, bottom_left) {
@@ -607,4 +587,26 @@ pub fn locate(matrix : BitMatrix) -> Array[QrLocation] {
       })
   }
   result
+}
+
+fn append_line_to_quads(quads : Array[Quad], line : Line, ratio_numerator : Int) -> Unit {
+  let start_x = line.start_x
+  let end_x = line.end_x
+  for i = 0; i < quads.length(); i = i + 1 {
+    let q = quads[i]
+    let ratio = ratio_numerator.to_double() / (q.bottom.end_x - q.bottom.start_x).to_double()
+    let is_match = (start_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
+      (end_x >= q.bottom.start_x && start_x <= q.bottom.end_x) ||
+      (
+        start_x <= q.bottom.start_x &&
+        end_x >= q.bottom.end_x &&
+        ratio < max_quad_ratio &&
+        ratio > min_quad_ratio
+      )
+    if is_match {
+      quads[i] = { top: q.top, bottom: line }
+      return
+    }
+  }
+  quads.push({ top: line, bottom: line })
 }
