@@ -46,3 +46,64 @@ test "encode still works and shrinks the version when splitting helps" {
     None => abort("encode returned None")
   }
 }
+
+test "Numericで01234567を書く → 3桁単位と余りのコードワードになる" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "01234567", @encode.Mode::Numeric, 1)
+  assert_eq(w.bit_length(), 41)
+  assert_eq(w.to_codewords(), [16, 32, 12, 86, 97, 128])
+}
+
+test "Numericで1桁の7を書く → データ部が4bitになる" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "7", @encode.Mode::Numeric, 1)
+  assert_eq(w.bit_length(), 18)
+  assert_eq(w.to_codewords(), [16, 5, 192])
+}
+
+test "Numericで2桁の67を書く → データ部が7bitになる" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "67", @encode.Mode::Numeric, 1)
+  assert_eq(w.bit_length(), 21)
+  assert_eq(w.to_codewords(), [16, 10, 24])
+}
+
+test "AlphanumericでAC-42を書く → 文字対と余りのコードワードになる" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "AC-42", @encode.Mode::Alphanumeric, 1)
+  assert_eq(w.bit_length(), 41)
+  assert_eq(w.to_codewords(), [32, 41, 206, 231, 33, 0])
+}
+
+test "ByteでAéあ🦑を書く → UTF-8の10バイトを文字数指示子とデータに使う" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "Aéあ🦑", @encode.Mode::Byte, 1)
+  assert_eq(w.bit_length(), 92)
+  assert_eq(w.to_codewords(), [64, 164, 28, 58, 158, 56, 24, 47, 9, 250, 105, 16])
+}
+
+test "Numericで空文字を書く → モードと文字数0の14bitだけを書く" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "", @encode.Mode::Numeric, 1)
+  assert_eq(w.bit_length(), 14)
+  assert_eq(w.to_codewords(), [16, 0])
+}
+
+test "Alphanumericで空文字を書く → モードと文字数0の13bitだけを書く" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "", @encode.Mode::Alphanumeric, 1)
+  assert_eq(w.bit_length(), 13)
+  assert_eq(w.to_codewords(), [32, 0])
+}
+
+test "Byteで空文字を書く → モードと文字数0の12bitだけを書く" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "", @encode.Mode::Byte, 1)
+  assert_eq(w.bit_length(), 12)
+  assert_eq(w.to_codewords(), [64, 0])
+}
+
+test "panic Alphanumericで範囲外のaを書く → abortする" {
+  let w = @encode.BitWriter::new()
+  @encode.write_segment(w, "a", @encode.Mode::Alphanumeric, 1)
+}

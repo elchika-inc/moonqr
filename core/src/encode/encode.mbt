@@ -15,20 +15,17 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
   }
   // 文字数指示子は 1-9 / 10-26 / 27-40 の帯でのみ変わるため、
   // 最適分割は帯ごとに1回だけ求めてバージョン試行間で再利用する。
-  let segments_low = match optimal_segments(text, 1) {
-    Some(segments) => segments
-    None => return None
+  guard optimal_segments(text, 1) is Some(segments_low) else {
+    return None
   }
-  let segments_mid = match optimal_segments(text, 10) {
-    Some(segments) => segments
-    None => return None
+  guard optimal_segments(text, 10) is Some(segments_mid) else {
+    return None
   }
-  let segments_high = match optimal_segments(text, 27) {
-    Some(segments) => segments
-    None => return None
+  guard optimal_segments(text, 27) is Some(segments_high) else {
+    return None
   }
   let try_version = fn(v : Int) -> Matrix? {
-    let w = BitWriter::new()
+    let writer = BitWriter::new()
     let segments = if v <= 9 {
       segments_low
     } else if v <= 26 {
@@ -36,34 +33,20 @@ pub fn encode(text : String, ec : EcLevel, version : Int?) -> Matrix? {
     } else {
       segments_high
     }
-    write_segment_list(w, text, v, segments)
-    match assemble(w, v, ec) {
-      None => None
-      Some(cw) => {
-        let m = Matrix::new(v)
-        place_function_patterns(m, v)
-        place_version(m, v)
-        place_data(m, cw)
-        let mask = choose_mask(m, ec)
-        apply_mask(m, mask)
-        place_format(m, ec, mask)
-        Some(m)
-      }
+    write_segment_list(writer, text, v, segments)
+    assemble_matrix(writer, v, ec)
+  }
+  if version is Some(v) {
+    return try_version(v)
+  }
+  // cci_bits がバージョン帯(1-9/10-26/27-40)で変わるため素直に線形試行
+  for v = 1; v <= 40; v = v + 1 {
+    match try_version(v) {
+      Some(m) => return Some(m)
+      None => continue
     }
   }
-  match version {
-    Some(v) => try_version(v)
-    None => {
-      // cci_bits がバージョン帯(1-9/10-26/27-40)で変わるため素直に線形試行
-      for v = 1; v <= 40; v = v + 1 {
-        match try_version(v) {
-          Some(m) => return Some(m)
-          None => continue
-        }
-      }
-      None
-    }
-  }
+  None
 }
 
 ///| JS境界用: [size, m00, m01, ...] の平坦配列。エラー時は空配列。
@@ -82,15 +65,7 @@ pub fn encode_js(text : String, ec : Int, version : Int) -> Array[Int] {
   let v : Int? = if version == 0 { None } else { Some(version) }
   match encode(text, level, v) {
     None => []
-    Some(m) => {
-      let out : Array[Int] = [m.size]
-      for y = 0; y < m.size; y = y + 1 {
-        for x = 0; x < m.size; x = x + 1 {
-          out.push(if m.get(x, y) { 1 } else { 0 })
-        }
-      }
-      out
-    }
+    Some(matrix) => matrix_to_js_array(matrix)
   }
 }
 
@@ -117,4 +92,28 @@ pub fn to_svg_string_js(
     None => ""
     Some(m) => to_svg_string(m, margin, cell)
   }
+}
+
+fn assemble_matrix(writer : BitWriter, version : Int, ec : EcLevel) -> Matrix? {
+  guard assemble(writer, version, ec) is Some(codewords) else {
+    return None
+  }
+  let matrix = Matrix::new(version)
+  place_function_patterns(matrix, version)
+  place_version(matrix, version)
+  place_data(matrix, codewords)
+  let mask = choose_mask(matrix, ec)
+  apply_mask(matrix, mask)
+  place_format(matrix, ec, mask)
+  Some(matrix)
+}
+
+fn matrix_to_js_array(matrix : Matrix) -> Array[Int] {
+  let out : Array[Int] = [matrix.size]
+  for y = 0; y < matrix.size; y = y + 1 {
+    for x = 0; x < matrix.size; x = x + 1 {
+      out.push(if matrix.get(x, y) { 1 } else { 0 })
+    }
+  }
+  out
 }

@@ -73,3 +73,25 @@ test "svg output contains rect per dark module" {
     None => abort("must encode")
   }
 }
+
+test "version 10でByteに挟まれた6桁の数字 → 現在の行列の先頭行を保つ" {
+  guard @encode.encode("a123456a", @encode.EcLevel::M, Some(10)) is Some(matrix) else {
+    abort("must encode")
+  }
+  let mut row = ""
+  for x = 0; x < matrix.size; x = x + 1 {
+    row = row + (if matrix.get(x, 0) { "1" } else { "0" })
+  }
+  assert_eq(row, "111111100001111010100110101111000100010001000011001111111")
+}
+
+test "18桁の数字をversion 1・Hに指定 → 容量不足でNone" {
+  match @encode.encode("012345678901234567", @encode.EcLevel::H, Some(1)) {
+    Some(_) => abort("must overflow")
+    None => assert_true(true)
+  }
+}
+
+test "18桁の数字をJS境界でversion 1・Hに指定 → 容量不足で空配列" {
+  assert_eq(@encode.encode_js("012345678901234567", 3, 1), [])
+}

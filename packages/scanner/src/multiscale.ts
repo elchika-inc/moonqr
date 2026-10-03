@@ -119,51 +119,51 @@ export function multiScaleDecode<T>(
   width: number,
   height: number,
 ): MultiScaleOutcome<T> | null {
-  let curData = data;
-  let curW = width;
-  let curH = height;
-  let scale = 1; // 入力ネイティブ解像度に対する総縮小率（事前半減も計上する）
+  const baseLevel = shrinkToPixelLimit(data, width, height);
+  const levels = buildScalePyramid(baseLevel);
 
-  // 1. メモリガード（16Mピクセル上限に収まるまで先に縮小。この半減も scale に
-  //    計上する——計上しないと「事前半減のおかげで初めて成功した」ケースが
-  //    scale=1（無縮小成功）として報告されてしまう）
-  while (curW * curH > MAX_PIXELS) {
-    const halved = halveRGBA(curData, curW, curH);
-    curData = halved.data;
-    curW = halved.width;
-    curH = halved.height;
-    scale *= 2;
-  }
-
-  // 2. 半減ピラミッド構築（levels[0] = 基点 = 最大レベル）
-  const levels: Array<{ data: Uint8Array; width: number; height: number; scale: number }> = [
-    { data: curData, width: curW, height: curH, scale },
-  ];
-  while (Math.max(curW, curH) >= 150) {
-    const halved = halveRGBA(curData, curW, curH);
-    curData = halved.data;
-    curW = halved.width;
-    curH = halved.height;
-    scale *= 2;
-    levels.push({ data: curData, width: curW, height: curH, scale });
-  }
-
-  // 3. 小スケール（画素数の少ない）レベルから昇順に試行
   const attemptedScales: number[] = [];
   for (let i = levels.length - 1; i >= 0; i--) {
-    const lv = levels[i];
-    if (!lv) continue;
-    attemptedScales.push(lv.scale);
-    const result = decodeFn(lv.data, lv.width, lv.height);
+    const level = levels[i];
+    if (!level) continue;
+    attemptedScales.push(level.scale);
+    const result = decodeFn(level.data, level.width, level.height);
     if (result) {
       return {
         result,
-        scale: lv.scale,
-        width: lv.width,
-        height: lv.height,
+        scale: level.scale,
+        width: level.width,
+        height: level.height,
         attemptedScales,
       };
     }
   }
   return null;
+}
+
+function shrinkToPixelLimit(
+  data: Uint8Array,
+  width: number,
+  height: number,
+): RGBAImage & { scale: number } {
+  let current = { data, width, height, scale: 1 };
+  // 事前半減も総縮小率に含め、ガード後の画像をscale=1と報告しない。
+  while (current.width * current.height > MAX_PIXELS) {
+    const halved = halveRGBA(current.data, current.width, current.height);
+    current = { ...halved, scale: current.scale * 2 };
+  }
+  return current;
+}
+
+function buildScalePyramid(
+  baseLevel: RGBAImage & { scale: number },
+): Array<RGBAImage & { scale: number }> {
+  const levels = [baseLevel];
+  let current = baseLevel;
+  while (Math.max(current.width, current.height) >= 150) {
+    const halved = halveRGBA(current.data, current.width, current.height);
+    current = { ...halved, scale: current.scale * 2 };
+    levels.push(current);
+  }
+  return levels;
 }
